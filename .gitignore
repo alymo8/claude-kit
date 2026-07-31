@@ -1,0 +1,19 @@
+# This repo tracks ONLY the Desktop/Github workspace preferences.
+#
+# Everything at the workspace root is ignored by default; the pref files are
+# whitelisted below. The many project folders under Github/ (and any .env files
+# inside them) are therefore NEVER committed. `/*` is anchored to the root, so it
+# ignores only top-level entries — un-ignoring a directory here tracks all of its
+# contents.
+
+# Ignore every top-level entry...
+/*
+
+# ...but keep the workspace-preference files:
+!/.gitignore
+!/CLAUDE.md
+!/README.md
+!/LICENSE
+!/conventions/
+!/scripts/
+!/skills/
