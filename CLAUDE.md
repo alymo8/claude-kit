@@ -80,9 +80,22 @@ We are working on **Windows**. Use Windows-appropriate commands and paths
   open the file / folder for me (`Invoke-Item <path>` for a file, `explorer <path>`
   for a folder) rather than only telling me the path.
 
-## Building a new feature: use a worktree
+## Building a new feature: check branch state first, then use a worktree
 
-When building a new feature, use the **superpowers worktree skill**
+**Before implementing any new feature, always run a pre-flight branch check and get
+my go-ahead:**
+
+1. **Confirm we are on `main`.** Run `git branch --show-current`. If we are not on
+   `main`, **stop and warn me** — tell me the current branch and do not start
+   implementing until I confirm how to proceed.
+2. **Confirm `main` is up to date.** Fetch and compare against the remote (e.g.
+   `git fetch` then check `git status` / `git rev-list --count main..@{u}`). If local
+   `main` is behind (or ahead of) the remote, **stop and warn me** — do not start
+   implementing until `main` is updated or I tell you to proceed anyway.
+
+Only once both checks pass (or I have explicitly waived them) should you begin.
+
+Then, when building the feature, use the **superpowers worktree skill**
 (`superpowers:using-git-worktrees`) to start a new worktree. Before creating the
 worktree, make sure to **pull the latest `main`** so the worktree branches from
 up-to-date code.
