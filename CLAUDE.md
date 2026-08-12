@@ -80,7 +80,7 @@ We are working on **Windows**. Use Windows-appropriate commands and paths
   open the file / folder for me (`Invoke-Item <path>` for a file, `explorer <path>`
   for a folder) rather than only telling me the path.
 
-## Building a new feature: check branch state first, then use a worktree
+## Building a new feature: check branch state first, use a worktree, then clean up
 
 **Before implementing any new feature, always run a pre-flight branch check and get
 my go-ahead:**
@@ -99,3 +99,18 @@ Then, when building the feature, use the **superpowers worktree skill**
 (`superpowers:using-git-worktrees`) to start a new worktree. Before creating the
 worktree, make sure to **pull the latest `main`** so the worktree branches from
 up-to-date code.
+
+**Once the feature is done, always clean up.** A feature is not finished until its
+temporary workspace is gone. After the work is merged (or explicitly abandoned):
+
+1. **Confirm the work is safely landed** — merged into `main` / PR merged, or I have
+   told you to drop it. Never clean up work that only exists in the worktree.
+2. **Remove the worktree** (`git worktree remove <path>`, and
+   `git worktree prune` afterwards). Check `git worktree list` to confirm it is gone.
+3. **Delete the feature branch**, local and remote (`git branch -d <branch>`,
+   `git push origin --delete <branch>`) unless I ask to keep it.
+4. **Delete leftover scratch files** the feature created outside the repo (temp
+   scripts, generated artifacts, scratchpad output) — keep the workspace clean.
+
+If any cleanup step would discard unmerged commits or uncommitted changes, **stop and
+ask me first** rather than forcing it.
