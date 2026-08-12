@@ -66,6 +66,32 @@ python ../scripts/render-spec.py                      # all specs in ./docs/supe
 Requires `pip install markdown` (once per machine). Do not copy the script into
 individual repos — keep the single shared copy so it never drifts.
 
+## Plans must be self-contained
+
+When you write an implementation plan (typically under `docs/plans/`), assume
+**whoever executes it has none of our conversation context** — it may be me in a
+fresh session, a subagent, or a different machine days later. The plan file is the
+only handoff.
+
+So a plan file must stand on its own:
+
+- **State the goal and the why**, not just the steps — enough that the executor
+  understands what "done and correct" means without reading the spec. Link the spec
+  / ADRs / knowledge docs it came from, but do not *depend* on them being read.
+- **Carry the decisions already made** (and the rejected alternatives, briefly), so
+  the executor doesn't relitigate settled choices or guess differently than we did.
+- **Name concrete paths, commands, and file names** — repo, branch/worktree, files to
+  create or change, exact commands to run and expected output. No "as we discussed",
+  "the usual setup", "the file from earlier", or other back-references to chat.
+- **Spell out setup and prerequisites** — env vars, installs, services to start —
+  since a fresh session starts cold.
+- **Include the verification criteria** we agreed on, so the executor can check the
+  work against them without asking me.
+- **Keep steps ordered and independently checkable**, with review checkpoints.
+
+Sanity check before handing a plan over: *could a competent stranger execute this
+with only the repo and this file?* If not, the plan isn't finished.
+
 ## Environment
 
 We are working on **Windows**. Use Windows-appropriate commands and paths
