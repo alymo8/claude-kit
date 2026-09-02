@@ -11,7 +11,7 @@ the full shape as soon as a project has more than one contributor, outlives a
 weekend, or makes choices worth remembering. Skipping should be a deliberate call,
 not the path of least resistance.
 
-## The four playbooks
+## The playbooks
 
 | Playbook | What it governs |
 |----------|-----------------|
@@ -19,6 +19,7 @@ not the path of least resistance.
 | [Decision log (ADRs)](decision-log.md) | How locked-in decisions leave a durable, numbered trace. |
 | [Spec-driven development](spec-driven-development.md) | The path from an idea to shipped code: brainstorm → spec → plan → build. |
 | [Engineering practices](engineering-practices.md) | Test-first development, coding standards, and the code-review gate. |
+| [Project memory file](project-memory.md) | The checked-in `CLAUDE.md` at a repo's root: build/test commands, architecture, conventions, gotchas. |
 
 ## How they fit together
 
@@ -26,6 +27,9 @@ The knowledge layer is the **foundation** — the organized home for what a proj
 knows. The decision log is where choices made against that knowledge get **locked
 in**. Spec-driven development is the **flow** that turns knowledge and decisions
 into working software, and engineering practices are the **quality bar** every
-change clears on the way to `main`. A healthy project keeps all four current: new
-findings update the knowledge base, new choices land as ADRs, new work starts from
-a spec, and every merge passes the practices gate.
+change clears on the way to `main`. The project memory file is the **front door** —
+the short, static, checked-in `CLAUDE.md` that tells anyone arriving cold how to
+build, test, and navigate the repo, and points at the other three. A healthy project
+keeps all five current: new findings update the knowledge base, new choices land as
+ADRs, new work starts from a spec, every merge passes the practices gate, and the
+memory file changes in the same PR as whatever made it stale.

@@ -10,7 +10,7 @@ setup that sits above my individual project repos — it defines *how* I work, n
 - **[`CLAUDE.md`](CLAUDE.md)** — the workspace instructions Claude Code reads: how we
   work, decision verification, spec/HTML rendering, environment, and file-opening
   conventions.
-- **[`conventions/`](conventions/)** — four self-contained playbooks that generalize
+- **[`conventions/`](conventions/)** — five self-contained playbooks that generalize
   my way of working to any new project:
   - [Knowledge layer](conventions/knowledge-layer.md) — a version-controlled,
     domain-organized knowledge base as the foundation.
@@ -20,6 +20,8 @@ setup that sits above my individual project repos — it defines *how* I work, n
     spec → plan → build.
   - [Engineering practices](conventions/engineering-practices.md) — test-first,
     coding standards, and a CI + AI + human review gate.
+  - [Project memory file](conventions/project-memory.md) — a checked-in `CLAUDE.md`
+    per repo: build/test commands, architecture, conventions, gotchas.
 - **[`skills/`](skills/)** — custom Claude Code skills.
 - **[`scripts/`](scripts/)** — shared tooling (e.g. the spec → HTML renderer).
 

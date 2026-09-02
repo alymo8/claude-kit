@@ -2,9 +2,9 @@
 
 These apply to all projects under this directory.
 
-## How we work: knowledge, decisions, specs, engineering
+## How we work: knowledge, decisions, specs, engineering, project memory
 
-New projects follow four working conventions, documented in full under
+New projects follow five working conventions, documented in full under
 [`conventions/`](conventions/) (self-contained — read the relevant file before
 applying it). **Scale them to the project:** these are the full-strength defaults;
 apply a lighter version for small or throwaway work, but reach for the full shape
@@ -23,8 +23,15 @@ worth remembering.
 - **[Engineering practices](conventions/engineering-practices.md)** — test-first
   development, language-agnostic coding standards, and a CI + AI + human code-review
   gate on every change to `main`.
+- **[Project memory file](conventions/project-memory.md)** — every repo carries a
+  checked-in `CLAUDE.md` at its root with build commands, test commands (full suite
+  and single test), architectural conventions, and gotchas. Cheap to write,
+  disproportionately effective, and static — so it sits in the cacheable prefix
+  instead of being rediscovered every session. Keep it to about a screen, update it
+  in the same PR that makes it stale, and link to `knowledge/` rather than
+  duplicating it.
 
-See [`conventions/README.md`](conventions/README.md) for how the four fit together.
+See [`conventions/README.md`](conventions/README.md) for how the five fit together.
 
 ## Verify key decisions with me, and agree on criteria upfront
 
