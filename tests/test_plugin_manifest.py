@@ -30,3 +30,11 @@ def test_hook_commands_reference_existing_scripts():
         match = re.search(r"\$\{CLAUDE_PLUGIN_ROOT\}/([^\"]+)", command)
         assert match, command
         assert (PLUGIN / match.group(1)).exists(), command
+
+
+def test_commands_exist_with_frontmatter():
+    for name in ("new-project", "adopt-conventions"):
+        text = (PLUGIN / "commands" / f"{name}.md").read_text(encoding="utf-8")
+        assert text.startswith("---\n"), name
+        assert "description:" in text.split("---", 2)[1], name
+        assert "scripts/scaffold.py" in text, name
