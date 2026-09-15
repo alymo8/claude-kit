@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-- **Status:** approved
+- **Status:** implemented
 - **Date:** 2026-09-15
 
 **Goal:** Add `/new-project` and `/adopt-conventions` commands (a template tree + `scaffold.py`) so any repo gets the kit's conventions in one step, and a spec lifecycle (`draft | approved | implemented | superseded`) with a generated per-repo index.
