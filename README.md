@@ -22,11 +22,32 @@ setup that sits above my individual project repos — it defines *how* I work, n
     coding standards, and a CI + AI + human review gate.
   - [Project memory file](conventions/project-memory.md) — a checked-in `CLAUDE.md`
     per repo: build/test commands, architecture, conventions, gotchas.
-- **[`skills/`](skills/)** — custom Claude Code skills.
-- **[`scripts/`](scripts/)** — shared tooling (e.g. the spec → HTML renderer).
+- **[`plugin/`](plugin/)** — a Claude Code plugin: the `supabase-cli` skill, the
+  spec → HTML renderer, and two hooks (auto-render specs/plans after edits; report
+  leftover worktrees at session start). Install once per machine with
+  `plugin\install.ps1` — it junctions `~/.claude/skills/claude-kit` to this folder
+  so edits are live. If PowerShell refuses to run the script (execution policy),
+  use `powershell -ExecutionPolicy Bypass -File plugin\install.ps1`.
+- **[`knowledge/decisions/`](knowledge/decisions/)** — this repo's own ADRs.
+- **[`docs/superpowers/`](docs/superpowers/)** — specs and plans for changes to
+  the kit itself.
 
 ## Scope
 
 By design this repo tracks **only** the files above. The project folders that also
 live under `Github/` are ignored via a whitelist [`.gitignore`](.gitignore), so
 nothing project-specific (or any secrets) is ever committed here.
+
+## Developing the kit
+
+```
+pip install "markdown~=3.10" pytest "ruff~=0.16"       # once
+pytest                                                  # full suite
+pytest tests/test_render_spec.py::test_title_from_h1    # one test
+ruff check plugin tests                                 # lint
+ruff format plugin tests                                # format
+```
+
+CI runs the same three commands on Ubuntu and Windows for every push and PR.
+Feature-sized changes go through a branch and PR; one-line doc fixes may land on
+`main` directly (ADR 0006).

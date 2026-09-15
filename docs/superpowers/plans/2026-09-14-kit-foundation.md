@@ -24,7 +24,7 @@ A review found that this repo *describes* rules it cannot *enforce*: its one ski
 
 ## Global Constraints
 
-- Repo root: `C:\Users\alymo\Desktop\Github` (git remote `alymo8/claude-kit`, **public** — never write private repo names or the Windows username into tracked files; refer to other repos as "a project repo").
+- Repo root: `<repo-root>` (the `Desktop/Github` checkout) (git remote `alymo8/claude-kit`, **public** — never write private repo names or the Windows username into tracked files; refer to other repos as "a project repo").
 - The repo root `.gitignore` ignores everything (`/*`) and whitelists specific entries. **Every new top-level path must be added to the whitelist or it is silently untracked.**
 - Rendered HTML (`docs/superpowers/**/*.html`) is never committed.
 - `ruff` and `pytest` must be invoked with explicit paths (`ruff check plugin tests`) because the repo directory contains unrelated project folders.
@@ -36,7 +36,7 @@ A review found that this repo *describes* rules it cannot *enforce*: its one ski
 
 ## Prerequisites (fresh session starts cold)
 
-1. On `main`, up to date: `git -C C:\Users\alymo\Desktop\Github status -sb` shows `## main...origin/main` with nothing ahead/behind. If not, stop and ask.
+1. On `main`, up to date: `git -C <repo-root> status -sb` shows `## main...origin/main` with nothing ahead/behind. If not, stop and ask.
 2. Python 3.11+ on PATH as `python`; `git` ≥ 2.28; `gh` authenticated (`gh auth status`).
 3. Install dev deps once: `pip install "markdown~=3.10" pytest ruff`.
 4. Create the isolated worktree with the `superpowers:using-git-worktrees` skill, branch name `feat/kit-foundation`. All tasks below run **inside that worktree** unless a step says otherwise. In commands below, `<wt>` means the worktree path the skill reports.
@@ -1445,11 +1445,11 @@ gh pr merge --squash --delete-branch
 Run **from the main checkout, not the worktree**, in PowerShell:
 
 ```powershell
-git -C C:\Users\alymo\Desktop\Github pull --ff-only
-C:\Users\alymo\Desktop\Github\plugin\install.ps1
+git -C <repo-root> pull --ff-only
+<repo-root>\plugin\install.ps1
 ```
 
-Expected: `Installed: C:\Users\alymo\.claude\skills\claude-kit -> C:\Users\alymo\Desktop\Github\plugin`.
+Expected: `Installed: $HOME\.claude\skills\claude-kit -> <repo-root>\plugin`.
 
 Then ask the user to start a **new** Claude Code session and confirm `claude-kit:supabase-cli` appears in the available-skills list (or run `/plugins` and look for `claude-kit@skills-dir`). This step cannot be verified from inside the current session.
 
@@ -1466,7 +1466,7 @@ Record the outcomes in the PR (a comment) or tell the user.
 Use `superpowers:finishing-a-development-branch`. Concretely:
 
 ```bash
-cd C:\Users\alymo\Desktop\Github
+cd <repo-root>
 git worktree remove <wt>
 git worktree prune
 git branch -d feat/kit-foundation      # remote branch already deleted by --delete-branch
