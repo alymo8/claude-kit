@@ -118,37 +118,28 @@ We are working on **Windows**. Use Windows-appropriate commands and paths
   open the file / folder for me (`Invoke-Item <path>` for a file, `explorer <path>`
   for a folder) rather than only telling me the path.
 
-## Building a new feature: check branch state first, use a worktree, then clean up
+## Building a new feature: pre-flight, worktree, clean up
 
-**Before implementing any new feature, always run a pre-flight branch check and get
-my go-ahead:**
+**Before implementing any new feature, run a pre-flight branch check and get my
+go-ahead:**
 
-1. **Confirm we are on `main`.** Run `git branch --show-current`. If we are not on
-   `main`, **stop and warn me** — tell me the current branch and do not start
-   implementing until I confirm how to proceed.
-2. **Confirm `main` is up to date.** Fetch and compare against the remote (e.g.
-   `git fetch` then check `git status` / `git rev-list --count main..@{u}`). If local
-   `main` is behind (or ahead of) the remote, **stop and warn me** — do not start
-   implementing until `main` is updated or I tell you to proceed anyway.
+1. **Confirm we are on `main`.** Run `git branch --show-current`. If not on `main`,
+   **stop and warn me** — tell me the current branch and do not start until I
+   confirm how to proceed.
+2. **Confirm `main` is up to date.** `git fetch`, then check `git status -sb` /
+   `git rev-list --count main..@{u}`. If local `main` is behind or ahead of the
+   remote, **stop and warn me** — do not start until `main` is updated or I tell
+   you to proceed anyway.
 
 Only once both checks pass (or I have explicitly waived them) should you begin.
 
-Then, when building the feature, use the **superpowers worktree skill**
-(`superpowers:using-git-worktrees`) to start a new worktree. Before creating the
-worktree, make sure to **pull the latest `main`** so the worktree branches from
-up-to-date code.
+Then build in an isolated worktree using `superpowers:using-git-worktrees`, after
+pulling the latest `main` so the worktree branches from up-to-date code.
 
-**Once the feature is done, always clean up.** A feature is not finished until its
-temporary workspace is gone. After the work is merged (or explicitly abandoned):
-
-1. **Confirm the work is safely landed** — merged into `main` / PR merged, or I have
-   told you to drop it. Never clean up work that only exists in the worktree.
-2. **Remove the worktree** (`git worktree remove <path>`, and
-   `git worktree prune` afterwards). Check `git worktree list` to confirm it is gone.
-3. **Delete the feature branch**, local and remote (`git branch -d <branch>`,
-   `git push origin --delete <branch>`) unless I ask to keep it.
-4. **Delete leftover scratch files** the feature created outside the repo (temp
-   scripts, generated artifacts, scratchpad output) — keep the workspace clean.
-
-If any cleanup step would discard unmerged commits or uncommitted changes, **stop and
-ask me first** rather than forcing it.
+**A feature is not finished until its workspace is gone.** When the work is merged
+(or I have explicitly abandoned it), use `superpowers:finishing-a-development-branch`
+to integrate and clean up: the worktree removed and pruned, the branch deleted
+locally and on the remote, and any scratch files created outside the repo deleted.
+The kit's session-start hook reports leftover worktrees and branches; treat that as
+a to-do, but **never delete anything with unmerged commits or uncommitted changes
+without asking me first.**
