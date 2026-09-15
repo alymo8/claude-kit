@@ -16,7 +16,11 @@ easily-reversed choices do not need one.
 - **New decisions take the next available number.** Numbers are never reused.
 - **Decisions are never deleted.** If a decision changes, add a *new* ADR and mark
   the old one `superseded`, noting which ADR replaces it. The history stays intact.
-- **An index table** in `decisions/README.md` lists every ADR: number, title, status.
+- **An index table** in `knowledge/decisions/README.md` lists every ADR: number, title,
+  status.
+- **The location is fixed at `knowledge/decisions/`** — not `docs/decisions/` or
+  `docs/adr/`. Decisions are part of what the project *knows*, so they live in the
+  knowledge layer next to the docs they were made against.
 
 ## Template
 
@@ -47,6 +51,6 @@ practice doc; the ADR captures the decision itself.
 
 - The decision is one numbered file following the template, with a real Context /
   Decision / Consequences — not a bare title.
-- `decisions/README.md`'s index has a row for it.
+- `knowledge/decisions/README.md`'s index has a row for it.
 - If it replaces an earlier decision, the earlier ADR is marked `superseded` and
   points here.

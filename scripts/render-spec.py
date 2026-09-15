@@ -55,8 +55,10 @@ TEMPLATE = """<!doctype html>
   ul, ol {{ padding-inline-start: 1.4em; }}
   li {{ margin: .2em 0; }}
   hr {{ border: none; border-top: 1px solid var(--border); margin: 2em 0; }}
-  /* Arabic runs read right-to-left inside an otherwise LTR document */
-  :lang(ar) {{ direction: rtl; }}
+  /* Each block picks its own direction from its first strong character, so
+     Arabic paragraphs/list items read RTL inside an otherwise LTR document.
+     (Markdown emits no lang/dir attributes, so a :lang(ar) rule never matches.) */
+  h1, h2, h3, h4, p, li, td, th, blockquote {{ unicode-bidi: plaintext; }}
   .doc-meta {{ color: var(--muted); font-size: .9rem; }}
 </style>
 </head>
@@ -73,7 +75,7 @@ def render(md_path: Path) -> Path:
     text = md_path.read_text(encoding="utf-8")
     html_body = markdown.markdown(
         text,
-        extensions=["fenced_code", "tables", "toc", "sane_lists", "attr_list"],
+        extensions=["fenced_code", "tables", "sane_lists", "attr_list"],
         output_format="html5",
     )
     # Derive a title from the first H1, falling back to the filename.

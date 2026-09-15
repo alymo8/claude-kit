@@ -18,8 +18,8 @@ worth remembering.
   decisions as numbered `NNNN-slug.md` ADRs (Context / Decision / Consequences /
   Status / Date); supersede, never delete.
 - **[Spec-driven development](conventions/spec-driven-development.md)** — brainstorm
-  → spec → plan → build; specs and plans live dated under `docs/specs/` and
-  `docs/plans/`.
+  → spec → plan → build; specs and plans live dated under `docs/superpowers/specs/`
+  and `docs/superpowers/plans/`.
 - **[Engineering practices](conventions/engineering-practices.md)** — test-first
   development, language-agnostic coding standards, and a CI + AI + human code-review
   gate on every change to `main`.
@@ -51,7 +51,7 @@ Do not let significant choices pass silently.
   get my agreement before building. Then verify against exactly those criteria and
   report the evidence (see the `superpowers:verification-before-completion` skill).
 
-Whenever you write or update a spec / design document (Markdown, typically under
+Whenever you write or update a spec / design document (Markdown, under
 `docs/superpowers/specs/`), also produce a co-located, self-contained HTML rendering
 of it. Keep the original `.md` as the source of truth; the `.html` is a generated
 view for easy reading in a browser.
@@ -75,7 +75,7 @@ individual repos — keep the single shared copy so it never drifts.
 
 ## Plans must be self-contained
 
-When you write an implementation plan (typically under `docs/plans/`), assume
+When you write an implementation plan (under `docs/superpowers/plans/`), assume
 **whoever executes it has none of our conversation context** — it may be me in a
 fresh session, a subagent, or a different machine days later. The plan file is the
 only handoff.

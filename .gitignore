@@ -13,7 +13,13 @@
 !/.gitignore
 !/CLAUDE.md
 !/README.md
-!/LICENSE
 !/conventions/
 !/scripts/
 !/skills/
+
+# ...and never track secrets or local state, even inside the whitelisted dirs
+# (un-ignoring a directory above tracks everything beneath it).
+.env
+.env.*
+*.local
+__pycache__/

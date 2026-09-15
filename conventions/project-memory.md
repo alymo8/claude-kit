@@ -39,7 +39,7 @@ churn is expensive and brevity is a feature, not a nicety.
 - **Gotchas** — the footguns: things that look wrong but are intentional, steps that
   must run in a specific order, flaky areas, platform quirks.
 - **Pointers** — one-line links to `knowledge/`, `knowledge/decisions/`, and
-  `docs/specs/`.
+  `docs/superpowers/specs/`.
 
 ## What stays out
 

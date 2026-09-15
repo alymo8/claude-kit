@@ -32,9 +32,15 @@ and a short spec may be enough — but the *order* holds: decide before you buil
 ```
 <repo>/
   docs/
-    specs/     # design specs (the "what & why")
-    plans/     # implementation plans (the "how & in what order")
+    superpowers/
+      specs/   # design specs (the "what & why")
+      plans/   # implementation plans (the "how & in what order")
 ```
+
+The `docs/superpowers/` prefix is where the `superpowers:brainstorming` and
+`superpowers:writing-plans` skills write by default, and where the shared spec
+renderer looks; keeping the convention identical to the tooling means nothing has
+to be moved or configured.
 
 - **Specs and plans are dated:** `YYYY-MM-DD-<slug>.md`.
 - A spec carries a **Status** (`draft` | `approved`) and a **Date**, and should name
