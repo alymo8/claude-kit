@@ -58,11 +58,13 @@ Every change to `main` clears three gates before merge:
 Projects with quality-sensitive or performance-sensitive code add their own gate —
 e.g. an eval or benchmark gate — on top of these three.
 
-The scaffolder (`/new-project`, `/adopt-conventions`) ships `ci.yml`, `secret-scan.yml`, a PR template carrying the Definition of done, and a `claude-review.yml` that stays disabled until the repo has credentials.
-
 This raises merge friction deliberately, in exchange for a consistent quality floor
 and a second (AI) set of eyes on every change. It requires branch protection and CI
 wiring, set up when the code phase begins.
+
+The scaffolder (`/new-project`, `/adopt-conventions`) ships `ci.yml`,
+`secret-scan.yml`, a PR template carrying the Definition of done, and a
+`claude-review.yml` that stays disabled until the repo has credentials.
 
 ## Definition of done
 

@@ -1,5 +1,7 @@
 Stack: Python with uv. Create the manifest first with `uv init`, then
 `uv add --dev pytest ruff`, and keep pytest and ruff configured in `pyproject.toml`.
+CI's `uv run pytest` exits 5 when no tests are collected, so add the first test
+before expecting CI to go green.
 
 ```
 uv sync                                   # install dependencies into .venv

@@ -13,9 +13,10 @@ Scaffold a new project from the claude-kit templates. Arguments: `$ARGUMENTS`
    python "${CLAUDE_PLUGIN_ROOT}/scripts/scaffold.py" --name <name> --stack <stack>
 
    If `${CLAUDE_PLUGIN_ROOT}` is not expanded in this context, the script lives at
-   `~/.claude/skills/claude-kit/scripts/scaffold.py`. The project is created as a
-   sibling of the kit checkout, on `main`, with one commit. Pass `--parent <dir>`
-   only if the user asks for a different location.
+   `~/.claude/skills/claude-kit/scripts/scaffold.py`. The project is created
+   inside the workspace directory (the kit checkout's root), beside the other
+   project repos, on `main`, with one commit. Pass `--parent <dir>` only if the
+   user asks for a different location.
 3. Show the script's output verbatim. If it exits non-zero, show the error and stop.
 4. Close with the next steps the script printed: the stack's own init command
    (required before CI is green), `/init` to fill in `CLAUDE.md`, and creating the
