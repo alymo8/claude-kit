@@ -4,7 +4,7 @@
 Shared across all repos under Desktop/Github. Run it from inside a repo:
 
     python ../scripts/render-spec.py <file.md>     # render one file
-    python ../scripts/render-spec.py               # render all specs in ./docs/superpowers/specs
+    python ../scripts/render-spec.py  # render all specs in docs/superpowers/specs
 
 Each <name>.md produces a <name>.html next to it. The HTML is standalone
 (inline CSS, no external requests), mobile-first, and RTL-aware so Arabic
@@ -43,13 +43,25 @@ TEMPLATE = """<!doctype html>
   main {{ max-width: 820px; margin: 0 auto; padding: 2rem 1.15rem 5rem; }}
   h1, h2, h3 {{ line-height: 1.25; }}
   h1 {{ font-size: 1.9rem; margin: .2em 0 .6em; }}
-  h2 {{ font-size: 1.35rem; margin: 2em 0 .5em; padding-top: .6em; border-top: 1px solid var(--border); }}
+  h2 {{
+    font-size: 1.35rem; margin: 2em 0 .5em; padding-top: .6em;
+    border-top: 1px solid var(--border);
+  }}
   h3 {{ font-size: 1.1rem; margin: 1.4em 0 .4em; }}
   a {{ color: var(--accent); }}
-  code {{ background: var(--code-bg); padding: .12em .4em; border-radius: 4px; font-size: .9em; }}
-  pre {{ background: var(--code-bg); padding: 1rem; border-radius: 8px; overflow-x: auto; }}
+  code {{
+    background: var(--code-bg); padding: .12em .4em; border-radius: 4px;
+    font-size: .9em;
+  }}
+  pre {{
+    background: var(--code-bg); padding: 1rem; border-radius: 8px;
+    overflow-x: auto;
+  }}
   pre code {{ background: none; padding: 0; }}
-  blockquote {{ margin: 1em 0; padding: .2em 1em; border-inline-start: 3px solid var(--accent); color: var(--muted); }}
+  blockquote {{
+    margin: 1em 0; padding: .2em 1em;
+    border-inline-start: 3px solid var(--accent); color: var(--muted);
+  }}
   table {{ border-collapse: collapse; width: 100%; display: block; overflow-x: auto; }}
   th, td {{ border: 1px solid var(--border); padding: .5em .7em; text-align: start; }}
   th {{ background: var(--card); }}
