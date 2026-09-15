@@ -64,16 +64,19 @@ view for easy reading in a browser.
 - The HTML is a **local view only — never commit it.** Every repo gitignores
   `docs/superpowers/**/*.html`; only the `.md` is tracked.
 
-Use the shared renderer at `Desktop/Github/scripts/render-spec.py`. Run it from
-inside a repo (repos live one level under `Github/`, so `../scripts/` resolves):
+Use the shared renderer at `Desktop/Github/plugin/scripts/render-spec.py`. Run it
+from inside a repo (repos live one level under `Github/`, so `../plugin/` resolves):
 
 ```
-python ../scripts/render-spec.py <path-to-spec.md>   # one file
-python ../scripts/render-spec.py                      # all specs in ./docs/superpowers/specs
+python ../plugin/scripts/render-spec.py <path-to-spec.md>   # one file
+python ../plugin/scripts/render-spec.py                      # all specs in ./docs/superpowers/specs
 ```
 
 Requires `pip install markdown` (once per machine). Do not copy the script into
-individual repos — keep the single shared copy so it never drifts.
+individual repos — keep the single shared copy so it never drifts. When the
+claude-kit plugin is installed (see `README.md`), a hook re-renders automatically
+after every Write/Edit to a spec or plan; you only need the command for bulk
+re-renders.
 
 ## Plans must be self-contained
 
