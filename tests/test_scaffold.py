@@ -193,6 +193,11 @@ def test_scaffolded_files_use_lf_newlines(tmp_path):
     assert b"\r\n" not in (tmp_path / "demo" / "CLAUDE.md").read_bytes()
 
 
+def test_adopted_files_use_lf_newlines(repo):
+    run_script(SCRIPT, "--adopt", "--stack", "python", "--dest", str(repo))
+    assert b"\r\n" not in (repo / ".github" / "workflows" / "ci.yml").read_bytes()
+
+
 def test_git_binary_missing_removes_freshly_created_directory(tmp_path, monkeypatch):
     mod = load_module(SCRIPT, "scaffold_nogit")
 

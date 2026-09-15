@@ -71,11 +71,14 @@ def render_files(name: str, stack: str, today: str) -> dict[Path, str]:
     return files
 
 
+def write_file(path: Path, text: str) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(text, encoding="utf-8", newline="\n")
+
+
 def write_files(dest: Path, files: dict[Path, str]) -> None:
     for rel, text in files.items():
-        path = dest / rel
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(text, encoding="utf-8", newline="\n")
+        write_file(dest / rel, text)
 
 
 def git(*args: str, cwd: Path) -> subprocess.CompletedProcess[str]:
@@ -155,8 +158,7 @@ def scaffold_adopt(name: str, stack: str, dest: Path) -> tuple[list[Path], list[
         if path.exists() or keep_in_populated_dir:
             skipped.append(rel)
             continue
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(text, encoding="utf-8")
+        write_file(path, text)
         created.append(rel)
     # The template index is empty; regenerate it from whatever specs/plans exist.
     # But never overwrite an index the repo already had before this run.
