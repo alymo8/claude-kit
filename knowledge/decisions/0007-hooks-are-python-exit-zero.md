@@ -15,4 +15,4 @@ report on stderr, and always exit 0. They never open a browser and never delete.
 
 ## Consequences
 Predictable behaviour on every platform; a broken hook degrades to a no-op with
-a stderr line instead of stopping work. Python must be on Path as `python`.
+a stderr line instead of stopping work. Python must be on PATH as `python`.

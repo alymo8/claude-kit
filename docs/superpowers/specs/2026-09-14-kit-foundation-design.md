@@ -115,14 +115,15 @@ the junction and in the checkout.
 
 1. `git worktree list --porcelain`: every worktree except the main one.
 2. Local branches other than `main`/`master` that are either already merged into
-   the default branch (`git branch --merged <default>`) or have no upstream.
+   the default branch (`git branch --merged <default>`), have no upstream, or had
+   their upstream deleted (squash-merged, then `git fetch --prune`d).
 
 If either list is non-empty, print one short block, e.g.
 
 ```
 [claude-kit] Leftover from earlier feature work in this repo:
   worktrees: .claude/worktrees/ui-found (feat/ui-foundation)
-  branches:  feat/ui-foundation (merged), worktree-x (no upstream)
+  branches:  feat/ui-foundation (merged), worktree-x (no upstream), feat/sq (upstream gone)
 Clean up with superpowers:finishing-a-development-branch once the work is landed.
 ```
 

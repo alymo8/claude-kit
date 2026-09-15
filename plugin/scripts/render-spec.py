@@ -3,8 +3,8 @@
 
 Shared across all repos under Desktop/Github. Run it from inside a repo:
 
-    python ../scripts/render-spec.py <file.md>     # render one file
-    python ../scripts/render-spec.py  # render all specs in docs/superpowers/specs
+    python ../plugin/scripts/render-spec.py <file.md>  # render one file
+    python ../plugin/scripts/render-spec.py # render all specs in docs/superpowers/specs
 
 Each <name>.md produces a <name>.html next to it. The HTML is standalone
 (inline CSS, no external requests), mobile-first, and RTL-aware so Arabic

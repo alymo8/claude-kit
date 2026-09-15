@@ -26,7 +26,8 @@ setup that sits above my individual project repos — it defines *how* I work, n
   spec → HTML renderer, and two hooks (auto-render specs/plans after edits; report
   leftover worktrees at session start). Install once per machine with
   `plugin\install.ps1` — it junctions `~/.claude/skills/claude-kit` to this folder
-  so edits are live.
+  so edits are live. If PowerShell refuses to run the script (execution policy),
+  use `powershell -ExecutionPolicy Bypass -File plugin\install.ps1`.
 - **[`knowledge/decisions/`](knowledge/decisions/)** — this repo's own ADRs.
 - **[`docs/superpowers/`](docs/superpowers/)** — specs and plans for changes to
   the kit itself.
@@ -40,10 +41,11 @@ nothing project-specific (or any secrets) is ever committed here.
 ## Developing the kit
 
 ```
-pip install "markdown~=3.10" pytest ruff     # once
-pytest                                         # full suite
-pytest tests/test_render_spec.py::test_title_from_h1   # one test
-ruff check plugin tests && ruff format plugin tests    # lint + format
+pip install "markdown~=3.10" pytest "ruff~=0.16"       # once
+pytest                                                  # full suite
+pytest tests/test_render_spec.py::test_title_from_h1    # one test
+ruff check plugin tests                                 # lint
+ruff format plugin tests                                # format
 ```
 
 CI runs the same three commands on Ubuntu and Windows for every push and PR.
