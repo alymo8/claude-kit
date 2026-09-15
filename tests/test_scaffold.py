@@ -111,6 +111,11 @@ def test_unknown_stack_is_a_usage_error(tmp_path):
     assert result.returncode == 2
 
 
+def test_default_parent_is_the_workspace_root():
+    mod = load_module(SCRIPT, "scaffold_default_parent")
+    assert mod.build_parser().get_default("parent") == PLUGIN.parent
+
+
 def test_render_files_rejects_unresolved_placeholder(tmp_path, monkeypatch):
     mod = load_module(SCRIPT, "scaffold_bad")
     bad_root = tmp_path / "templates"

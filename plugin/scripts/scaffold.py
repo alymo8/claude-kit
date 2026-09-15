@@ -195,7 +195,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--parent",
         type=Path,
-        default=PLUGIN_ROOT.parent.parent,
+        default=PLUGIN_ROOT.parent,
         help="new mode: directory to create the project in",
     )
     parser.add_argument(
