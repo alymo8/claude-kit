@@ -1,6 +1,6 @@
 # Project scaffolder and spec lifecycle
 
-- **Status:** approved
+- **Status:** implemented
 - **Date:** 2026-09-15
 
 ## Purpose
