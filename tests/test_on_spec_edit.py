@@ -26,6 +26,9 @@ def test_unrelated_path_is_not_a_target():
     mod = load_module(HOOK, "on_spec_edit")
     assert mod.target_from_event(event("C:/repo/src/app.py")) is None
     assert mod.target_from_event(event("C:/repo/docs/superpowers/specs/x.html")) is None
+    assert (
+        mod.target_from_event(event("C:/repo/notdocs/superpowers/specs/x.md")) is None
+    )
 
 
 def test_malformed_event_is_not_a_target():

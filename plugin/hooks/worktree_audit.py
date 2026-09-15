@@ -3,8 +3,9 @@
 
 Advisory only. Prints one short block when the repo containing ``cwd`` has
 worktrees other than the main one (and the one we are in), or local branches that
-are already merged into the default branch or have no upstream. Prints nothing
-when clean or outside a git repo. Never deletes or prunes. Always exits 0.
+are already merged into the default branch, have no upstream, or had their upstream
+deleted (e.g. squash-merged then pruned). Prints nothing when clean or outside a
+git repo. Never deletes or prunes. Always exits 0.
 """
 
 from __future__ import annotations
@@ -23,7 +24,13 @@ def git(*args: str, cwd: Path) -> str | None:
     """Run git; return stdout on success, None on any failure."""
     try:
         result = subprocess.run(
-            ["git", *args], cwd=cwd, capture_output=True, text=True, timeout=30
+            ["git", *args],
+            cwd=cwd,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            timeout=30,
         )
     except (OSError, subprocess.SubprocessError):
         return None
@@ -67,17 +74,20 @@ def leftover_branches(cwd: Path, default: str) -> list[str]:
     merged = {line.strip() for line in (merged_out or "").splitlines()}
     refs = git(
         "for-each-ref",
-        "--format=%(refname:short) %(upstream:short)",
+        "--format=%(refname:short) %(upstream:short) %(upstream:track)",
         "refs/heads/",
         cwd=cwd,
     )
     found: list[str] = []
     for line in (refs or "").splitlines():
-        name, _, upstream = line.partition(" ")
+        name, _, rest = line.partition(" ")
+        upstream, _, track = rest.partition(" ")
         if name in (default, "main", "master", current):
             continue
         if name in merged:
             found.append(f"{name} (merged)")
+        elif track.strip() == "[gone]":
+            found.append(f"{name} (upstream gone)")
         elif not upstream:
             found.append(f"{name} (no upstream)")
     return found

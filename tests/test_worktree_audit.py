@@ -9,7 +9,13 @@ HOOK = PLUGIN / "hooks" / "worktree_audit.py"
 
 def git(*args: str, cwd: Path) -> str:
     return subprocess.run(
-        ["git", *args], cwd=cwd, capture_output=True, text=True, check=True
+        ["git", *args],
+        cwd=cwd,
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+        check=True,
     ).stdout
 
 
@@ -80,6 +86,30 @@ def test_unmerged_branch_with_upstream_is_not_listed(repo):
     git("checkout", "-q", "main", cwd=repo)
     git("branch", "--set-upstream-to=main", "tracked", cwd=repo)
     assert report(repo) == ""
+
+
+def test_non_ascii_names_survive(repo, tmp_path):
+    wt = tmp_path / "wt-عربي"
+    git("worktree", "add", "-q", "-b", "feat/ünï", str(wt), cwd=repo)
+    text = report(repo)
+    assert "wt-عربي" in text
+    assert "feat/ünï" in text
+
+
+def test_branch_with_gone_upstream_is_listed(repo, tmp_path):
+    remote = tmp_path / "remote.git"
+    git("init", "-q", "--bare", str(remote), cwd=tmp_path)
+    git("remote", "add", "origin", str(remote), cwd=repo)
+    git("push", "-q", "-u", "origin", "main", cwd=repo)
+    git("checkout", "-q", "-b", "feat/sq", cwd=repo)
+    (repo / "sq.txt").write_text("sq\n", encoding="utf-8")
+    git("add", "sq.txt", cwd=repo)
+    git("commit", "-q", "-m", "sq", cwd=repo)
+    git("push", "-q", "-u", "origin", "feat/sq", cwd=repo)
+    git("checkout", "-q", "main", cwd=repo)
+    git("push", "-q", "origin", "--delete", "feat/sq", cwd=repo)
+    git("fetch", "-q", "--prune", cwd=repo)
+    assert "feat/sq (upstream gone)" in report(repo)
 
 
 def test_script_exit_code_is_zero_everywhere(repo, tmp_path):

@@ -16,7 +16,7 @@ import sys
 from pathlib import Path
 
 RENDERER = Path(__file__).resolve().parent.parent / "scripts" / "render-spec.py"
-TARGET_RE = re.compile(r"docs/superpowers/(specs|plans)/[^/]+\.md$")
+TARGET_RE = re.compile(r"(^|/)docs/superpowers/(specs|plans)/[^/]+\.md$")
 
 
 def target_from_event(raw: str) -> Path | None:
@@ -45,7 +45,7 @@ def main() -> int:
             [sys.executable, str(RENDERER), str(target)],
             capture_output=True,
             text=True,
-            timeout=60,
+            timeout=30,
         )
         if result.returncode != 0:
             print(
