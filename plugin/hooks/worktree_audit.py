@@ -31,7 +31,7 @@ def git(*args: str, cwd: Path) -> str | None:
 
 
 def _norm(path: str) -> str:
-    return path.replace("\\", "/").rstrip("/").lower()
+    return path.strip().replace("\\", "/").rstrip("/").lower()
 
 
 def default_branch(cwd: Path) -> str | None:

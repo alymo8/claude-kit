@@ -47,6 +47,17 @@ def test_leftover_worktree_is_listed(repo, tmp_path):
     assert "wt-feature" in text
 
 
+def test_current_worktree_is_never_listed(repo, tmp_path):
+    here = tmp_path / "wt-here"
+    other = tmp_path / "wt-other"
+    git("worktree", "add", "-q", "-b", "feat/here", str(here), cwd=repo)
+    git("worktree", "add", "-q", "-b", "feat/other", str(other), cwd=repo)
+    text = report(here)
+    assert "wt-here" not in text
+    assert "wt-other" in text
+    assert "feat/here" not in text
+
+
 def test_merged_branch_is_listed_as_merged(repo):
     git("branch", "done-branch", cwd=repo)  # points at main => merged
     text = report(repo)
