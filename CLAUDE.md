@@ -61,6 +61,8 @@ view for easy reading in a browser.
 - The HTML must be standalone (inline CSS, no external requests), mobile-first,
   and RTL-aware (spec content may contain Arabic).
 - Regenerate the HTML every time the `.md` changes, so the two never drift.
+- The HTML is a **local view only — never commit it.** Every repo gitignores
+  `docs/superpowers/**/*.html`; only the `.md` is tracked.
 
 Use the shared renderer at `Desktop/Github/scripts/render-spec.py`. Run it from
 inside a repo (repos live one level under `Github/`, so `../scripts/` resolves):

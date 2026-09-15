@@ -82,8 +82,9 @@ the repo and this file?*
 When a spec or design doc is written or updated, also produce a co-located,
 self-contained HTML rendering next to the `.md` (same basename), regenerated
 whenever the `.md` changes so the two never drift. Keep the `.md` as the source of
-truth. (See the workspace `CLAUDE.md` for the shared renderer and the
-open-it-for-me convention.)
+truth. The HTML is a local reading view, not a deliverable: it is gitignored
+(`docs/superpowers/**/*.html`) and only the `.md` is tracked. (See the workspace
+`CLAUDE.md` for the shared renderer and the open-it-for-me convention.)
 
 ## Definition of done
 

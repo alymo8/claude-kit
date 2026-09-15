@@ -20,7 +20,9 @@ easily-reversed choices do not need one.
   status.
 - **The location is fixed at `knowledge/decisions/`** — not `docs/decisions/` or
   `docs/adr/`. Decisions are part of what the project *knows*, so they live in the
-  knowledge layer next to the docs they were made against.
+  knowledge layer next to the docs they were made against. Repos that adopted
+  ADRs before this was fixed (`docs/decisions/` in e-commerce-market-agent and
+  refrigerated-transport) stay where they are as a grandfathered exception.
 
 ## Template
 
