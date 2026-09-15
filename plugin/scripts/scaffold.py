@@ -5,7 +5,9 @@
     scaffold.py --adopt --stack {node,python} [--dest DIR] [--name NAME]
 
 New mode renders plugin/templates/ into PARENT/NAME (PARENT defaults to the
-directory the kit checkout lives in), then runs `git init -b main` and one commit.
+workspace directory that contains the kit checkout's `plugin/` folder, i.e. the
+kit checkout's own root — new projects land beside the other repos there), then
+runs `git init -b main` and one commit.
 It refuses a non-empty destination. Adopt mode writes only the files that do not
 already exist in DEST (default: the current directory, which must be a git work
 tree) and never commits. Neither mode creates a GitHub repository or a stack
@@ -31,7 +33,11 @@ STACKS = ("node", "python")
 PLACEHOLDER_RE = re.compile(r"\{\{[a-z_]+\}\}")
 CI_PATH = Path(".github/workflows/ci.yml")
 NEXT_STEPS = {
-    "node": "next: `pnpm init` (or a framework starter), then commit package.json",
+    "node": (
+        "next: `pnpm init` (or a framework starter), ensure package.json has a "
+        "packageManager field, run `pnpm install`, then commit package.json and "
+        "pnpm-lock.yaml"
+    ),
     "python": (
         "next: `uv init` and `uv add --dev pytest ruff`, then commit pyproject.toml"
     ),
@@ -69,7 +75,7 @@ def write_files(dest: Path, files: dict[Path, str]) -> None:
     for rel, text in files.items():
         path = dest / rel
         path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(text, encoding="utf-8")
+        path.write_text(text, encoding="utf-8", newline="\n")
 
 
 def git(*args: str, cwd: Path) -> subprocess.CompletedProcess[str]:
@@ -80,7 +86,9 @@ def git(*args: str, cwd: Path) -> subprocess.CompletedProcess[str]:
 
 def commit_all(dest: Path, message: str) -> None:
     identity: list[str] = []
-    if git("config", "--get", "user.name", cwd=dest).returncode != 0:
+    name_set = git("config", "--get", "user.name", cwd=dest).returncode == 0
+    email_set = git("config", "--get", "user.email", cwd=dest).returncode == 0
+    if not (name_set and email_set):
         identity = [
             "-c",
             "user.name=claude-kit",
@@ -102,13 +110,18 @@ def scaffold_new(name: str, stack: str, parent: Path) -> Path:
     if dest.exists() and (not dest.is_dir() or any(dest.iterdir())):
         raise SystemExit(f"error: {dest} already exists and is not an empty directory")
     created_dir = not dest.exists()
-    files = render_files(name, stack, dt.date.today().isoformat())
+    try:
+        files = render_files(name, stack, dt.date.today().isoformat())
+    except ValueError as exc:
+        raise SystemExit(f"error: {exc}") from exc
     write_files(dest, files)
     try:
         commit_all(dest, "Scaffold project from claude-kit")
-    except SystemExit:
+    except (SystemExit, OSError) as exc:
         if created_dir:
             shutil.rmtree(dest, ignore_errors=True)
+        if isinstance(exc, OSError):
+            raise SystemExit(f"error: {exc}") from exc
         raise
     print(f"created: {len(files)} files at {dest}")
     for rel in files:
@@ -146,13 +159,21 @@ def scaffold_adopt(name: str, stack: str, dest: Path) -> tuple[list[Path], list[
         path.write_text(text, encoding="utf-8")
         created.append(rel)
     # The template index is empty; regenerate it from whatever specs/plans exist.
-    subprocess.run(
-        [sys.executable, str(INDEXER), str(dest / "docs" / "superpowers")],
-        capture_output=True,
-        text=True,
-        encoding="utf-8",
-        timeout=30,
-    )
+    # But never overwrite an index the repo already had before this run.
+    index = Path("docs/superpowers/README.md")
+    if index in created:
+        subprocess.run(
+            [sys.executable, str(INDEXER), str(dest / "docs" / "superpowers")],
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            timeout=30,
+        )
+    else:
+        print(
+            "index: docs/superpowers/README.md left as-is "
+            "(the render hook regenerates it on the next spec edit)"
+        )
     print("created:")
     for rel in created:
         print(f"  {rel.as_posix()}")

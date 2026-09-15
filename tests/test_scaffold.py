@@ -172,3 +172,34 @@ def test_adopt_defaults_to_cwd(repo):
     result = run_script(SCRIPT, "--adopt", "--stack", "python", cwd=repo)
     assert result.returncode == 0, result.stderr
     assert (repo / ".github/workflows/secret-scan.yml").exists()
+
+
+def test_adopt_keeps_a_hand_written_index(repo):
+    index = repo / "docs" / "superpowers" / "README.md"
+    index.write_text("# My own index\n", encoding="utf-8")
+    git("add", "-A", cwd=repo)
+    git("commit", "-q", "-m", "index", cwd=repo)
+    result = run_script(SCRIPT, "--adopt", "--stack", "python", "--dest", str(repo))
+    assert result.returncode == 0, result.stderr
+    assert index.read_text("utf-8") == "# My own index\n"
+    assert (
+        git("status", "--porcelain", "--", "docs/superpowers/README.md", cwd=repo) == ""
+    )
+    assert "left as-is" in result.stdout
+
+
+def test_scaffolded_files_use_lf_newlines(tmp_path):
+    run_script(SCRIPT, "--name", "demo", "--stack", "node", "--parent", str(tmp_path))
+    assert b"\r\n" not in (tmp_path / "demo" / "CLAUDE.md").read_bytes()
+
+
+def test_git_binary_missing_removes_freshly_created_directory(tmp_path, monkeypatch):
+    mod = load_module(SCRIPT, "scaffold_nogit")
+
+    def missing_git(*args, cwd):
+        raise FileNotFoundError("git")
+
+    monkeypatch.setattr(mod, "git", missing_git)
+    with pytest.raises(SystemExit):
+        mod.scaffold_new("demo", "python", tmp_path)
+    assert not (tmp_path / "demo").exists()

@@ -85,3 +85,21 @@ def test_cli_defaults_to_cwd_docs_superpowers_and_exits_zero(tmp_path):
     assert result.returncode == 0, result.stderr
     assert (docs / "README.md").exists()
     assert run_script(SCRIPT, str(tmp_path / "nowhere")).returncode == 0
+
+
+def test_title_survives_utf8_bom(tmp_path):
+    docs = tmp_path / "docs" / "superpowers"
+    (docs / "specs").mkdir(parents=True)
+    (docs / "specs" / "2026-05-05-bom-design.md").write_bytes(
+        b"\xef\xbb\xbf# Bom title\n\n- **Status:** approved\n"
+    )
+    assert "[Bom title](specs/2026-05-05-bom-design.md) | approved |" in mod().render(
+        docs
+    )
+
+
+def test_index_is_written_with_lf_newlines(tmp_path):
+    docs = tmp_path / "docs" / "superpowers"
+    make(docs, "specs", "2026-01-01-a.md", "# A\n")
+    out = mod().write_index(docs)
+    assert b"\r\n" not in out.read_bytes()
