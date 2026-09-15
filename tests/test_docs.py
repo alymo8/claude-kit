@@ -1,15 +1,11 @@
 import re
 import subprocess
 
-from helpers import REPO
+from helpers import REPO, broken_links
 
-LINK_RE = re.compile(r"\]\(([^)\s]+)\)")
 SCRIPT_REF_RE = re.compile(r"python \.\./(\S+\.py)")
-
-
-FENCE_RE = re.compile(r"^```.*?^```[ \t]*$", re.M | re.S)
-# Plans embed snippets of other files (with their own relative links); skip them.
-SKIP_DIRS = ("docs/superpowers/plans/",)
+# Plans embed snippets of other files; template links resolve only once rendered.
+SKIP_DIRS = ("docs/superpowers/plans/", "plugin/templates/")
 
 
 def tracked_markdown():
@@ -27,21 +23,8 @@ def tracked_markdown():
     ]
 
 
-def prose(md):
-    """Markdown text with fenced code blocks removed."""
-    return FENCE_RE.sub("", md.read_text(encoding="utf-8"))
-
-
 def test_relative_markdown_links_resolve():
-    broken = []
-    for md in tracked_markdown():
-        for match in LINK_RE.finditer(prose(md)):
-            href = match.group(1).split("#", 1)[0]
-            if not href or "://" in href or href.startswith("mailto:"):
-                continue
-            if not (md.parent / href).exists():
-                broken.append(f"{md.relative_to(REPO)} -> {href}")
-    assert not broken, "\n".join(broken)
+    assert not broken_links(tracked_markdown())
 
 
 def test_claude_md_script_paths_exist():

@@ -1,0 +1,14 @@
+Stack: Node.js with pnpm. Create the manifest first with `pnpm init` (or a
+framework starter such as `pnpm create vite`), then make sure `package.json`
+defines the `dev`, `build`, `lint`, `typecheck` and `test` scripts that CI and the
+commands below rely on.
+
+```
+pnpm install                  # install dependencies
+pnpm dev                      # run locally
+pnpm build                    # production build
+pnpm test                     # full test suite
+pnpm test -- <file-or-name>   # one test file or test name
+pnpm lint                     # lint
+pnpm typecheck                # type-check
+```

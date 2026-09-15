@@ -1,0 +1,11 @@
+Stack: Python with uv. Create the manifest first with `uv init`, then
+`uv add --dev pytest ruff`, and keep pytest and ruff configured in `pyproject.toml`.
+
+```
+uv sync                                   # install dependencies into .venv
+uv run python -m <package>                # run locally
+uv run pytest                             # full test suite
+uv run pytest tests/test_x.py::test_name  # one test
+uv run ruff check .                       # lint
+uv run ruff format .                      # format
+```
