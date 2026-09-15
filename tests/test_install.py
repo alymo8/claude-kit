@@ -52,3 +52,27 @@ def test_conflicting_directory_fails(tmp_path):
     result = run_install(skills)
     assert result.returncode == 1
     assert "already exists" in result.stdout + result.stderr
+
+
+def test_dangling_junction_fails_cleanly(tmp_path):
+    skills = tmp_path / "skills"
+    skills.mkdir()
+    victim = tmp_path / "victim"
+    victim.mkdir()
+    link = skills / "claude-kit"
+    subprocess.run(
+        [
+            "powershell",
+            "-NoProfile",
+            "-Command",
+            f"New-Item -ItemType Junction -Path '{link}' -Target '{victim}' | Out-Null",
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+        timeout=60,
+    )
+    victim.rmdir()  # the junction now dangles
+    result = run_install(skills)
+    assert result.returncode == 1
+    assert "already exists" in result.stdout + result.stderr

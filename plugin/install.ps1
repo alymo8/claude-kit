@@ -31,13 +31,10 @@ if (Test-Path $link) {
   $item = Get-Item $link -Force
   $existingTarget = $null
   if ($item.LinkType) { $existingTarget = @($item.Target)[0] }
-  if ($existingTarget) {
-    $resolvedExisting = Normalize-Path (Resolve-Path $existingTarget).Path
-    $resolvedTarget = Normalize-Path $target
-    if ($resolvedExisting -ieq $resolvedTarget) {
-      Write-Host "claude-kit already installed: $link -> $target"
-      exit 0
-    }
+  if ($existingTarget -and (Test-Path -LiteralPath $existingTarget) -and
+      ((Normalize-Path $existingTarget) -ieq (Normalize-Path $target))) {
+    Write-Host "claude-kit already installed: $link -> $target"
+    exit 0
   }
   Write-Host "ERROR: $link already exists and is not a junction to $target. Remove it first."
   exit 1
