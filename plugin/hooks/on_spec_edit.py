@@ -3,8 +3,9 @@
 
 Reads the hook event JSON from stdin. If ``tool_input.file_path`` points at
 ``docs/superpowers/specs/*.md`` or ``docs/superpowers/plans/*.md``, runs the shared
-renderer on that one file. Never opens a browser. Always exits 0: a hook must never
-block work, so any failure is reported on stderr and otherwise swallowed.
+renderer on that one file, then regenerates `docs/superpowers/README.md` (the
+spec/plan index). Never opens a browser. Always exits 0: a hook must never block
+work, so any failure is reported on stderr and otherwise swallowed.
 """
 
 from __future__ import annotations
@@ -16,6 +17,7 @@ import sys
 from pathlib import Path
 
 RENDERER = Path(__file__).resolve().parent.parent / "scripts" / "render-spec.py"
+INDEXER = Path(__file__).resolve().parent.parent / "scripts" / "spec-index.py"
 TARGET_RE = re.compile(r"(^|/)docs/superpowers/(specs|plans)/[^/]+\.md$")
 
 
@@ -51,6 +53,16 @@ def main() -> int:
             print(
                 f"[claude-kit] render failed: {result.stderr.strip()}", file=sys.stderr
             )
+            return 0
+        docs_dir = target.resolve().parent.parent
+        index = subprocess.run(
+            [sys.executable, str(INDEXER), str(docs_dir)],
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
+        if index.stderr.strip():
+            print(index.stderr.strip(), file=sys.stderr)
     except Exception as exc:  # a hook must never raise
         print(f"[claude-kit] on_spec_edit error: {exc}", file=sys.stderr)
     return 0

@@ -2,6 +2,9 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
+- **Status:** implemented
+- **Date:** 2026-09-14
+
 **Goal:** Turn this workspace-preferences repo into a real Claude Code plugin (`plugin/`) with two enforcing hooks, a pytest suite with CI, a backfilled decision log, and a trimmed `CLAUDE.md`.
 
 **Architecture:** Everything Claude Code loads moves under `plugin/` (a *skills-dir plugin*: a folder under `~/.claude/skills/` containing `.claude-plugin/plugin.json`, made live by a junction). Two Python hook scripts in `plugin/hooks/` read the hook event from stdin and always exit 0. Tests live in `tests/` and exercise the scripts by importing them from their file path or running them as subprocesses. Decisions are recorded as ADRs under `knowledge/decisions/`.

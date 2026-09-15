@@ -60,3 +60,14 @@ def test_hook_survives_garbage_stdin(tmp_path):
     result = run_script(HOOK, stdin="{{{", cwd=tmp_path)
     assert result.returncode == 0
     assert list(tmp_path.iterdir()) == []
+
+
+def test_hook_regenerates_index_after_render(tmp_path):
+    spec_dir = tmp_path / "docs" / "superpowers" / "specs"
+    spec_dir.mkdir(parents=True)
+    md = spec_dir / "2026-01-01-thing-design.md"
+    md.write_text("# Thing\n\n- **Status:** draft\n", encoding="utf-8")
+    result = run_script(HOOK, stdin=event(str(md)), cwd=tmp_path)
+    assert result.returncode == 0, result.stderr
+    index = (tmp_path / "docs" / "superpowers" / "README.md").read_text("utf-8")
+    assert "[Thing](specs/2026-01-01-thing-design.md) | draft |" in index

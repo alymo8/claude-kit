@@ -43,8 +43,14 @@ renderer looks; keeping the convention identical to the tooling means nothing ha
 to be moved or configured.
 
 - **Specs and plans are dated:** `YYYY-MM-DD-<slug>.md`.
-- A spec carries a **Status** (`draft` | `approved`) and a **Date**, and should name
-  its scope and success criteria explicitly.
+- A spec (and a plan) carries a **Status** and a **Date**, and a spec names its
+  scope and success criteria explicitly. Status is one of:
+  `draft` → `approved` → `implemented`, or `superseded`. When the work a plan
+  describes merges, set the spec and plan to `implemented` in the same PR. When a
+  later spec replaces one, mark the old spec `superseded` and link its successor.
+- `docs/superpowers/README.md` is a **generated index** of specs and plans (date,
+  title, status). The kit's render hook regenerates it on every spec/plan write; do
+  not edit it by hand.
 - Significant decisions that emerge during spec or plan work are promoted to
   **ADRs** — the spec explains and the ADR locks in.
 
