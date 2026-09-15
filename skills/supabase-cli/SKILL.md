@@ -10,7 +10,7 @@ local development stack, and the migration-based schema workflow (local → remo
 
 ## Install / update (Windows, this machine)
 
-Installed via **Scoop** at `C:\Users\alymo\scoop\shims\supabase.exe` (on PATH).
+Installed via **Scoop** at `%USERPROFILE%\scoop\shims\supabase.exe` (on PATH).
 
 ```bash
 supabase --version            # verify
