@@ -1,0 +1,33 @@
+# AI code review on pull requests. DISABLED until credentials are configured.
+#
+# To enable:
+#   1. Choose one auth method:
+#      a) Run /install-github-app in Claude Code for this repo. It installs the
+#         Claude GitHub App and stores CLAUDE_CODE_OAUTH_TOKEN as a repo secret.
+#      b) Or add an ANTHROPIC_API_KEY repo secret and swap the `with:` lines below.
+#   2. Replace `workflow_dispatch:` under `on:` with:
+#        pull_request:
+#          types: [opened, synchronize, reopened]
+name: claude-review
+on:
+  workflow_dispatch:
+
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+      issues: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+      - uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          # anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          prompt: >
+            Review this pull request for correctness bugs, missing tests, and
+            quality problems. Post specific, actionable findings as PR comments.

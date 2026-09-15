@@ -1,0 +1,4 @@
+# Replaced by plugin/templates/stacks/<stack>/ci.yml at scaffold time.
+name: ci
+on: [push, pull_request]
+jobs: {}

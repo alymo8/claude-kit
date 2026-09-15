@@ -1,5 +1,5 @@
 {
   "name": "claude-kit",
   "version": "0.1.0",
-  "description": "Workspace conventions as a plugin: spec renderer hook, worktree audit, supabase-cli skill."
+  "description": "Workspace conventions as a plugin: /new-project and /adopt-conventions scaffolding, spec renderer + index hook, worktree audit, supabase-cli skill."
 }

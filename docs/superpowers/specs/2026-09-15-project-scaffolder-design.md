@@ -120,13 +120,13 @@ scaffold.py --adopt --stack {node,python} [--dest DIR] [--name NAME]
 Common: locate templates relative to the script (`../templates/`), build the
 placeholder map, render every file in memory, validate no `{{` remains.
 
-**New mode.** `dest = parent / NAME`; `--parent` defaults to the kit checkout's
-parent directory, derived as `Path(__file__).resolve().parents[2]` (the script
-lives at `<kit>/plugin/scripts/`, so that is the workspace directory the kit sits
-in; the junction resolves to the real checkout). Refuse with exit 1 if `dest`
-exists and is non-empty. Write all files; run `git init -q -b main`, `git add -A`,
-`git commit -q -m "Scaffold project from claude-kit"`. Print `created: <n> files at
-<dest>` followed by the list and a next-step hint (`pnpm create …` / `uv init`).
+**New mode.** `dest = parent / NAME`; `--parent` defaults to the workspace
+directory that contains the kit checkout's `plugin/` folder, i.e. the kit
+checkout's own root — new projects land beside the other repos there. Refuse with
+exit 1 if `dest` exists and is non-empty. Write all files; run `git init -q -b
+main`, `git add -A`, `git commit -q -m "Scaffold project from claude-kit"`. Print
+`created: <n> files at <dest>` followed by the list and a next-step hint (`pnpm
+create …` / `uv init`).
 
 **Adopt mode.** `dest` defaults to cwd and must be inside a git work tree (else
 exit 1). `NAME` defaults to the directory name. For each rendered file: if it

@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 import importlib.util
+import re
 import subprocess
 import sys
+from collections.abc import Iterable
 from pathlib import Path
 from types import ModuleType
 
@@ -34,3 +36,21 @@ def run_script(
         cwd=cwd,
         timeout=60,
     )
+
+
+LINK_RE = re.compile(r"\]\(([^)\s]+)\)")
+FENCE_RE = re.compile(r"^```.*?^```[ \t]*$", re.M | re.S)
+
+
+def broken_links(md_files: Iterable[Path]) -> list[str]:
+    """Relative markdown links (outside code fences) that do not resolve."""
+    broken = []
+    for md in md_files:
+        prose = FENCE_RE.sub("", md.read_text(encoding="utf-8"))
+        for match in LINK_RE.finditer(prose):
+            href = match.group(1).split("#", 1)[0]
+            if not href or "://" in href or href.startswith("mailto:"):
+                continue
+            if not (md.parent / href).exists():
+                broken.append(f"{md} -> {href}")
+    return broken

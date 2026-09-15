@@ -27,7 +27,10 @@ setup that sits above my individual project repos — it defines *how* I work, n
   leftover worktrees at session start). Install once per machine with
   `plugin\install.ps1` — it junctions `~/.claude/skills/claude-kit` to this folder
   so edits are live. If PowerShell refuses to run the script (execution policy),
-  use `powershell -ExecutionPolicy Bypass -File plugin\install.ps1`.
+  use `powershell -ExecutionPolicy Bypass -File plugin\install.ps1`. It also
+  provides two commands: `/new-project <name> <node|python>` scaffolds a new repo
+  with every convention in place, and `/adopt-conventions <node|python>` adds the
+  missing pieces to an existing one.
 - **[`knowledge/decisions/`](knowledge/decisions/)** — this repo's own ADRs.
 - **[`docs/superpowers/`](docs/superpowers/)** — specs and plans for changes to
   the kit itself.

@@ -50,7 +50,7 @@ pinned per project once its stack is known — and that choice is itself worth a
 
 Every change to `main` clears three gates before merge:
 
-1. **CI gates (blocking):** lint, type-check, and the full test suite pass.
+1. **CI gates (blocking):** lint, type-check, the full test suite, and a secret scan (gitleaks) pass.
 2. **AI review:** an automated review runs on the PR (e.g. Claude Code
    `/code-review`), surfacing correctness and quality findings.
 3. **Human approval:** at least one human approves.
@@ -61,6 +61,10 @@ e.g. an eval or benchmark gate — on top of these three.
 This raises merge friction deliberately, in exchange for a consistent quality floor
 and a second (AI) set of eyes on every change. It requires branch protection and CI
 wiring, set up when the code phase begins.
+
+The scaffolder (`/new-project`, `/adopt-conventions`) ships `ci.yml`,
+`secret-scan.yml`, a PR template carrying the Definition of done, and a
+`claude-review.yml` that stays disabled until the repo has credentials.
 
 ## Definition of done
 

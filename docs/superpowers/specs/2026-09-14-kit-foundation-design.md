@@ -1,6 +1,6 @@
 # Kit foundation: plugin packaging, hooks, tests, decision log
 
-- **Status:** approved
+- **Status:** implemented
 - **Date:** 2026-09-14
 
 ## Purpose

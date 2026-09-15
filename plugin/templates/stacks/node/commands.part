@@ -1,0 +1,19 @@
+Stack: Node.js with pnpm. Create the manifest first with `pnpm init` (or a
+framework starter such as `pnpm create vite`), then make sure `package.json`
+defines the `dev`, `build`, `lint`, `typecheck` and `test` scripts that CI and the
+commands below rely on. The manifest must also carry a `packageManager` field:
+`pnpm init` on pnpm 9+ adds it automatically, otherwise add
+`"packageManager": "pnpm@9"` by hand. `pnpm/action-setup@v4` in CI reads that field
+to install the matching pnpm, and `pnpm install --frozen-lockfile` needs a
+committed lockfile — so run `pnpm install` and commit `package.json` and
+`pnpm-lock.yaml` before expecting CI to pass.
+
+```
+pnpm install                  # install dependencies
+pnpm dev                      # run locally
+pnpm build                    # production build
+pnpm test                     # full test suite
+pnpm test -- <file-or-name>   # one test file or test name
+pnpm lint                     # lint
+pnpm typecheck                # type-check
+```
