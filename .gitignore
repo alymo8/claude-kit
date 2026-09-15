@@ -16,6 +16,7 @@
 !/conventions/
 !/scripts/
 !/skills/
+!/docs/
 
 # ...and never track secrets or local state, even inside the whitelisted dirs
 # (un-ignoring a directory above tracks everything beneath it).
@@ -23,3 +24,6 @@
 .env.*
 *.local
 __pycache__/
+
+# Rendered spec/plan views are local only (see CLAUDE.md)
+docs/superpowers/**/*.html
