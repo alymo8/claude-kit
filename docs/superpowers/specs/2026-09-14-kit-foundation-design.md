@@ -39,7 +39,7 @@ ADRs.
 
 - The `/new-project` scaffolder, workflow templates for project repos (CI, AI
   review, secret scan), and spec lifecycle statuses / index: *Spec 2*.
-- Any change to project repos (cairo-clinics etc.) beyond what the hooks do at
+- Any change to project repos beyond what the hooks do at
   runtime.
 - Marketplace distribution (`marketplace.json`). The layout keeps it possible.
 
@@ -224,9 +224,9 @@ which is updated here, and receive the hooks automatically once the junction exi
    CI on both Ubuntu and Windows.
 2. After `plugin/install.ps1`, a fresh Claude Code session lists
    `claude-kit:supabase-cli` among available skills.
-3. Editing a spec `.md` under `docs/superpowers/specs/` in cairo-clinics via
+3. Editing a spec `.md` under `docs/superpowers/specs/` in a project repo via
    Write/Edit produces an updated `.html` with no action from Claude.
-4. Starting a session in refrigerated-transport prints its leftover
+4. Starting a session in a project repo with stale worktrees prints its leftover
    worktrees/branches; starting one in this repo prints nothing.
 5. `tests/test_docs.py` passes: every relative link resolves and every path cited
    in `CLAUDE.md` exists.
