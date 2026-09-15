@@ -1,0 +1,20 @@
+[project]
+name = "claude-kit"
+version = "0.1.0"
+description = "Workspace conventions, a Claude Code plugin, and shared tooling"
+requires-python = ">=3.11"
+dependencies = ["markdown~=3.10"]
+
+[dependency-groups]
+dev = ["pytest>=8", "ruff>=0.6"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+
+[tool.ruff]
+line-length = 88
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]

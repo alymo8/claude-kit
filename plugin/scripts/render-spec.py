@@ -12,6 +12,7 @@ content in the specs renders correctly.
 
 Requires: pip install markdown
 """
+
 import sys
 from pathlib import Path
 
