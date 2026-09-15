@@ -19,6 +19,7 @@ from __future__ import annotations
 import argparse
 import datetime as dt
 import re
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -98,11 +99,17 @@ def commit_all(dest: Path, message: str) -> None:
 
 def scaffold_new(name: str, stack: str, parent: Path) -> Path:
     dest = parent / name
-    if dest.exists() and any(dest.iterdir()):
-        raise SystemExit(f"error: {dest} already exists and is not empty")
+    if dest.exists() and (not dest.is_dir() or any(dest.iterdir())):
+        raise SystemExit(f"error: {dest} already exists and is not an empty directory")
+    created_dir = not dest.exists()
     files = render_files(name, stack, dt.date.today().isoformat())
     write_files(dest, files)
-    commit_all(dest, "Scaffold project from claude-kit")
+    try:
+        commit_all(dest, "Scaffold project from claude-kit")
+    except SystemExit:
+        if created_dir:
+            shutil.rmtree(dest, ignore_errors=True)
+        raise
     print(f"created: {len(files)} files at {dest}")
     for rel in files:
         print(f"  {rel.as_posix()}")
@@ -113,6 +120,49 @@ def scaffold_new(name: str, stack: str, parent: Path) -> Path:
         "(e.g. `gh repo create --private`)."
     )
     return dest
+
+
+def inside_git_work_tree(path: Path) -> bool:
+    return git("rev-parse", "--is-inside-work-tree", cwd=path).returncode == 0
+
+
+def scaffold_adopt(name: str, stack: str, dest: Path) -> tuple[list[Path], list[Path]]:
+    if not dest.is_dir() or not inside_git_work_tree(dest):
+        raise SystemExit(f"error: {dest} is not inside a git work tree")
+    files = render_files(name, stack, dt.date.today().isoformat())
+    created: list[Path] = []
+    skipped: list[Path] = []
+    for rel, text in files.items():
+        path = dest / rel
+        keep_in_populated_dir = (
+            rel.name == ".gitkeep"
+            and path.parent.is_dir()
+            and any(path.parent.iterdir())
+        )
+        if path.exists() or keep_in_populated_dir:
+            skipped.append(rel)
+            continue
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(text, encoding="utf-8")
+        created.append(rel)
+    # The template index is empty; regenerate it from whatever specs/plans exist.
+    subprocess.run(
+        [sys.executable, str(INDEXER), str(dest / "docs" / "superpowers")],
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        timeout=30,
+    )
+    print("created:")
+    for rel in created:
+        print(f"  {rel.as_posix()}")
+    print("skipped (already present):")
+    for rel in skipped:
+        print(f"  {rel.as_posix()}")
+    if Path(".gitignore") in skipped:
+        print("check .gitignore contains: docs/superpowers/**/*.html and .env*")
+    print("review with `git status`, then commit.")
+    return created, skipped
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -140,11 +190,14 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def main(argv: list[str]) -> int:
-    args = build_parser().parse_args(argv)
+    parser = build_parser()
+    args = parser.parse_args(argv)
     if args.adopt:
-        raise SystemExit("error: adopt mode is not implemented yet")
+        dest = args.dest.resolve()
+        scaffold_adopt(args.name or dest.name, args.stack, dest)
+        return 0
     if not args.name:
-        build_parser().error("--name is required in new mode")
+        parser.error("--name is required in new mode")
     scaffold_new(args.name, args.stack, args.parent)
     return 0
 
