@@ -1,6 +1,6 @@
 # Workspace preferences
 
-My personal working conventions, skills, and shared tooling for building software
+An attempt to open source my agentic coding set up, skills, and shared tooling for building software
 with [Claude Code](https://claude.com/claude-code). This repo is the workspace-level
 setup that sits above my individual project repos — it defines *how* I work, not
 *what* any one project does.
