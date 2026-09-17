@@ -54,3 +54,7 @@ ruff format plugin tests                                # format
 CI runs the same three commands on Ubuntu and Windows for every push and PR.
 Feature-sized changes go through a branch and PR; one-line doc fixes may land on
 `main` directly (ADR 0006).
+
+## License
+
+[MIT](LICENSE).

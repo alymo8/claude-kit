@@ -13,6 +13,7 @@
 !/.gitignore
 !/CLAUDE.md
 !/README.md
+!/LICENSE
 !/pyproject.toml
 !/conventions/
 !/plugin/
