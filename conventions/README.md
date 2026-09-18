@@ -31,9 +31,10 @@ into working software, and engineering practices are the **quality bar** every
 change clears on the way to `main`. The project memory file is the **front door** —
 the short, static, checked-in `CLAUDE.md` that tells anyone arriving cold how to
 build, test, and navigate the repo, and points at the other three. A healthy project
-keeps all five current: new findings update the knowledge base, new choices land as
-ADRs, new work starts from a spec, every merge passes the practices gate, and the
-memory file changes in the same PR as whatever made it stale. Session hygiene is
+keeps all six current: new findings update the knowledge base, new choices land as
+ADRs, new work starts from a spec, every merge passes the practices gate, the
+memory file changes in the same PR as whatever made it stale, and every session
+ends with a handoff. Session hygiene is
 the **cadence**: it keeps each working session short and cheap while the other
 five keep the work correct, and it decides what a session leaves behind (a
 handoff) versus what goes into the knowledge base, the decision log, or the

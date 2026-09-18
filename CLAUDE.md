@@ -4,7 +4,7 @@ These apply to all projects under this directory.
 
 ## How we work: knowledge, decisions, specs, engineering, project memory
 
-New projects follow five working conventions, documented in full under
+New projects follow six working conventions, documented in full under
 [`conventions/`](conventions/) (self-contained — read the relevant file before
 applying it). **Scale them to the project:** these are the full-strength defaults;
 apply a lighter version for small or throwaway work, but reach for the full shape
@@ -34,7 +34,7 @@ worth remembering.
   work: a gitignored per-branch handoff file (`/handoff`, injected on the next
   start), a context meter with a nudge at 300k tokens, and lean exploration.
 
-See [`conventions/README.md`](conventions/README.md) for how the five fit together.
+See [`conventions/README.md`](conventions/README.md) for how the six fit together.
 
 ## Verify key decisions with me, and agree on criteria upfront
 
