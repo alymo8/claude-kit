@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-- **Status:** approved
+- **Status:** implemented
 - **Date:** 2026-09-18
 
 **Goal:** Make ending and restarting a Claude Code session nearly free (a per-branch
