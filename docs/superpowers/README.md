@@ -6,6 +6,7 @@
 
 | Date | Spec | Status |
 |---|---|---|
+| 2026-09-18 | [Session hygiene: handoff, context meter, lean exploration](specs/2026-09-18-session-hygiene-design.md) | draft |
 | 2026-09-15 | [Project scaffolder and spec lifecycle](specs/2026-09-15-project-scaffolder-design.md) | implemented |
 | 2026-09-14 | [Kit foundation: plugin packaging, hooks, tests, decision log](specs/2026-09-14-kit-foundation-design.md) | implemented |
 
