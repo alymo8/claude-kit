@@ -22,15 +22,22 @@ setup that sits above my individual project repos — it defines *how* I work, n
     coding standards, and a CI + AI + human review gate.
   - [Project memory file](conventions/project-memory.md) — a checked-in `CLAUDE.md`
     per repo: build/test commands, architecture, conventions, gotchas.
-- **[`plugin/`](plugin/)** — a Claude Code plugin: the `supabase-cli` skill, the
-  spec → HTML renderer, and two hooks (auto-render specs/plans after edits; report
-  leftover worktrees at session start). Install once per machine with
-  `plugin\install.ps1` — it junctions `~/.claude/skills/claude-kit` to this folder
-  so edits are live. If PowerShell refuses to run the script (execution policy),
-  use `powershell -ExecutionPolicy Bypass -File plugin\install.ps1`. It also
-  provides two commands: `/new-project <name> <node|python>` scaffolds a new repo
-  with every convention in place, and `/adopt-conventions <node|python>` adds the
-  missing pieces to an existing one.
+  - [Session hygiene](conventions/session-hygiene.md) — short sessions, a
+    per-branch handoff file, a context meter, lean exploration.
+- **[`plugin/`](plugin/)** — a Claude Code plugin: the `supabase-cli` and
+  `lean-context` skills, the spec → HTML renderer, the `token-report.py`
+  measurement script, a status line, and five hooks (auto-render specs/plans
+  after edits; report leftover worktrees, inject the branch handoff and nudge
+  past a context threshold at the right moments; snapshot git state at session
+  end). Install once per machine with `plugin\install.ps1` — it junctions
+  `~/.claude/skills/claude-kit` to this folder so edits are live. If PowerShell
+  refuses to run the script (execution policy), use
+  `powershell -ExecutionPolicy Bypass -File plugin\install.ps1`. It also adds
+  the kit's status line to `~/.claude/settings.json` when none is configured.
+  It also provides two commands: `/new-project <name> <node|python>` scaffolds
+  a new repo with every convention in place, and `/adopt-conventions
+  <node|python>` adds the missing pieces to an existing one. `/handoff` writes
+  the per-branch handoff file before you `/clear`.
 - **[`knowledge/decisions/`](knowledge/decisions/)** — this repo's own ADRs.
 - **[`docs/superpowers/`](docs/superpowers/)** — specs and plans for changes to
   the kit itself.

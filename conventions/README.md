@@ -20,6 +20,7 @@ not the path of least resistance.
 | [Spec-driven development](spec-driven-development.md) | The path from an idea to shipped code: brainstorm → spec → plan → build. |
 | [Engineering practices](engineering-practices.md) | Test-first development, coding standards, and the code-review gate. |
 | [Project memory file](project-memory.md) | The checked-in `CLAUDE.md` at a repo's root: build/test commands, architecture, conventions, gotchas. |
+| [Session hygiene](session-hygiene.md) | How sessions start, how long they run, and how they end: handoff files, the context meter, lean exploration. |
 
 ## How they fit together
 
@@ -32,4 +33,8 @@ the short, static, checked-in `CLAUDE.md` that tells anyone arriving cold how to
 build, test, and navigate the repo, and points at the other three. A healthy project
 keeps all five current: new findings update the knowledge base, new choices land as
 ADRs, new work starts from a spec, every merge passes the practices gate, and the
-memory file changes in the same PR as whatever made it stale.
+memory file changes in the same PR as whatever made it stale. Session hygiene is
+the **cadence**: it keeps each working session short and cheap while the other
+five keep the work correct, and it decides what a session leaves behind (a
+handoff) versus what goes into the knowledge base, the decision log, or the
+plan.
