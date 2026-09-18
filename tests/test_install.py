@@ -88,3 +88,15 @@ def test_install_adds_statusline_to_given_settings(tmp_path):
     assert "statusLine added" in result.stdout
     text = (tmp_path / "settings.json").read_text(encoding="utf-8")
     assert "statusline.py" in text
+
+
+def test_install_survives_malformed_settings(tmp_path):
+    skills = tmp_path / "skills"
+    skills.parent.mkdir(parents=True, exist_ok=True)
+    settings = skills.parent / "settings.json"
+    settings.write_text("{oops", encoding="utf-8")
+    result = run_install(skills)
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert "Installed" in result.stdout
+    assert settings.read_text(encoding="utf-8") == "{oops"
+    assert "WARNING: status line not configured" in result.stdout

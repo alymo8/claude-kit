@@ -27,11 +27,20 @@ function Normalize-Path([string]$path) {
 
 function Install-StatusLine {
   $script = Join-Path $PSScriptRoot "scripts\install-statusline.py"
+  $previous = $ErrorActionPreference
+  $ErrorActionPreference = "Continue"
   try {
-    $out = & python $script --settings $Settings --skills-dir $SkillsDir 2>&1
-    Write-Host ($out -join "`n")
+    $out = & python $script --settings $Settings --skills-dir $SkillsDir
+    if ($LASTEXITCODE -ne 0) {
+      Write-Host ("WARNING: status line not configured (install-statusline.py " +
+        "exited $LASTEXITCODE); see the message above.")
+    } elseif ($out) {
+      Write-Host ($out -join "`n")
+    }
   } catch {
-    Write-Host "WARNING: could not configure the status line (is python on PATH?): $_"
+    Write-Host "WARNING: could not run install-statusline.py (is python on PATH?): $_"
+  } finally {
+    $ErrorActionPreference = $previous
   }
 }
 
