@@ -14,5 +14,6 @@
 
 | Date | Plan | Status |
 |---|---|---|
+| 2026-09-18 | [Session Hygiene Implementation Plan](plans/2026-09-18-session-hygiene.md) | approved |
 | 2026-09-15 | [Project Scaffolder and Spec Lifecycle Implementation Plan](plans/2026-09-15-project-scaffolder.md) | implemented |
 | 2026-09-14 | [Kit Foundation Implementation Plan](plans/2026-09-14-kit-foundation.md) | implemented |
