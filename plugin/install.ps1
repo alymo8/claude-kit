@@ -6,13 +6,15 @@
   Creates a junction  <SkillsDir>\claude-kit  ->  this plugin folder, so Claude Code
   loads the kit's skills, hooks and commands directly from the git checkout.
   Idempotent: re-running when already installed is a no-op. Refuses to overwrite
-  anything else at that path.
+  anything else at that path. Also adds the kit's status line to user settings
+  when none is configured.
 
 .PARAMETER SkillsDir
   Where Claude Code looks for skills-dir plugins. Default: ~\.claude\skills
 #>
 param(
-  [string]$SkillsDir = (Join-Path $HOME ".claude\skills")
+  [string]$SkillsDir = (Join-Path $HOME ".claude\skills"),
+  [string]$Settings = (Join-Path $HOME ".claude\settings.json")
 )
 
 $ErrorActionPreference = "Stop"
@@ -21,6 +23,16 @@ $link = Join-Path $SkillsDir "claude-kit"
 
 function Normalize-Path([string]$path) {
   return [System.IO.Path]::GetFullPath($path).TrimEnd('\')
+}
+
+function Install-StatusLine {
+  $script = Join-Path $PSScriptRoot "scripts\install-statusline.py"
+  try {
+    $out = & python $script --settings $Settings --skills-dir $SkillsDir 2>&1
+    Write-Host ($out -join "`n")
+  } catch {
+    Write-Host "WARNING: could not configure the status line (is python on PATH?): $_"
+  }
 }
 
 if (-not (Test-Path $SkillsDir)) {
@@ -34,6 +46,7 @@ if (Test-Path $link) {
   if ($existingTarget -and (Test-Path -LiteralPath $existingTarget) -and
       ((Normalize-Path $existingTarget) -ieq (Normalize-Path $target))) {
     Write-Host "claude-kit already installed: $link -> $target"
+    Install-StatusLine
     exit 0
   }
   Write-Host "ERROR: $link already exists and is not a junction to $target. Remove it first."
@@ -42,5 +55,6 @@ if (Test-Path $link) {
 
 New-Item -ItemType Junction -Path $link -Target $target | Out-Null
 Write-Host "Installed: $link -> $target"
+Install-StatusLine
 Write-Host "Start a new Claude Code session (or run /reload-plugins) to load the kit."
 exit 0
