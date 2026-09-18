@@ -21,7 +21,7 @@ def transcript_with(path: Path, tokens: int, padding_bytes: int = 0) -> Path:
         lines += [filler] * (padding_bytes // (len(filler) + 1))
     lines.append(json.dumps({"type": "assistant", "message": {"usage": usage}}))
     lines.append(json.dumps({"type": "user", "message": {"content": "next"}}))
-    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    path.write_text("\n".join(lines) + "\n", encoding="utf-8", newline="\n")
     return path
 
 
