@@ -1,6 +1,6 @@
-# Session hygiene: handoff, context meter, lean exploration
+﻿# Session hygiene: handoff, context meter, lean exploration
 
-- **Status:** draft
+- **Status:** approved
 - **Date:** 2026-09-18
 
 ## Purpose
