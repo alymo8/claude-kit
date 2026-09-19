@@ -2,9 +2,9 @@
 
 These apply to all projects under this directory.
 
-## How we work: knowledge, decisions, specs, engineering, project memory
+## How we work: knowledge, decisions, specs, engineering, project memory, session hygiene
 
-New projects follow five working conventions, documented in full under
+New projects follow six working conventions, documented in full under
 [`conventions/`](conventions/) (self-contained — read the relevant file before
 applying it). **Scale them to the project:** these are the full-strength defaults;
 apply a lighter version for small or throwaway work, but reach for the full shape
@@ -30,8 +30,11 @@ worth remembering.
   instead of being rediscovered every session. Keep it to about a screen, update it
   in the same PR that makes it stale, and link to `knowledge/` rather than
   duplicating it.
+- **[Session hygiene](conventions/session-hygiene.md)** — sessions are units of
+  work: a gitignored per-branch handoff file (`/handoff`, injected on the next
+  start), a context meter with a nudge at 300k tokens, and lean exploration.
 
-See [`conventions/README.md`](conventions/README.md) for how the five fit together.
+See [`conventions/README.md`](conventions/README.md) for how the six fit together.
 
 ## Verify key decisions with me, and agree on criteria upfront
 
@@ -109,6 +112,13 @@ with only the repo and this file?* If not, the plan isn't finished.
 We are working on **Windows**. Use Windows-appropriate commands and paths
 (PowerShell is the primary shell; the Bash tool is available for POSIX scripts).
 
+## Token discipline
+
+The cost of a session is context size times turn count. Before exploring or
+running anything with long output, use the `claude-kit:lean-context` skill. When
+the context nudge appears, finish the current step, run `/handoff`, then `/clear`.
+Details: [conventions/session-hygiene.md](conventions/session-hygiene.md).
+
 ## Open files and folders for me
 
 - Whenever you create a spec / knowledge / design **HTML** doc, open it for me
@@ -142,4 +152,5 @@ to integrate and clean up: the worktree removed and pruned, the branch deleted
 locally and on the remote, and any scratch files created outside the repo deleted.
 The kit's session-start hook reports leftover worktrees and branches; treat that as
 a to-do, but **never delete anything with unmerged commits or uncommitted changes
-without asking me first.**
+without asking me first.** The normal end of a working session on a feature is
+`/handoff` then `/clear`; the next session on the branch starts from the handoff.

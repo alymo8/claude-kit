@@ -32,3 +32,4 @@ the workspace `CLAUDE.md` one level up.
 - Knowledge base: [`knowledge/`](knowledge/README.md)
 - Decisions: [`knowledge/decisions/`](knowledge/decisions/README.md)
 - Specs and plans: [`docs/superpowers/`](docs/superpowers/README.md)
+- Session hygiene: use `claude-kit:lean-context` when exploring; `/handoff` before `/clear`.

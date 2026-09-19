@@ -1,6 +1,6 @@
 ﻿# Session hygiene: handoff, context meter, lean exploration
 
-- **Status:** approved
+- **Status:** implemented
 - **Date:** 2026-09-18
 
 ## Purpose

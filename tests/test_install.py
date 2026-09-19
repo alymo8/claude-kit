@@ -11,6 +11,7 @@ pytestmark = pytest.mark.skipif(
 
 
 def run_install(skills_dir):
+    settings = skills_dir.parent / "settings.json"
     return subprocess.run(
         [
             "powershell",
@@ -21,6 +22,8 @@ def run_install(skills_dir):
             str(INSTALL),
             "-SkillsDir",
             str(skills_dir),
+            "-Settings",
+            str(settings),
         ],
         capture_output=True,
         text=True,
@@ -76,3 +79,24 @@ def test_dangling_junction_fails_cleanly(tmp_path):
     result = run_install(skills)
     assert result.returncode == 1
     assert "already exists" in result.stdout + result.stderr
+
+
+def test_install_adds_statusline_to_given_settings(tmp_path):
+    skills = tmp_path / "skills"
+    result = run_install(skills)
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert "statusLine added" in result.stdout
+    text = (tmp_path / "settings.json").read_text(encoding="utf-8")
+    assert "statusline.py" in text
+
+
+def test_install_survives_malformed_settings(tmp_path):
+    skills = tmp_path / "skills"
+    skills.parent.mkdir(parents=True, exist_ok=True)
+    settings = skills.parent / "settings.json"
+    settings.write_text("{oops", encoding="utf-8")
+    result = run_install(skills)
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert "Installed" in result.stdout
+    assert settings.read_text(encoding="utf-8") == "{oops"
+    assert "WARNING: status line not configured" in result.stdout

@@ -9,5 +9,8 @@ docs/superpowers/**/*.html
 # Claude Code worktrees
 .claude/worktrees/
 
+# Session handoff files (claude-kit): per branch, never committed
+.claude/handoffs/
+
 # Stack
 {{stack_gitignore}}

@@ -183,7 +183,10 @@ def scaffold_adopt(name: str, stack: str, dest: Path) -> tuple[list[Path], list[
     for rel in skipped:
         print(f"  {rel.as_posix()}")
     if Path(".gitignore") in skipped:
-        print("check .gitignore contains: docs/superpowers/**/*.html and .env*")
+        print(
+            "check .gitignore contains: docs/superpowers/**/*.html, .env* "
+            "and .claude/handoffs/"
+        )
     print("review with `git status`, then commit.")
     return created, skipped
 

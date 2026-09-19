@@ -213,3 +213,26 @@ def test_git_binary_missing_removes_freshly_created_directory(tmp_path, monkeypa
     with pytest.raises(SystemExit):
         mod.scaffold_new("demo", "python", tmp_path)
     assert not (tmp_path / "demo").exists()
+
+
+def test_new_project_ignores_handoffs_and_points_at_session_hygiene(tmp_path):
+    result = run_script(
+        SCRIPT,
+        "--name",
+        "demo",
+        "--stack",
+        "node",
+        "--parent",
+        str(tmp_path),
+    )
+    assert result.returncode == 0, result.stderr
+    gitignore = (tmp_path / "demo" / ".gitignore").read_text("utf-8")
+    assert ".claude/handoffs/" in gitignore
+    claude_md = (tmp_path / "demo" / "CLAUDE.md").read_text("utf-8")
+    assert "lean-context" in claude_md and "/handoff" in claude_md
+
+
+def test_adopt_reminder_mentions_handoffs(repo):
+    result = run_script(SCRIPT, "--adopt", "--stack", "node", "--dest", str(repo))
+    assert result.returncode == 0, result.stderr
+    assert ".claude/handoffs/" in result.stdout

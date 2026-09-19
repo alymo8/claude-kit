@@ -13,3 +13,5 @@ the next number; superseded ones are never deleted.
 | [0005](0005-kit-is-a-skills-dir-plugin.md) | Kit is a skills-dir Claude Code plugin in `plugin/`, installed by junction | accepted | 2026-09-14 |
 | [0006](0006-kit-main-gate.md) | Kit `main` gate: CI on every push; PRs for feature work | accepted | 2026-09-14 |
 | [0007](0007-hooks-are-python-exit-zero.md) | Hook handlers are Python scripts that always exit 0 | accepted | 2026-09-14 |
+| [0008](0008-handoff-is-gitignored-per-branch.md) | Session handoff files are gitignored, per branch, per work tree | accepted | 2026-09-18 |
+| [0009](0009-no-service-backed-memory.md) | No service-backed memory in the kit | accepted | 2026-09-18 |
