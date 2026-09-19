@@ -1,6 +1,7 @@
 ---
 description: Scaffold a new project with the kit's conventions (knowledge layer, decision log, specs, CI, CLAUDE.md), git-initialised with one commit
 argument-hint: [name] [node|python]
+disable-model-invocation: true
 ---
 
 Scaffold a new project from the claude-kit templates. Arguments: `$ARGUMENTS`

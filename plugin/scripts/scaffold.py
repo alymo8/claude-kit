@@ -174,7 +174,7 @@ def scaffold_adopt(name: str, stack: str, dest: Path) -> tuple[list[Path], list[
     else:
         print(
             "index: docs/superpowers/README.md left as-is "
-            "(the render hook regenerates it on the next spec edit)"
+            "(the spec-index hook regenerates it on the next spec edit)"
         )
     print("created:")
     for rel in created:

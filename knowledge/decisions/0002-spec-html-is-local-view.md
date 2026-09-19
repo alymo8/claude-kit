@@ -1,6 +1,6 @@
 # ADR 0002: Spec/plan HTML is a local view, never committed
 
-- **Status:** accepted
+- **Status:** superseded by [ADR 0010](0010-spec-html-on-demand-only.md) (auto-render part; the HTML is still never committed)
 - **Date:** 2026-09-14
 
 ## Context

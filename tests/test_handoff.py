@@ -56,7 +56,7 @@ def test_detached_head_gets_sha_name(repo, mod):
 
 
 def test_state_lists_dirty_files_and_commits(repo, mod, monkeypatch):
-    monkeypatch.setattr(mod, "pr_url", lambda cwd: None)
+    monkeypatch.setattr(mod, "pr_url", lambda cwd, upstream: None)
     (repo / "b.txt").write_text("b\n", encoding="utf-8")
     state = mod.state_section(repo)
     assert state.startswith("## State\n<!-- generated; do not edit -->\n")
@@ -69,7 +69,7 @@ def test_state_lists_dirty_files_and_commits(repo, mod, monkeypatch):
 
 
 def test_state_reports_ahead_behind_when_upstream_exists(repo, mod, monkeypatch):
-    monkeypatch.setattr(mod, "pr_url", lambda cwd: None)
+    monkeypatch.setattr(mod, "pr_url", lambda cwd, upstream: None)
     git("branch", "base", cwd=repo)
     git("checkout", "-q", "-b", "feat", cwd=repo)
     git("branch", "--set-upstream-to=base", cwd=repo)
@@ -102,7 +102,7 @@ def test_replace_state_when_state_is_last_section(mod):
 
 
 def test_snapshot_creates_file_with_state_and_prompts(repo, mod, monkeypatch):
-    monkeypatch.setattr(mod, "pr_url", lambda cwd: None)
+    monkeypatch.setattr(mod, "pr_url", lambda cwd, upstream: None)
     path = mod.snapshot(repo, ["first prompt", "second prompt"])
     text = path.read_text(encoding="utf-8")
     assert path.resolve() == (repo / ".claude" / "handoffs" / "main.md").resolve()
@@ -114,7 +114,7 @@ def test_snapshot_creates_file_with_state_and_prompts(repo, mod, monkeypatch):
 
 
 def test_snapshot_refreshes_only_state_and_written(repo, mod, monkeypatch):
-    monkeypatch.setattr(mod, "pr_url", lambda cwd: None)
+    monkeypatch.setattr(mod, "pr_url", lambda cwd, upstream: None)
     path = mod.handoff_path(repo)
     path.parent.mkdir(parents=True)
     path.write_text(
@@ -152,7 +152,7 @@ def test_cli_snapshot_reads_prompts_file(repo, tmp_path):
 
 
 def test_snapshot_makes_handoffs_dir_self_ignoring(repo, mod, monkeypatch):
-    monkeypatch.setattr(mod, "pr_url", lambda cwd: None)
+    monkeypatch.setattr(mod, "pr_url", lambda cwd, upstream: None)
     mod.snapshot(repo, [])
     ignore = repo / ".claude" / "handoffs" / ".gitignore"
     assert ignore.read_text(encoding="utf-8") == "*\n"
@@ -170,3 +170,14 @@ def test_cli_outside_git_exits_1_and_writes_nothing(tmp_path):
         assert out.returncode == 1, sub
         assert "git" in out.stderr
     assert not (plain / ".claude").exists()
+
+
+def test_pr_url_skips_gh_when_branch_has_no_upstream(mod, monkeypatch, tmp_path):
+    # A branch without an upstream cannot have a PR; do not pay ~0.8 s for gh.
+    monkeypatch.setattr(mod.shutil, "which", lambda name: "gh")
+
+    def boom(*args, **kwargs):
+        raise AssertionError("gh must not be invoked")
+
+    monkeypatch.setattr(mod.subprocess, "run", boom)
+    assert mod.pr_url(tmp_path, None) is None
