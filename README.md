@@ -39,8 +39,9 @@ setup that sits above my individual project repos — it defines *how* I work, n
   adds the missing pieces to an existing one. `/handoff` writes the
   per-branch handoff file before you `/clear`. `/ship <spec.md>` takes an
   approved spec all the way to a squash-merged, cleaned-up change on `main`
-  without further check-ins (it stops only on red CI after three fixes, a review
-  finding that needs a decision, or a blocked merge).
+  without further check-ins; it stops only on the rules listed in the command
+  (red CI after three fixes, a review finding that needs a decision, a refused
+  merge, a failed pre-flight).
 - **[`knowledge/decisions/`](knowledge/decisions/)** — this repo's own ADRs.
 - **[`docs/superpowers/`](docs/superpowers/)** — specs and plans for changes to
   the kit itself.
