@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
-"""PostToolUse hook: re-render a spec or plan's HTML after its Markdown is written.
+"""PostToolUse hook: refresh the spec/plan index after a spec or plan is written.
 
 Reads the hook event JSON from stdin. If ``tool_input.file_path`` points at
-``docs/superpowers/specs/*.md`` or ``docs/superpowers/plans/*.md``, runs the shared
-renderer on that one file, then regenerates `docs/superpowers/README.md` (the
-spec/plan index). Never opens a browser. Always exits 0: a hook must never block
-work, so any failure is reported on stderr and otherwise swallowed.
+``docs/superpowers/specs/*.md`` or ``docs/superpowers/plans/*.md``, regenerates
+`docs/superpowers/README.md` (the spec/plan index). It does NOT render HTML: the
+HTML view is produced on demand only, by ``/spec-html`` (``scripts/open-spec.py``).
+Always exits 0: a hook must never block work, so any failure is reported on stderr
+and otherwise swallowed.
 """
 
 from __future__ import annotations
@@ -16,7 +17,6 @@ import subprocess
 import sys
 from pathlib import Path
 
-RENDERER = Path(__file__).resolve().parent.parent / "scripts" / "render-spec.py"
 INDEXER = Path(__file__).resolve().parent.parent / "scripts" / "spec-index.py"
 TARGET_RE = re.compile(r"(^|/)docs/superpowers/(specs|plans)/[^/]+\.md$")
 
@@ -42,17 +42,6 @@ def main() -> int:
     try:
         target = target_from_event(sys.stdin.read())
         if target is None or not target.exists():
-            return 0
-        result = subprocess.run(
-            [sys.executable, str(RENDERER), str(target)],
-            capture_output=True,
-            text=True,
-            timeout=30,
-        )
-        if result.returncode != 0:
-            print(
-                f"[claude-kit] render failed: {result.stderr.strip()}", file=sys.stderr
-            )
             return 0
         docs_dir = target.resolve().parent.parent
         index = subprocess.run(

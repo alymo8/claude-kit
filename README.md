@@ -8,7 +8,7 @@ setup that sits above my individual project repos — it defines *how* I work, n
 ## What's here
 
 - **[`CLAUDE.md`](CLAUDE.md)** — the workspace instructions Claude Code reads: how we
-  work, decision verification, spec/HTML rendering, environment, and file-opening
+  work, decision verification, on-demand spec HTML views, environment, and file-opening
   conventions.
 - **[`conventions/`](conventions/)** — six self-contained playbooks that generalize
   my way of working to any new project:
@@ -25,7 +25,7 @@ setup that sits above my individual project repos — it defines *how* I work, n
   - [Session hygiene](conventions/session-hygiene.md) — short sessions, a
     per-branch handoff file, a context meter, lean exploration.
 - **[`plugin/`](plugin/)** — a Claude Code plugin: the `supabase-cli` and
-  `lean-context` skills, the spec → HTML renderer, the `token-report.py`
+  `lean-context` skills, the on-demand spec → HTML renderer, the `token-report.py`
   measurement script, a status line, and five hooks (auto-render specs/plans
   after edits; report leftover worktrees, inject the branch handoff and nudge
   past a context threshold at the right moments; snapshot git state at session
@@ -41,7 +41,8 @@ setup that sits above my individual project repos — it defines *how* I work, n
   approved spec all the way to a squash-merged, cleaned-up change on `main`
   without further check-ins; it stops only on the rules listed in the command
   (red CI after three fixes, a review finding that needs a decision, a refused
-  merge, a failed pre-flight).
+  merge, a failed pre-flight). `/spec-html [path]` renders a
+  spec or plan (the latest one when no path is given) and opens its HTML view.
 - **[`knowledge/decisions/`](knowledge/decisions/)** — this repo's own ADRs.
 - **[`docs/superpowers/`](docs/superpowers/)** — specs and plans for changes to
   the kit itself.

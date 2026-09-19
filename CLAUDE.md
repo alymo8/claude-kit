@@ -54,21 +54,24 @@ Do not let significant choices pass silently.
   get my agreement before building. Then verify against exactly those criteria and
   report the evidence (see the `superpowers:verification-before-completion` skill).
 
-Whenever you write or update a spec / design document (Markdown, under
-`docs/superpowers/specs/`), also produce a co-located, self-contained HTML rendering
-of it. Keep the original `.md` as the source of truth; the `.html` is a generated
-view for easy reading in a browser.
+Specs and plans are Markdown (`docs/superpowers/specs/`, `docs/superpowers/plans/`)
+and the `.md` is the only source of truth. **Do not produce an HTML view by
+default** — not by hand, not by running the renderer. When you write or update a
+spec or plan, just tell me the `.md` path. An HTML reading view exists only on
+demand: when I ask, or via `/spec-html` (`/spec-html` alone renders and opens the
+most recently modified spec/plan; `/spec-html <path>` renders and opens that one).
 
-- The HTML must live next to the `.md` with the same basename
-  (e.g. `foo-design.md` → `foo-design.html`).
-- The HTML must be standalone (inline CSS, no external requests), mobile-first,
-  and RTL-aware (spec content may contain Arabic).
-- Regenerate the HTML every time the `.md` changes, so the two never drift.
-- The HTML is a **local view only — never commit it.** Every repo gitignores
-  `docs/superpowers/**/*.html`; only the `.md` is tracked.
+When an HTML view is produced it must:
 
-Use the shared renderer at `Desktop/Github/plugin/scripts/render-spec.py`. Run it
-from inside a repo (repos live one level under `Github/`, so `../plugin/` resolves):
+- live next to the `.md` with the same basename (`foo-design.md` → `foo-design.html`);
+- be standalone (inline CSS, no external requests), mobile-first, and RTL-aware
+  (spec content may contain Arabic);
+- **never be committed.** Every repo gitignores `docs/superpowers/**/*.html`; only
+  the `.md` is tracked.
+
+The single shared renderer is `Desktop/Github/plugin/scripts/render-spec.py`
+(`/spec-html` uses it). For a bulk render, run it from inside a repo (repos live one
+level under `Github/`, so `../plugin/` resolves):
 
 ```
 python ../plugin/scripts/render-spec.py <path-to-spec.md>   # one file
@@ -76,10 +79,7 @@ python ../plugin/scripts/render-spec.py                      # all specs in ./do
 ```
 
 Requires `pip install markdown` (once per machine). Do not copy the script into
-individual repos — keep the single shared copy so it never drifts. When the
-claude-kit plugin is installed (see `README.md`), a hook re-renders automatically
-after every Write/Edit to a spec or plan; you only need the command for bulk
-re-renders.
+individual repos — keep the single shared copy so it never drifts.
 
 ## Plans must be self-contained
 
@@ -121,9 +121,9 @@ Details: [conventions/session-hygiene.md](conventions/session-hygiene.md).
 
 ## Open files and folders for me
 
-- Whenever you create a spec / knowledge / design **HTML** doc, open it for me
-  after generating it (e.g. `Invoke-Item <path-to.html>` in PowerShell, or
-  `start <path-to.html>`).
+- **Do not render or open spec / plan HTML unless I ask.** After writing or
+  updating a spec or plan, tell me the `.md` path only. I open the HTML view
+  with `/spec-html` when I want it (see the spec section above).
 - Whenever you want me to update a file or look at a specific folder structure,
   open the file / folder for me (`Invoke-Item <path>` for a file, `explorer <path>`
   for a folder) rather than only telling me the path.
