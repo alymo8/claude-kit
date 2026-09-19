@@ -154,3 +154,9 @@ The kit's session-start hook reports leftover worktrees and branches; treat that
 a to-do, but **never delete anything with unmerged commits or uncommitted changes
 without asking me first.** The normal end of a working session on a feature is
 `/handoff` then `/clear`; the next session on the branch starts from the handoff.
+
+**Once I approve a spec, `/ship <spec.md>` is my instruction to continue
+autonomously** through plan → implement → CI → review → PR → green CI →
+squash-merge → verify `main` → cleanup, with no further check-ins. Invoking it is
+my explicit approval for the merge; it stops only on the rules listed in the
+command.

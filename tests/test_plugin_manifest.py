@@ -37,12 +37,14 @@ def test_commands_exist_with_frontmatter():
         "new-project": "scripts/scaffold.py",
         "adopt-conventions": "scripts/scaffold.py",
         "handoff": "scripts/handoff.py",
+        "ship": None,
     }
     for name, script in expected.items():
         text = (PLUGIN / "commands" / f"{name}.md").read_text(encoding="utf-8")
         assert text.startswith("---\n"), name
         assert "description:" in text.split("---", 2)[1], name
-        assert script in text, name
+        if script:
+            assert script in text, name
 
 
 def test_hooks_json_registers_session_hygiene_hooks():
@@ -75,5 +77,6 @@ def test_lean_context_skill_exists_and_is_short():
 def test_plugin_version_bumped():
     plugin_json = PLUGIN / ".claude-plugin" / "plugin.json"
     data = json.loads(plugin_json.read_text(encoding="utf-8"))
-    assert data["version"] == "0.2.0"
+    assert data["version"] == "0.3.0"
     assert "handoff" in data["description"]
+    assert "/ship" in data["description"]
