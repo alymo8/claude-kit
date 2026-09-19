@@ -74,9 +74,12 @@ These are the only reasons to stop. When one fires: write the handoff with the
 11. **Cleanup.** From the main checkout, inline (do not show the
     `superpowers:finishing-a-development-branch` menu): `git worktree remove
     <worktree-path>`, `git worktree prune`, `git branch -D feat/<slug>`,
-    `git fetch --prune`, delete `.claude/handoffs/feat-<slug>.md` if present, and
-    delete any scratch files you created outside the repo. Check: `git worktree
-    list` shows only the main checkout and `git branch -a` has no `feat/<slug>`.
+    `git push origin --delete feat/<slug>` (the merge's `--delete-branch` aborts
+    before the remote step when run from a worktree), `git fetch --prune`, delete
+    `.claude/handoffs/feat-<slug>.md` if present, and delete any scratch files you
+    created outside the repo. Check: `git worktree list` shows only the main
+    checkout and `git ls-remote --heads origin` and `git branch -a` have no
+    `feat/<slug>`.
 12. **Report.** One message: the PR link, the squash commit on `main`, the
     verification output from step 10, the review findings you fixed, and anything
     left out and why.
