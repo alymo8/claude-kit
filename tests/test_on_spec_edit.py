@@ -38,14 +38,15 @@ def test_malformed_event_is_not_a_target():
     assert mod.target_from_event(json.dumps({"tool_input": {}})) is None
 
 
-def test_hook_renders_spec(tmp_path):
+def test_hook_indexes_but_does_not_render_html(tmp_path):
     spec_dir = tmp_path / "docs" / "superpowers" / "specs"
     spec_dir.mkdir(parents=True)
     md = spec_dir / "2026-01-01-thing-design.md"
     md.write_text("# Thing\n", encoding="utf-8")
     result = run_script(HOOK, stdin=event(str(md)), cwd=tmp_path)
     assert result.returncode == 0, result.stderr
-    assert (spec_dir / "2026-01-01-thing-design.html").exists()
+    assert (tmp_path / "docs" / "superpowers" / "README.md").exists()
+    assert not (spec_dir / "2026-01-01-thing-design.html").exists()
 
 
 def test_hook_ignores_unrelated_file(tmp_path):

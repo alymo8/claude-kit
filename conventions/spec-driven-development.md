@@ -85,12 +85,12 @@ the repo and this file?*
 
 ## Rendered views
 
-When a spec or design doc is written or updated, also produce a co-located,
-self-contained HTML rendering next to the `.md` (same basename), regenerated
-whenever the `.md` changes so the two never drift. Keep the `.md` as the source of
-truth. The HTML is a local reading view, not a deliverable: it is gitignored
-(`docs/superpowers/**/*.html`) and only the `.md` is tracked. (See the workspace
-`CLAUDE.md` for the shared renderer and the open-it-for-me convention.)
+The `.md` is the only source of truth and the only thing produced by default. A
+co-located, self-contained HTML rendering (same basename) is available **on demand
+only** — `/spec-html [path]` renders and opens it — never generated automatically
+when a spec is written. The HTML is a local reading view, not a deliverable: it is
+gitignored (`docs/superpowers/**/*.html`) and only the `.md` is tracked. (See the
+workspace `CLAUDE.md` for the shared renderer.)
 
 ## Definition of done
 

@@ -38,6 +38,7 @@ def test_commands_exist_with_frontmatter():
         "adopt-conventions": "scripts/scaffold.py",
         "handoff": "scripts/handoff.py",
         "ship": None,
+        "spec-html": "scripts/open-spec.py",
     }
     for name, script in expected.items():
         text = (PLUGIN / "commands" / f"{name}.md").read_text(encoding="utf-8")
