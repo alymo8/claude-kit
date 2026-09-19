@@ -26,16 +26,15 @@ not the path of least resistance.
 
 The knowledge layer is the **foundation** — the organized home for what a project
 knows. The decision log is where choices made against that knowledge get **locked
-in**. Spec-driven development is the **flow** that turns knowledge and decisions
-into working software, and engineering practices are the **quality bar** every
-change clears on the way to `main`. The project memory file is the **front door** —
-the short, static, checked-in `CLAUDE.md` that tells anyone arriving cold how to
-build, test, and navigate the repo, and points at the other three. A healthy project
-keeps all six current: new findings update the knowledge base, new choices land as
-ADRs, new work starts from a spec, every merge passes the practices gate, the
-memory file changes in the same PR as whatever made it stale, and every session
-ends with a handoff. Session hygiene is
-the **cadence**: it keeps each working session short and cheap while the other
-five keep the work correct, and it decides what a session leaves behind (a
-handoff) versus what goes into the knowledge base, the decision log, or the
-plan.
+in**. Spec-driven development is the **flow** that turns knowledge and decisions into
+working software, and engineering practices are the **quality bar** every change
+clears on the way to `main`. The project memory file is the **front door** — the
+short, static, checked-in `CLAUDE.md` that tells anyone arriving cold how to build,
+test, and navigate the repo, and points at the others. A healthy project keeps all
+six current: new findings update the knowledge base, new choices land as ADRs, new
+work starts from a spec, every merge passes the practices gate, the memory file
+changes in the same PR as whatever made it stale, and every session ends with a
+handoff. Session hygiene is the **cadence**: it keeps each working session short and
+cheap while the other five keep the work correct, and it decides what a session
+leaves behind (a handoff) versus what goes into the knowledge base, the decision log,
+or the plan.

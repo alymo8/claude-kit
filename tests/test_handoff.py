@@ -151,6 +151,17 @@ def test_cli_snapshot_reads_prompts_file(repo, tmp_path):
     assert "- one\n- two\n" in text
 
 
+def test_snapshot_makes_handoffs_dir_self_ignoring(repo, mod, monkeypatch):
+    monkeypatch.setattr(mod, "pr_url", lambda cwd: None)
+    mod.snapshot(repo, [])
+    ignore = repo / ".claude" / "handoffs" / ".gitignore"
+    assert ignore.read_text(encoding="utf-8") == "*\n"
+    assert git("status", "--porcelain", cwd=repo) == ""
+    ignore.write_text("custom\n", encoding="utf-8", newline="\n")
+    mod.snapshot(repo, [])
+    assert ignore.read_text(encoding="utf-8") == "custom\n"
+
+
 def test_cli_outside_git_exits_1_and_writes_nothing(tmp_path):
     plain = tmp_path / "plain"
     plain.mkdir()

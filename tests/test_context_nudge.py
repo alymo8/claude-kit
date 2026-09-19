@@ -82,6 +82,12 @@ def test_reads_only_the_tail_of_a_large_transcript(tmp_path):
     assert "310k tokens" in result.stdout
 
 
+def test_rearms_after_context_drops_below_first_threshold(tmp_path):
+    assert "310k tokens" in run(tmp_path, 310_000).stdout
+    assert run(tmp_path, 50_000).stdout == ""
+    assert "310k tokens" in run(tmp_path, 310_000).stdout
+
+
 def test_missing_transcript_or_bad_stdin_is_silent(tmp_path):
     event = json.dumps({"transcript_path": str(tmp_path / "none.jsonl")})
     assert run_script(HOOK, stdin=event).returncode == 0

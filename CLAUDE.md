@@ -2,7 +2,7 @@
 
 These apply to all projects under this directory.
 
-## How we work: knowledge, decisions, specs, engineering, project memory
+## How we work: knowledge, decisions, specs, engineering, project memory, session hygiene
 
 New projects follow six working conventions, documented in full under
 [`conventions/`](conventions/) (self-contained — read the relevant file before

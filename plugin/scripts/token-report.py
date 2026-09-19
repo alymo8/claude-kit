@@ -80,52 +80,56 @@ def scan(files: list[Path]) -> Report:
         tools: dict[str, tuple[str, dict]] = {}
         contexts: list[int] = []
         cost: float | None = None
-        for line in path.open(encoding="utf-8", errors="replace"):
-            try:
-                record = json.loads(line)
-            except ValueError:
-                continue
-            if not isinstance(record, dict):
-                continue
-            kind = record.get("type")
-            message = record.get("message") or {}
-            if kind == "cost-state":
-                cost = record.get("totalCostUSD")
-            elif kind == "assistant":
-                usage = message.get("usage")
-                if isinstance(usage, dict):
-                    ctx = sum(int(usage.get(k) or 0) for k in USAGE_KEYS)
-                    contexts.append(ctx)
-                    report.turns += 1
-                    report.input_tokens += ctx
-                for block in message.get("content") or []:
-                    if isinstance(block, dict) and (block.get("type") == "tool_use"):
-                        tools[block.get("id", "")] = (
-                            block.get("name", "?"),
-                            block.get("input") or {},
-                        )
-                        report.tool_calls[block.get("name", "?")] += 1
-            elif kind == "user" and isinstance(message.get("content"), list):
-                for block in message["content"]:
-                    if not (
-                        isinstance(block, dict) and block.get("type") == "tool_result"
-                    ):
-                        continue
-                    text = result_text(block)
-                    name, inp = tools.get(block.get("tool_use_id", ""), ("?", {}))
-                    report.tool_chars[name] += len(text)
-                    if name in ("Bash", "PowerShell"):
-                        report.families[family(str(inp.get("command", "")))] += len(
-                            text
-                        )
-                    if len(text) > BIG_RESULT:
-                        what = (
-                            inp.get("command")
-                            or inp.get("file_path")
-                            or inp.get("pattern")
-                            or ""
-                        )
-                        report.big_results.append((len(text), name, str(what)[:80]))
+        with path.open(encoding="utf-8", errors="replace") as fh:
+            for line in fh:
+                try:
+                    record = json.loads(line)
+                except ValueError:
+                    continue
+                if not isinstance(record, dict):
+                    continue
+                kind = record.get("type")
+                message = record.get("message") or {}
+                if kind == "cost-state":
+                    cost = record.get("totalCostUSD")
+                elif kind == "assistant":
+                    usage = message.get("usage")
+                    if isinstance(usage, dict):
+                        ctx = sum(int(usage.get(k) or 0) for k in USAGE_KEYS)
+                        contexts.append(ctx)
+                        report.turns += 1
+                        report.input_tokens += ctx
+                    for block in message.get("content") or []:
+                        if isinstance(block, dict) and (
+                            block.get("type") == "tool_use"
+                        ):
+                            tools[block.get("id", "")] = (
+                                block.get("name", "?"),
+                                block.get("input") or {},
+                            )
+                            report.tool_calls[block.get("name", "?")] += 1
+                elif kind == "user" and isinstance(message.get("content"), list):
+                    for block in message["content"]:
+                        if not (
+                            isinstance(block, dict)
+                            and block.get("type") == "tool_result"
+                        ):
+                            continue
+                        text = result_text(block)
+                        name, inp = tools.get(block.get("tool_use_id", ""), ("?", {}))
+                        report.tool_chars[name] += len(text)
+                        if name in ("Bash", "PowerShell"):
+                            report.families[family(str(inp.get("command", "")))] += len(
+                                text
+                            )
+                        if len(text) > BIG_RESULT:
+                            what = (
+                                inp.get("command")
+                                or inp.get("file_path")
+                                or inp.get("pattern")
+                                or ""
+                            )
+                            report.big_results.append((len(text), name, str(what)[:80]))
         if contexts:
             report.contexts.append(contexts)
             report.per_session.append(

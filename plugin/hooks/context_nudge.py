@@ -6,7 +6,10 @@ call (input + cache creation + cache read), and when it first passes
 CLAUDE_KIT_NUDGE_AT (default 300000) and then every CLAUDE_KIT_NUDGE_STEP
 (default 100000), prints a one-sentence nudge as additionalContext (for Claude)
 and systemMessage (for the user). The highest threshold already fired is kept
-in <scratchpad_dir>/claude-kit/nudge-level. Always exits 0 (ADR 0007).
+in <scratchpad_dir>/claude-kit/nudge-level. The temp-dir fallback marker is
+never deleted (ADR 0007); it is a few bytes per session. Always exits 0
+(ADR 0007). The marker resets to 0 when context falls below the first
+threshold, so the next crossing fires again after /compact or any context drop.
 """
 
 from __future__ import annotations
@@ -75,10 +78,15 @@ def main() -> int:
                 fired = int(marker.read_text(encoding="utf-8").strip() or 0)
             except ValueError:
                 fired = 0
+        at = env_int("CLAUDE_KIT_NUDGE_AT", DEFAULT_AT)
+        if tokens < at and fired > 0:
+            marker.parent.mkdir(parents=True, exist_ok=True)
+            marker.write_text("0", encoding="utf-8")
+            return 0
         level = next_level(
             tokens,
             fired,
-            env_int("CLAUDE_KIT_NUDGE_AT", DEFAULT_AT),
+            at,
             env_int("CLAUDE_KIT_NUDGE_STEP", DEFAULT_STEP),
         )
         if level is None:

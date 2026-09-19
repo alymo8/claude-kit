@@ -17,4 +17,6 @@ SessionStart hook injects it for seven days. Durable content goes to
 ## Consequences
 No PR diff noise and no cleanup step at merge; a removed worktree takes its
 handoffs with it. A machine switch mid-feature loses the handoff (the plan and
-git history remain). Rejected: committing it on the feature branch.
+git history remain). Rejected: committing it on the feature branch. The folder
+carries its own `.gitignore` (`*`), written on first use, so the guarantee
+holds in repos whose root `.gitignore` predates the template.

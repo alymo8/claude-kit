@@ -26,7 +26,7 @@ from pathlib import Path
 SAFE_RE = re.compile(r"[^A-Za-z0-9._-]")
 STATE_HEADER = "## State"
 STATE_NOTE = "<!-- generated; do not edit -->"
-WRITTEN_RE = re.compile(r"^- \*\*Written:\*\* .*$", re.M)
+WRITTEN_RE = re.compile(r"^- \*\*Written:\*\* [^\r\n]*$", re.M)
 
 
 def git(*args: str, cwd: Path, timeout: int = 30) -> str | None:
@@ -145,6 +145,13 @@ def new_file_text(branch: str, state: str, prompts: list[str]) -> str:
     return "\n".join(parts) + "\n"
 
 
+def ensure_ignored(folder: Path) -> None:
+    """Write a ``*`` .gitignore into ``folder`` if it doesn't already have one."""
+    ignore = folder / ".gitignore"
+    if not ignore.exists():
+        ignore.write_text("*\n", encoding="utf-8", newline="\n")
+
+
 def snapshot(cwd: Path, prompts: list[str]) -> Path:
     path = handoff_path(cwd)
     state = state_section(cwd)
@@ -154,6 +161,7 @@ def snapshot(cwd: Path, prompts: list[str]) -> Path:
     else:
         text = new_file_text(branch_name(cwd), state, prompts)
     path.parent.mkdir(parents=True, exist_ok=True)
+    ensure_ignored(path.parent)
     path.write_text(text, encoding="utf-8", newline="\n")
     return path
 

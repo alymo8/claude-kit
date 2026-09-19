@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
 from pathlib import Path
 
@@ -29,11 +30,13 @@ def install(settings: Path, skills_dir: Path) -> str:
     script = (skills_dir / "claude-kit" / "scripts" / "statusline.py").as_posix()
     data["statusLine"] = {"type": "command", "command": f'python "{script}"'}
     settings.parent.mkdir(parents=True, exist_ok=True)
-    settings.write_text(
+    tmp = settings.with_suffix(".json.tmp")
+    tmp.write_text(
         json.dumps(data, indent=2, ensure_ascii=False) + "\n",
         encoding="utf-8",
         newline="\n",
     )
+    os.replace(tmp, settings)
     return "added"
 
 
