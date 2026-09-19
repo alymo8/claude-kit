@@ -1,6 +1,7 @@
 ---
 description: Use after a spec is approved to land it on main without further check-ins — plan, implement, CI, review, PR, green CI, squash-merge, verify main, clean up
 argument-hint: [path-to-spec.md]
+disable-model-invocation: true
 ---
 
 Ship the approved spec at `$ARGUMENTS` (if empty: the newest `*.md` under

@@ -49,8 +49,8 @@ to be moved or configured.
   describes merges, set the spec and plan to `implemented` in the same PR. When a
   later spec replaces one, mark the old spec `superseded` and link its successor.
 - `docs/superpowers/README.md` is a **generated index** of specs and plans (date,
-  title, status). The kit's render hook regenerates it on every spec/plan write; do
-  not edit it by hand.
+  title, status). The kit's spec-index hook regenerates it after every spec/plan
+  edit and at every stop; do not edit it by hand.
 - Significant decisions that emerge during spec or plan work are promoted to
   **ADRs** — the spec explains and the ADR locks in.
 

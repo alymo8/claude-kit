@@ -35,7 +35,18 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python \"${CLAUDE_PLUGIN_ROOT}/hooks/handoff_snapshot.py\""
+            "command": "python \"${CLAUDE_PLUGIN_ROOT}/hooks/handoff_snapshot.py\"",
+            "timeout": 20
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python \"${CLAUDE_PLUGIN_ROOT}/scripts/spec-index.py\" \"${CLAUDE_PROJECT_DIR}/docs/superpowers\""
           }
         ]
       }

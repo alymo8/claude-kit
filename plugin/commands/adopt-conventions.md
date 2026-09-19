@@ -1,6 +1,7 @@
 ---
 description: Add the kit's conventions to an existing repo (CLAUDE.md skeleton, knowledge layer, decisions, specs index, CI, secret scan, PR template), writing only files that do not exist
 argument-hint: [node|python]
+disable-model-invocation: true
 ---
 
 Add the claude-kit convention files that are missing from the current repository.

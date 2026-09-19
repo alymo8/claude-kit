@@ -6,7 +6,7 @@ Usage: open-spec.py [--no-open] [PATH]
 PATH is a Markdown spec or plan (an .html path is mapped back to its .md). With no
 PATH, the most recently modified file under ``docs/superpowers/{specs,plans}/`` of
 the current repo is used. Rendering goes through the shared ``render-spec.py`` so
-the HTML never drifts from the hook's output. ``--no-open`` renders only.
+the HTML matches a bulk ``render-spec.py`` run. ``--no-open`` renders only.
 """
 
 from __future__ import annotations

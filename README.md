@@ -26,10 +26,10 @@ setup that sits above my individual project repos — it defines *how* I work, n
     per-branch handoff file, a context meter, lean exploration.
 - **[`plugin/`](plugin/)** — a Claude Code plugin: the `supabase-cli` and
   `lean-context` skills, the on-demand spec → HTML renderer, the `token-report.py`
-  measurement script, a status line, and five hooks (auto-render specs/plans
-  after edits; report leftover worktrees, inject the branch handoff and nudge
-  past a context threshold at the right moments; snapshot git state at session
-  end). Install once per machine with `plugin\install.ps1` — it junctions
+  measurement script, a status line, and six hooks (regenerate the spec/plan
+  index after edits and at every stop; report leftover worktrees, inject the
+  branch handoff and nudge past a context threshold at the right moments;
+  snapshot git state at session end). Install once per machine with `plugin\install.ps1` — it junctions
   `~/.claude/skills/claude-kit` to this folder so edits are live, and adds the
   kit's status line to `~/.claude/settings.json` when none is configured. If
   PowerShell refuses to run the script (execution policy), use

@@ -30,9 +30,6 @@ thread for conclusions.
    edit; the tool result already confirmed it.
 6. **Write down what you learned** in the plan or the handoff instead of
    re-deriving it later in this session or the next one.
-7. **Watch the meter.** The status line shows context size; a nudge appears at
-   300k tokens and every 100k after. Finish the current step, run `/handoff`,
-   then `/clear`.
 
 ## Why
 

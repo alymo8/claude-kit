@@ -70,9 +70,12 @@ def handoff_path(cwd: Path) -> Path:
     return top / ".claude" / "handoffs" / f"{safe_name(branch_name(cwd))}.md"
 
 
-def pr_url(cwd: Path) -> str | None:
-    """URL of the open PR for the current branch via gh, or None."""
-    if not shutil.which("gh"):
+def pr_url(cwd: Path, upstream: str | None) -> str | None:
+    """URL of the open PR for the current branch via gh, or None.
+
+    Skipped when the branch has no upstream: it cannot have a PR, and the gh
+    call costs ~0.8 s against the SessionEnd hook budget."""
+    if not upstream or not shutil.which("gh"):
         return None
     try:
         result = subprocess.run(
@@ -111,7 +114,7 @@ def state_section(cwd: Path) -> str:
     log = git("log", "--oneline", "-5", cwd=cwd) or ""
     commits = [line.strip() for line in log.splitlines() if line.strip()]
     lines.append("- last commits: " + ("; ".join(commits) if commits else "none"))
-    lines.append(f"- PR: {pr_url(cwd) or 'none'}")
+    lines.append(f"- PR: {pr_url(cwd, upstream) or 'none'}")
     return "\n".join(lines) + "\n"
 
 

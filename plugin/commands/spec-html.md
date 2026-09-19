@@ -1,5 +1,6 @@
 ---
 description: Render a spec or plan to its HTML view and open it in the browser (latest spec/plan when no path is given)
+disable-model-invocation: true
 ---
 
 Render the spec/plan to HTML and open it. Run exactly one command and reply with
