@@ -37,12 +37,14 @@ def test_commands_exist_with_frontmatter():
         "new-project": "scripts/scaffold.py",
         "adopt-conventions": "scripts/scaffold.py",
         "handoff": "scripts/handoff.py",
+        "ship": None,
     }
     for name, script in expected.items():
         text = (PLUGIN / "commands" / f"{name}.md").read_text(encoding="utf-8")
         assert text.startswith("---\n"), name
         assert "description:" in text.split("---", 2)[1], name
-        assert script in text, name
+        if script:
+            assert script in text, name
 
 
 def test_hooks_json_registers_session_hygiene_hooks():

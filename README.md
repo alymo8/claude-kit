@@ -37,7 +37,10 @@ setup that sits above my individual project repos — it defines *how* I work, n
   provides two commands: `/new-project <name> <node|python>` scaffolds a new
   repo with every convention in place, and `/adopt-conventions <node|python>`
   adds the missing pieces to an existing one. `/handoff` writes the
-  per-branch handoff file before you `/clear`.
+  per-branch handoff file before you `/clear`. `/ship <spec.md>` takes an
+  approved spec all the way to a squash-merged, cleaned-up change on `main`
+  without further check-ins (it stops only on red CI after three fixes, a review
+  finding that needs a decision, or a blocked merge).
 - **[`knowledge/decisions/`](knowledge/decisions/)** — this repo's own ADRs.
 - **[`docs/superpowers/`](docs/superpowers/)** — specs and plans for changes to
   the kit itself.
