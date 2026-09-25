@@ -28,8 +28,10 @@ at 150k, by 65%.
 2. **Restarting must be cheap.** A handoff file carries the in-flight state; the
    knowledge layer, ADRs and plans carry everything durable. Nothing important
    lives only in the conversation.
-3. **Keep the main context for conclusions.** Explore narrowly, delegate sweeps,
-   send long output to disk first (the `claude-kit:lean-context` skill).
+3. **Keep the main context for what the work needs.** Read in full the code you
+   change, search instead of sweeping, send long output to disk first (the
+   `claude-kit:lean-context` skill). Understanding is not waste; the restart
+   cap limits how long it is carried (ADR 0011).
 4. **Make growth visible.** The status line shows context size at zero cost; a
    nudge at 300k tokens (then every 100k) says when to hand off.
 

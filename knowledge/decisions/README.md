@@ -16,3 +16,4 @@ the next number; superseded ones are never deleted.
 | [0008](0008-handoff-is-gitignored-per-branch.md) | Session handoff files are gitignored, per branch, per work tree | accepted | 2026-09-18 |
 | [0009](0009-no-service-backed-memory.md) | No service-backed memory in the kit | accepted | 2026-09-18 |
 | [0010](0010-spec-html-on-demand-only.md) | Spec/plan HTML is rendered on demand only | accepted | 2026-09-19 |
+| [0011](0011-lean-context-favours-quality.md) | Lean context favours quality over tokens when reading code | accepted | 2026-09-25 |
