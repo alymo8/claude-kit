@@ -14,9 +14,13 @@ docs/superpowers/specs/2026-09-28-jev-triage-pilot-design.md
 
 from __future__ import annotations
 
+import json
 import os
 import re
+import sys
+import time
 from dataclasses import dataclass
+from datetime import UTC, datetime
 from pathlib import Path
 
 MODES = ("off", "shadow", "active")
@@ -110,3 +114,123 @@ def hints(keys: list[str]) -> str:
 
 def jev_dir() -> Path:
     return Path.home() / ".claude" / "claude-kit" / "jev"
+
+
+class JevError(Exception):
+    """A judgment failed; ``code`` is the short string written to the log."""
+
+    def __init__(self, code: str) -> None:
+        super().__init__(code)
+        self.code = code
+
+
+@dataclass(frozen=True)
+class Judgment:
+    scores: dict[str, float]
+    usage: dict | None = None
+
+
+def judge(prompt: str) -> Judgment:
+    """One TypeSafe system_one call with the three Noul questions."""
+    if not os.environ.get("TYPESAFE_API_KEY", "").strip():
+        raise JevError("missing_key")
+    try:
+        import typesafe_sdk
+    except ImportError as exc:
+        raise JevError("missing_sdk") from exc
+    try:
+        questions = {
+            q.key: typesafe_sdk.Noul(
+                instructions=q.instructions, criteria={"true": q.yes, "false": q.no}
+            )
+            for q in QUESTIONS
+        }
+        with typesafe_sdk.TypeSafeClient(
+            timeout=TIMEOUT_S, retry=typesafe_sdk.RetryPolicy(max_retries=0)
+        ) as client:
+            result = client.system_one(state=prompt, questions=questions)
+        scores = {k: float(result.nouls[k].noul) for k in KEYS}
+        usage = {
+            "input_tokens": result.usage.input_tokens,
+            "output_tokens": result.usage.output_tokens,
+            "model": result.model,
+        }
+    except TimeoutError as exc:
+        raise JevError("timeout") from exc
+    except Exception as exc:
+        raise JevError(f"api_error: {type(exc).__name__}: {str(exc)[:200]}") from exc
+    return Judgment(scores, usage)
+
+
+def append_log(record: dict) -> None:
+    path = jev_dir() / "log.jsonl"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("a", encoding="utf-8") as fh:
+        fh.write(json.dumps(record, ensure_ascii=False) + "\n")
+
+
+def new_record(event: dict, current: str, prompt: str, limits: dict) -> dict:
+    return {
+        "ts": datetime.now(UTC).isoformat(timespec="seconds"),
+        "session_id": event.get("session_id"),
+        "project": Path(str(event.get("cwd") or "")).name,
+        "mode": current,
+        "prompt": prompt,
+        "scores": None,
+        "thresholds": limits,
+        "fired": [],
+        "injected": False,
+        "latency_ms": None,
+        "usage": None,
+        "error": None,
+    }
+
+
+def main() -> int:
+    try:
+        current = mode()
+        if current == "off":
+            return 0
+        # Windows stdin defaults to the ANSI code page; Claude Code sends UTF-8.
+        raw = sys.stdin.buffer.read().decode("utf-8", "replace")
+        event = json.loads(raw or "{}")
+        if not isinstance(event, dict) or not isinstance(event.get("prompt"), str):
+            return 0
+        prompt = clean(event["prompt"])
+        if not should_judge(prompt):
+            return 0
+        limits = thresholds()
+        record = new_record(event, current, prompt, limits)
+        start = time.perf_counter()
+        try:
+            judgment = judge(prompt)
+        except JevError as exc:
+            record["error"] = exc.code
+        else:
+            record["scores"] = judgment.scores
+            record["usage"] = judgment.usage
+            record["fired"] = fired(judgment.scores, limits)
+        record["latency_ms"] = round((time.perf_counter() - start) * 1000)
+        text = hints(record["fired"]) if current == "active" else ""
+        record["injected"] = bool(text)
+        if record["error"]:
+            print(f"[claude-kit] jev triage: {record['error']}", file=sys.stderr)
+        try:
+            append_log(record)
+        except OSError as exc:
+            print(f"[claude-kit] jev triage: cannot write log: {exc}", file=sys.stderr)
+        if text:
+            output = {
+                "hookSpecificOutput": {
+                    "hookEventName": "UserPromptSubmit",
+                    "additionalContext": text,
+                }
+            }
+            print(json.dumps(output))
+    except Exception as exc:  # a hook must never raise
+        print(f"[claude-kit] jev triage error: {exc}", file=sys.stderr)
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
