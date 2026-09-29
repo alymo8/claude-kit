@@ -66,8 +66,14 @@ No `labels.csv` exists yet, so there is nothing to migrate.
   `session_id`, `prompt` and `label_*` values are kept as they are. The file is
   written back as UTF-8 with BOM and commas, via a temporary file and a rename,
   so an interrupted or failed run never damages your labels. `missing_key` or
-  `missing_sdk` on the first row exits 1 with the file untouched. `--rescore`
-  cannot be combined with `--no-judge`, `--n`, `--seed` or `--since`.
+  `missing_sdk` on the first row exits 1 with the file untouched. A row whose
+  call fails (bad key, timeout) keeps its previous scores; if every row fails
+  the file is left untouched, and any failure makes the command exit 1 with a
+  count. Columns you added (e.g. notes) are kept after ours. If the file is
+  locked (open in Excel) it says so before calling jev, and a lock at write
+  time leaves the results in `labels.csv.tmp`. `--rescore` cannot be combined
+  with `--no-judge`, `--n`, `--seed` or `--since`. `--since` must be a
+  `YYYY-MM-DD` date (UTC).
 - The overwrite guard stays: plain `replay` or `replay --no-judge` refuses to
   replace an existing `labels.csv` without `--force`. `--rescore` never needs
   `--force`, because it keeps the labels.
@@ -90,7 +96,11 @@ Output: each measure as `k/n (pct)`, plus the rows skipped because the label was
 blank, the transcript is missing, or the prompt was not found in it. It also
 writes `baseline.csv` (one row per matched prompt: id, labels, asked, preflight,
 corrected) next to `labels.csv`, so you can check the heuristics by hand. It
-needs no key and makes no network call.
+needs no key and makes no network call. Known limits: a prompt typed twice in
+one session matches its first occurrence; and prompts are matched by exact
+text, so saving `labels.csv` from Excel as plain (ANSI) "CSV" instead of
+"CSV UTF-8" turns non-Latin characters into `?` and those rows show up as
+"not found".
 
 ### How the pieces fit
 

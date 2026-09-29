@@ -31,6 +31,7 @@ import time
 from collections import Counter, defaultdict
 from collections.abc import Iterable, Iterator
 from dataclasses import dataclass
+from datetime import date
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
@@ -231,11 +232,12 @@ def empty_row(i: int, project: str, session_id: str, text: str) -> dict:
     return row
 
 
-def score_row(row: dict) -> dict:
-    """Judge row["prompt"] and fill the score columns; raises JevError when jev
-    cannot be reached at all (missing key or SDK)."""
-    for name in SCORE_FIELDS:
-        row[name] = ""
+def score_row(row: dict) -> bool:
+    """Judge row["prompt"] and replace its score columns; True on success.
+
+    On a per-prompt error (bad key, timeout) the row keeps its previous scores and
+    False is returned. Raises JevError when jev cannot be reached at all (missing
+    key or SDK)."""
     start = time.perf_counter()
     try:
         judgment = triage.judge(str(row.get("prompt") or ""))
@@ -243,7 +245,9 @@ def score_row(row: dict) -> dict:
         if exc.code in ("missing_key", "missing_sdk"):
             raise
         print(f"prompt {row.get('id')}: {exc.code}", file=sys.stderr)
-        return row
+        return False
+    for name in SCORE_FIELDS:
+        row[name] = ""
     usage = judgment.usage or {}
     for key in triage.KEYS:
         if key in judgment.scores:
@@ -251,20 +255,48 @@ def score_row(row: dict) -> dict:
     row["latency_ms"] = round((time.perf_counter() - start) * 1000)
     row["input_tokens"] = usage.get("input_tokens") or ""
     row["output_tokens"] = usage.get("output_tokens") or ""
-    return row
+    return True
 
 
-def write_labels(path: Path, rows: list[dict]) -> None:
-    """Write via a temporary file and a rename, so a failure never truncates."""
+def write_labels(path: Path, rows: list[dict], extra: Iterable[str] = ()) -> None:
+    """Write via a temporary file and a rename, so a failure never truncates.
+
+    ``extra`` are columns the user added (e.g. notes), kept after ours."""
     path.parent.mkdir(parents=True, exist_ok=True)
     tmp = path.with_name(path.name + ".tmp")
     with tmp.open("w", encoding="utf-8-sig", newline="") as fh:
         writer = csv.DictWriter(
-            fh, fieldnames=LABEL_FIELDS, restval="", extrasaction="ignore"
+            fh, fieldnames=[*LABEL_FIELDS, *extra], restval="", extrasaction="ignore"
         )
         writer.writeheader()
         writer.writerows(rows)
     os.replace(tmp, path)
+
+
+def locked(path: Path, kept: Path | None = None) -> None:
+    where = f"; results kept in {kept}" if kept else ""
+    print(
+        f"cannot write {path}: close it (open in Excel?) and re-run{where}",
+        file=sys.stderr,
+    )
+
+
+def writable(path: Path) -> bool:
+    """False when another program (Excel, on Windows) holds the file locked."""
+    try:
+        with path.open("r+b"):
+            return True
+    except PermissionError:
+        return False
+
+
+def save_labels(path: Path, rows: list[dict], extra: Iterable[str] = ()) -> bool:
+    try:
+        write_labels(path, rows, extra)
+    except PermissionError:
+        locked(path, path.with_name(path.name + ".tmp"))
+        return False
+    return True
 
 
 def cmd_rescore(path: Path) -> int:
@@ -272,14 +304,27 @@ def cmd_rescore(path: Path) -> int:
     if not path.is_file():
         print(f"{path} not found; run: jev-eval.py replay --no-judge", file=sys.stderr)
         return 1
+    if not writable(path):
+        locked(path)
+        return 1
     rows = read_labels(path)
+    extra = [k for k in (rows[0] if rows else {}) if k not in LABEL_FIELDS]
     try:
-        rows = [score_row(row) for row in rows]
+        ok = [score_row(row) for row in rows]
     except triage.JevError as exc:
         print(f"cannot judge: {exc.code}; {path} left unchanged", file=sys.stderr)
         return 1
-    write_labels(path, rows)
-    print(f"rescored {len(rows)} prompts in {path}; next: jev-eval.py score")
+    errors = ok.count(False)
+    if rows and errors == len(rows):
+        print(f"no prompt could be judged; {path} left unchanged", file=sys.stderr)
+        return 1
+    if not save_labels(path, rows, extra):
+        return 1
+    note = f"; {errors} error(s), previous scores kept for those" if errors else ""
+    print(f"rescored {len(rows) - errors}/{len(rows)} prompts in {path}{note}")
+    if errors:
+        return 1
+    print("next: jev-eval.py score")
     return 0
 
 
@@ -297,11 +342,13 @@ def cmd_replay(args: argparse.Namespace) -> int:
     rows = [empty_row(i, p, s, t) for i, (p, s, t) in enumerate(chosen, 1)]
     if not args.no_judge:
         try:
-            rows = [score_row(row) for row in rows]
+            for row in rows:
+                score_row(row)
         except triage.JevError as exc:
             print(f"cannot judge: {exc.code}", file=sys.stderr)
             return 1
-    write_labels(out, rows)
+    if not save_labels(out, rows):
+        return 1
     print(f"wrote {len(rows)} prompts to {out}")
     print("fill the label_* columns with 1 or 0, then run: jev-eval.py baseline")
     return 0
@@ -316,7 +363,9 @@ def read_labels(path: Path) -> list[dict]:
         text = raw.decode("cp1252", "replace")
     header = text.splitlines()[0] if text else ""
     delimiter = ";" if header.count(";") > header.count(",") else ","
-    rows = list(csv.DictReader(io.StringIO(text, newline=""), delimiter=delimiter))
+    reader = csv.DictReader(io.StringIO(text, newline=""), delimiter=delimiter)
+    # Cells beyond the header land under the key None; they are not ours.
+    rows = [{k: v for k, v in r.items() if isinstance(k, str)} for r in reader]
     return [r for r in rows if any((v or "").strip() for v in r.values())]
 
 
@@ -756,9 +805,23 @@ def cmd_baseline(args: argparse.Namespace) -> int:
         print(f"  {BASELINE_LABELS[key]}: {k}/{n} ({fmt(ratio(k, n), True)})")
     print("  skipped: " + ", ".join(f"{why} {skipped[why]}" for why in SKIP_REASONS))
     out = path.parent / "baseline.csv"
-    write_baseline(out, results)
+    try:
+        write_baseline(out, results)
+    except PermissionError:
+        locked(out)
+        return 1
     print(f"per-prompt outcomes in {out}")
     return 0
+
+
+def iso_date(value: str) -> str:
+    """argparse type: '' or a YYYY-MM-DD date (normalised, compared as UTC)."""
+    if not value:
+        return ""
+    try:
+        return date.fromisoformat(value).isoformat()
+    except ValueError:
+        raise argparse.ArgumentTypeError(f"not a YYYY-MM-DD date: {value!r}") from None
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -768,14 +831,18 @@ def main(argv: list[str] | None = None) -> int:
     replay.add_argument("--n", type=int, default=None, help="default 60")
     replay.add_argument("--seed", type=int, default=None, help="default 0")
     replay.add_argument("--force", action="store_true")
-    replay.add_argument("--since", default="", help="YYYY-MM-DD")
+    replay.add_argument(
+        "--since", type=iso_date, default="", help="YYYY-MM-DD (UTC date)"
+    )
     how = replay.add_mutually_exclusive_group()
     how.add_argument("--no-judge", action="store_true", help="no key needed")
     how.add_argument("--rescore", action="store_true", help="score labels.csv")
     score = sub.add_parser("score", help="score labels.csv against the gate")
     score.add_argument("labels", nargs="?")
     report = sub.add_parser("report", help="shadow vs active outcomes")
-    report.add_argument("--since", default="")
+    report.add_argument(
+        "--since", type=iso_date, default="", help="YYYY-MM-DD (UTC date)"
+    )
     baseline = sub.add_parser("baseline", help="no-jev baseline from your labels")
     baseline.add_argument("labels", nargs="?")
     args = parser.parse_args(argv)

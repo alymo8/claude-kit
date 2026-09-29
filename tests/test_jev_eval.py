@@ -526,3 +526,114 @@ def test_baseline_unlabelled_file(monkeypatch, dirs, capsys):
 def test_baseline_missing_file(tmp_path, dirs, capsys):
     assert ev.main(["baseline", str(tmp_path / "nope.csv")]) == 1
     assert "not found" in capsys.readouterr().err
+
+
+def rescored_file(monkeypatch, dirs):
+    path, _ = labelled_file(monkeypatch, dirs)
+    monkeypatch.setattr(triage, "judge", fake)
+    assert ev.main(["replay", "--rescore"]) == 0
+    return path
+
+
+def test_rescore_all_rows_failing_leaves_file_untouched(monkeypatch, dirs):
+    path = rescored_file(monkeypatch, dirs)
+    original = path.read_bytes()
+
+    def bad_key(prompt):
+        raise triage.JevError("api_error: AuthenticationError: 401")
+
+    monkeypatch.setattr(triage, "judge", bad_key)
+    assert ev.main(["replay", "--rescore"]) == 1
+    assert path.read_bytes() == original
+
+
+def test_rescore_partial_failure_keeps_old_scores(monkeypatch, dirs, capsys):
+    path = rescored_file(monkeypatch, dirs)
+    calls = []
+
+    def flaky(prompt):
+        calls.append(prompt)
+        if len(calls) == 1:
+            raise triage.JevError("timeout")
+        scores = {"underspecified": 0.3, "new_feature": 0.4, "key_decision": 0.5}
+        return triage.Judgment(scores, None)
+
+    monkeypatch.setattr(triage, "judge", flaky)
+    assert ev.main(["replay", "--rescore"]) == 1
+    rows = read_rows(path)
+    assert rows[0]["s_new_feature"] == "0.9000"  # failed: previous score kept
+    assert rows[1]["s_new_feature"] == "0.4000"
+    assert "1 error" in capsys.readouterr().out
+
+
+def test_rescore_keeps_extra_columns(monkeypatch, dirs):
+    path, rows = labelled_file(monkeypatch, dirs)
+    rows[0]["notes"] = "my note"
+    rows[1]["notes"] = ""
+    with path.open("w", encoding="utf-8-sig", newline="") as fh:
+        writer = csv.DictWriter(fh, fieldnames=[*ev.LABEL_FIELDS, "notes"])
+        writer.writeheader()
+        writer.writerows(rows)
+    monkeypatch.setattr(triage, "judge", fake)
+    assert ev.main(["replay", "--rescore"]) == 0
+    after = read_rows(path)
+    assert list(after[0])[-1] == "notes"
+    assert after[0]["notes"] == "my note"
+
+
+def test_rescore_locked_file_on_replace(monkeypatch, dirs, capsys):
+    path, _ = labelled_file(monkeypatch, dirs)
+    original = path.read_bytes()
+    monkeypatch.setattr(triage, "judge", fake)
+
+    def locked(src, dst):
+        raise PermissionError(13, "denied")
+
+    monkeypatch.setattr(ev.os, "replace", locked)
+    assert ev.main(["replay", "--rescore"]) == 1
+    err = capsys.readouterr().err
+    assert "close" in err and "labels.csv.tmp" in err
+    assert path.read_bytes() == original
+
+
+def test_rescore_locked_file_checked_before_judging(monkeypatch, dirs, capsys):
+    labelled_file(monkeypatch, dirs)
+    monkeypatch.setattr(ev, "writable", lambda path: False)
+    monkeypatch.setattr(triage, "judge", must_not_call)
+    assert ev.main(["replay", "--rescore"]) == 1
+    assert "close" in capsys.readouterr().err
+
+
+@pytest.mark.parametrize(
+    "argv",
+    [
+        ["replay", "--no-judge", "--since", "2026-8-1"],
+        ["report", "--since", "yesterday"],
+    ],
+)
+def test_since_must_be_an_iso_date(dirs, argv):
+    with pytest.raises(SystemExit) as info:
+        ev.main(argv)
+    assert info.value.code == 2
+
+
+def test_baseline_locked_output(monkeypatch, dirs, capsys):
+    projects, jev = dirs
+    write_jsonl(projects / "proj-a" / "s1.jsonl", FIXTURE)
+    monkeypatch.setattr(triage, "judge", must_not_call)
+    assert ev.main(["replay", "--no-judge"]) == 0
+
+    def locked(out, results):
+        raise PermissionError(13, "denied")
+
+    monkeypatch.setattr(ev, "write_baseline", locked)
+    assert ev.main(["baseline"]) == 1
+    assert "close" in capsys.readouterr().err
+
+
+def test_read_labels_tolerates_cells_beyond_the_header(tmp_path):
+    path = tmp_path / "l.csv"
+    path.write_text("id,prompt\n1,a b c,extra\n,,\n", encoding="utf-8")
+    rows = ev.read_labels(path)
+    assert len(rows) == 1
+    assert rows[0]["prompt"] == "a b c"

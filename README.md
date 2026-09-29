@@ -58,7 +58,8 @@ mode, adds a one-line hint for Claude. It is **off by default**; see
 ```
 # no key needed
 python plugin/scripts/jev-eval.py replay --no-judge --since 2026-08-01
-#    fill label_* in ~/.claude/claude-kit/jev/labels.csv with 1/0
+#    fill label_* in ~/.claude/claude-kit/jev/labels.csv with 1/0; in Excel,
+#    save as "CSV UTF-8" (plain "CSV" turns non-Latin characters into ?)
 python plugin/scripts/jev-eval.py baseline   # how often the rules slip today
 # with a key (https://console.typesafe.ai/keys)
 python -m pip install "typesafe-sdk>=0.7"    # once, into the python hooks run
@@ -71,8 +72,9 @@ python plugin/scripts/jev-eval.py report --since 2026-10-01
 setx CLAUDE_KIT_JEV off                      # stop
 ```
 
-Judgments are logged to `~/.claude/claude-kit/jev/log.jsonl`; prompts go to
-TypeSafe only while the flag is `shadow` or `active`.
+Judgments are logged to `~/.claude/claude-kit/jev/log.jsonl`. Prompts go to
+TypeSafe only while the flag is `shadow` or `active`, and when you run
+`replay` without `--no-judge` or `replay --rescore`.
 
 ## Scope
 
