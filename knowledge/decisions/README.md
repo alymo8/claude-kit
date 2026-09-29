@@ -18,3 +18,4 @@ the next number; superseded ones are never deleted.
 | [0010](0010-spec-html-on-demand-only.md) | Spec/plan HTML is rendered on demand only | accepted | 2026-09-19 |
 | [0011](0011-lean-context-favours-quality.md) | Lean context favours quality over tokens when reading code | accepted | 2026-09-25 |
 | [0012](0012-jev-triage-pilot.md) | jev triage pilot is an opt-in third-party judge | accepted | 2026-09-28 |
+| [0013](0013-ship-never-works-in-local-main.md) | `/ship` never works in or depends on the local `main` checkout | accepted | 2026-09-29 |
