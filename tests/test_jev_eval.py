@@ -1,5 +1,6 @@
 import csv
 import json
+import sys
 
 import pytest
 from helpers import PLUGIN, load_module
@@ -37,17 +38,22 @@ FIXTURE = [
 def test_iter_prompts_keeps_only_typed_prompts(tmp_path):
     path = write_jsonl(tmp_path / "proj-a" / "s1.jsonl", FIXTURE, junk=True)
     assert list(ev.iter_prompts([path])) == [
-        ("proj-a", "add a dark mode toggle to settings"),
-        ("proj-a", "why does the login test fail"),
+        ("proj-a", "s1", "add a dark mode toggle to settings"),
+        ("proj-a", "s1", "why does the login test fail"),
     ]
 
 
 def test_sample_is_stratified_and_deduplicated():
-    prompts = [("a", "p1 x y"), ("a", "p1 x y"), ("a", "p2 x y"), ("b", "q1 x y")]
+    prompts = [
+        ("a", "s1", "p1 x y"),
+        ("a", "s1", "p1 x y"),
+        ("a", "s2", "p2 x y"),
+        ("b", "s3", "q1 x y"),
+    ]
     three = ev.sample(prompts, 3, 0)
     assert len(three) == 3
-    assert len({t for _, t in three}) == 3
-    assert {p for p, _ in ev.sample(prompts, 2, 0)} == {"a", "b"}
+    assert len({t for _, _, t in three}) == 3
+    assert {p for p, _, _ in ev.sample(prompts, 2, 0)} == {"a", "b"}
 
 
 def fake(prompt):
@@ -77,6 +83,7 @@ def test_replay_writes_labels(monkeypatch, dirs):
     assert rows[0]["s_new_feature"] == "0.9000"
     assert rows[0]["input_tokens"] == "10"
     assert rows[0]["label_new_feature"] == ""
+    assert rows[0]["session_id"] == "s1"
     assert ev.main(["replay"]) == 1
     assert ev.main(["replay", "--force"]) == 0
 
@@ -91,6 +98,55 @@ def test_replay_stops_on_missing_key(monkeypatch, dirs):
     monkeypatch.setattr(triage, "judge", no_key)
     assert ev.main(["replay"]) == 1
     assert not (jev / "labels.csv").exists()
+
+
+def dated(text, day):
+    return user(text, timestamp=f"{day}T10:00:00.000Z")
+
+
+def test_iter_prompts_since(tmp_path):
+    records = [
+        dated("an old prompt from july", "2026-07-15"),
+        dated("a prompt from the first day", "2026-08-01"),
+        user("a prompt with no timestamp"),
+    ]
+    path = write_jsonl(tmp_path / "proj-a" / "s1.jsonl", records)
+    assert [t for _, _, t in ev.iter_prompts([path], "2026-08-01")] == [
+        "a prompt from the first day"
+    ]
+    assert len(list(ev.iter_prompts([path]))) == 3
+
+
+def must_not_call(prompt):
+    raise AssertionError("judge must not be called")
+
+
+def test_replay_no_judge_needs_no_key(monkeypatch, dirs):
+    projects, jev = dirs
+    write_jsonl(projects / "proj-a" / "s1.jsonl", FIXTURE)
+    monkeypatch.setattr(triage, "judge", must_not_call)
+    monkeypatch.setitem(sys.modules, "typesafe_sdk", None)
+    monkeypatch.delenv("TYPESAFE_API_KEY", raising=False)
+    assert ev.main(["replay", "--no-judge"]) == 0
+    rows = read_rows(jev / "labels.csv")
+    assert list(rows[0]) == ev.LABEL_FIELDS
+    assert [r["session_id"] for r in rows] == ["s1", "s1"]
+    for row in rows:
+        assert row["s_new_feature"] == row["latency_ms"] == row["input_tokens"] == ""
+    assert ev.main(["replay", "--no-judge"]) == 1  # the overwrite guard holds
+
+
+def test_replay_since_filters_the_sample(monkeypatch, dirs):
+    projects, jev = dirs
+    records = [
+        dated("an old prompt from july", "2026-07-15"),
+        dated("a prompt from august", "2026-08-02"),
+    ]
+    write_jsonl(projects / "proj-a" / "s1.jsonl", records)
+    assert ev.main(["replay", "--no-judge", "--since", "2026-08-01"]) == 0
+    assert [r["prompt"] for r in read_rows(jev / "labels.csv")] == [
+        "a prompt from august"
+    ]
 
 
 HEADER = [
@@ -306,7 +362,7 @@ def test_interrupt_is_not_a_prompt_but_counts_as_correction(tmp_path):
         assistant(say("Switching.")),
     ]
     path = write_jsonl(tmp_path / "proj-a" / "s1.jsonl", session)
-    assert [t for _, t in ev.iter_prompts([path])] == [P1, FOLLOW_UP]
+    assert [t for _, _, t in ev.iter_prompts([path])] == [P1, FOLLOW_UP]
     result = ev.turns(path)
     assert [t[0] for t in result] == [P1, FOLLOW_UP]
     assert ev.outcome(result[0][1], result[0][2]).corrected is True

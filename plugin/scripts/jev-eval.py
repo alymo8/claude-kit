@@ -17,6 +17,7 @@ import importlib.util
 import io
 import json
 import math
+import os
 import random
 import re
 import statistics
@@ -41,6 +42,7 @@ INTERRUPT_PREFIX = "[Request interrupted by user"
 LABEL_FIELDS = [
     "id",
     "project",
+    "session_id",
     "prompt",
     *(f"s_{k}" for k in triage.KEYS),
     "latency_ms",
@@ -109,32 +111,40 @@ def prompt_text(record: dict) -> str | None:
     return text if text and triage.should_judge(text) else None
 
 
-def iter_prompts(files: Iterable[Path]) -> Iterator[tuple[str, str]]:
+def iter_prompts(
+    files: Iterable[Path], since: str = ""
+) -> Iterator[tuple[str, str, str]]:
+    """(project, session_id, text) for every prompt the hook would judge."""
     for path in files:
         for record in read_jsonl(path):
+            if since and str(record.get("timestamp") or "")[:10] < since:
+                continue
             text = prompt_text(record)
             if text:
-                yield path.parent.name, text
+                yield path.parent.name, path.stem, text
 
 
-def sample(prompts: list[tuple[str, str]], n: int, seed: int) -> list[tuple[str, str]]:
+def sample(
+    prompts: list[tuple[str, str, str]], n: int, seed: int
+) -> list[tuple[str, str, str]]:
     """Up to n distinct prompts, round-robin across projects."""
     rng = random.Random(seed)
-    groups: dict[str, list[str]] = defaultdict(list)
+    groups: dict[str, list[tuple[str, str]]] = defaultdict(list)
     seen: set[str] = set()
-    for project, text in prompts:
+    for project, session_id, text in prompts:
         if text not in seen:
             seen.add(text)
-            groups[project].append(text)
-    for texts in groups.values():
-        rng.shuffle(texts)
+            groups[project].append((session_id, text))
+    for entries in groups.values():
+        rng.shuffle(entries)
     order = sorted(groups)
     rng.shuffle(order)
-    chosen: list[tuple[str, str]] = []
+    chosen: list[tuple[str, str, str]] = []
     while len(chosen) < n and any(groups[p] for p in order):
         for project in order:
             if groups[project] and len(chosen) < n:
-                chosen.append((project, groups[project].pop()))
+                session_id, text = groups[project].pop()
+                chosen.append((project, session_id, text))
     return chosen
 
 
@@ -201,28 +211,55 @@ def confusion(rows: list[dict], key: str, threshold: float) -> Confusion:
     return c
 
 
-def label_row(i: int, project: str, text: str) -> dict:
-    """Judge one prompt and build its labels.csv row; raises JevError."""
+SCORE_FIELDS = (
+    *(f"s_{k}" for k in triage.KEYS),
+    "latency_ms",
+    "input_tokens",
+    "output_tokens",
+)
+
+
+def empty_row(i: int, project: str, session_id: str, text: str) -> dict:
+    """A labels.csv row with no scores and no labels."""
+    row = dict.fromkeys(LABEL_FIELDS, "")
+    row.update(id=i, project=project, session_id=session_id, prompt=text)
+    return row
+
+
+def score_row(row: dict) -> dict:
+    """Judge row["prompt"] and fill the score columns; raises JevError when jev
+    cannot be reached at all (missing key or SDK)."""
+    for name in SCORE_FIELDS:
+        row[name] = ""
     start = time.perf_counter()
     try:
-        judgment = triage.judge(text)
+        judgment = triage.judge(str(row.get("prompt") or ""))
     except triage.JevError as exc:
         if exc.code in ("missing_key", "missing_sdk"):
             raise
-        print(f"prompt {i}: {exc.code}", file=sys.stderr)
-        judgment = triage.Judgment({}, None)
+        print(f"prompt {row.get('id')}: {exc.code}", file=sys.stderr)
+        return row
     usage = judgment.usage or {}
-    scores = judgment.scores
-    return {
-        "id": i,
-        "project": project,
-        "prompt": text,
-        **{f"s_{k}": f"{scores[k]:.4f}" if k in scores else "" for k in triage.KEYS},
-        "latency_ms": round((time.perf_counter() - start) * 1000),
-        "input_tokens": usage.get("input_tokens") or "",
-        "output_tokens": usage.get("output_tokens") or "",
-        **{f"label_{k}": "" for k in triage.KEYS},
-    }
+    for key in triage.KEYS:
+        if key in judgment.scores:
+            row[f"s_{key}"] = f"{judgment.scores[key]:.4f}"
+    row["latency_ms"] = round((time.perf_counter() - start) * 1000)
+    row["input_tokens"] = usage.get("input_tokens") or ""
+    row["output_tokens"] = usage.get("output_tokens") or ""
+    return row
+
+
+def write_labels(path: Path, rows: list[dict]) -> None:
+    """Write via a temporary file and a rename, so a failure never truncates."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp = path.with_name(path.name + ".tmp")
+    with tmp.open("w", encoding="utf-8-sig", newline="") as fh:
+        writer = csv.DictWriter(
+            fh, fieldnames=LABEL_FIELDS, restval="", extrasaction="ignore"
+        )
+        writer.writeheader()
+        writer.writerows(rows)
+    os.replace(tmp, path)
 
 
 def cmd_replay(args: argparse.Namespace) -> int:
@@ -231,19 +268,17 @@ def cmd_replay(args: argparse.Namespace) -> int:
         print(f"{out} exists; pass --force to overwrite", file=sys.stderr)
         return 1
     files = sorted(projects_dir().glob("*/*.jsonl"))
-    chosen = sample(list(iter_prompts(files)), args.n, args.seed)
-    try:
-        rows = [label_row(i, p, t) for i, (p, t) in enumerate(chosen, 1)]
-    except triage.JevError as exc:
-        print(f"cannot judge: {exc.code}", file=sys.stderr)
-        return 1
-    out.parent.mkdir(parents=True, exist_ok=True)
-    with out.open("w", encoding="utf-8-sig", newline="") as fh:
-        writer = csv.DictWriter(fh, fieldnames=LABEL_FIELDS)
-        writer.writeheader()
-        writer.writerows(rows)
+    chosen = sample(list(iter_prompts(files, args.since)), args.n, args.seed)
+    rows = [empty_row(i, p, s, t) for i, (p, s, t) in enumerate(chosen, 1)]
+    if not args.no_judge:
+        try:
+            rows = [score_row(row) for row in rows]
+        except triage.JevError as exc:
+            print(f"cannot judge: {exc.code}", file=sys.stderr)
+            return 1
+    write_labels(out, rows)
     print(f"wrote {len(rows)} prompts to {out}")
-    print("fill the label_* columns with 1 or 0, then run: jev-eval.py score")
+    print("fill the label_* columns with 1 or 0, then run: jev-eval.py baseline")
     return 0
 
 
@@ -615,6 +650,8 @@ def main(argv: list[str] | None = None) -> int:
     replay.add_argument("--n", type=int, default=60)
     replay.add_argument("--seed", type=int, default=0)
     replay.add_argument("--force", action="store_true")
+    replay.add_argument("--since", default="", help="YYYY-MM-DD")
+    replay.add_argument("--no-judge", action="store_true")
     score = sub.add_parser("score", help="score labels.csv against the gate")
     score.add_argument("labels", nargs="?")
     report = sub.add_parser("report", help="shadow vs active outcomes")
