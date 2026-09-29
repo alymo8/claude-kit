@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import importlib.util
+import os
 import re
 import subprocess
 import sys
@@ -24,8 +25,23 @@ def load_module(path: Path, name: str) -> ModuleType:
     return module
 
 
+def clean_env(**extra: str) -> dict[str, str]:
+    """os.environ without the developer's CLAUDE_KIT_* and TYPESAFE_* settings."""
+    env = {
+        k: v
+        for k, v in os.environ.items()
+        if not k.startswith(("CLAUDE_KIT_", "TYPESAFE_"))
+    }
+    env.update(extra)
+    return env
+
+
 def run_script(
-    script: Path, *args: str, stdin: str = "", cwd: Path | None = None
+    script: Path,
+    *args: str,
+    stdin: str = "",
+    cwd: Path | None = None,
+    env: dict[str, str] | None = None,
 ) -> subprocess.CompletedProcess[str]:
     """Run a Python script the way a hook runner would: stdin in, text out."""
     return subprocess.run(
@@ -35,6 +51,7 @@ def run_script(
         text=True,
         encoding="utf-8",
         cwd=cwd,
+        env=clean_env() if env is None else env,
         timeout=60,
     )
 
