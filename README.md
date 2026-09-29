@@ -27,10 +27,10 @@ setup that sits above my individual project repos — it defines *how* I work, n
 - **[`plugin/`](plugin/)** — a Claude Code plugin: the `supabase-cli`,
   `lean-context`, `audit` and `audit-deep` skills (the audits share a citation
   checker, `check-findings.py`), the on-demand spec → HTML renderer, the `token-report.py`
-  measurement script, a status line, and seven hooks (regenerate the spec/plan
+  measurement script, a status line, and six hooks (regenerate the spec/plan
   index after edits and at every stop; report leftover worktrees, inject the
   branch handoff and nudge past a context threshold at the right moments;
-  snapshot git state at session end; an opt-in jev triage of each prompt). Install once per machine with `plugin\install.ps1` — it junctions
+  snapshot git state at session end). Install once per machine with `plugin\install.ps1` — it junctions
   `~/.claude/skills/claude-kit` to this folder so edits are live, and adds the
   kit's status line to `~/.claude/settings.json` when none is configured. If
   PowerShell refuses to run the script (execution policy), use
@@ -47,59 +47,6 @@ setup that sits above my individual project repos — it defines *how* I work, n
 - **[`knowledge/decisions/`](knowledge/decisions/)** — this repo's own ADRs.
 - **[`docs/superpowers/`](docs/superpowers/)** — specs and plans for changes to
   the kit itself.
-
-## Trying jev (opt-in pilot)
-
-An experiment: [jev](https://typesafe.ai), a fast "System One" judge, scores
-each prompt (underspecified? new feature? key decision?) and, in `active`
-mode, adds a one-line hint for Claude. It is **off by default**; see
-[ADR 0012](knowledge/decisions/0012-jev-triage-pilot.md) and the
-[spec](docs/superpowers/specs/2026-09-28-jev-triage-pilot-design.md).
-
-```
-# no key needed
-python plugin/scripts/jev-eval.py replay --no-judge --since 2026-08-01
-#    fill label_* in ~/.claude/claude-kit/jev/labels.csv with 1/0; in Excel,
-#    save as "CSV UTF-8" (plain "CSV" turns non-Latin characters into ?)
-python plugin/scripts/jev-eval.py baseline   # how often the rules slip today
-# with a key (https://console.typesafe.ai/keys)
-python -m pip install "typesafe-sdk>=0.7"    # once, into the python hooks run
-setx TYPESAFE_API_KEY <key>                  # restart Claude Code afterwards
-python plugin/scripts/jev-eval.py replay --rescore
-python plugin/scripts/jev-eval.py score      # Replay gate PASS/FAIL
-setx CLAUDE_KIT_JEV shadow                   # log only, 1-2 weeks
-setx CLAUDE_KIT_JEV active                   # add hints, 1-2 weeks
-python plugin/scripts/jev-eval.py report --since 2026-10-01
-setx CLAUDE_KIT_JEV off                      # stop
-```
-
-Judgments are logged to `~/.claude/claude-kit/jev/log.jsonl`. Prompts go to
-TypeSafe only while the flag is `shadow` or `active`, and when you run
-`replay` without `--no-judge` or `replay --rescore`.
-
-### Task bench: real tasks with and without jev
-
-`plugin/scripts/jev-bench.py` replays real past tasks headless, in throwaway
-sandboxes under `.jev-bench/`. Each sandbox is a clone with no remote and no
-later commits. `git push`, `gh`, deploy CLIs and file-opening commands are
-denied, and secrets are stripped from the environment. A simulated user
-(Haiku) answers Claude's questions from a brief of the real session, and a
-blind Opus judge grades each run against a rubric and the real commit. Task
-files are private and live in `~/.claude/claude-kit/jev/bench/tasks/`; see
-the [spec](docs/superpowers/specs/2026-09-29-jev-task-bench-design.md).
-
-```
-python plugin/scripts/jev-bench.py check
-python plugin/scripts/jev-bench.py run --arm off --runs 2   # cap: $150
-python plugin/scripts/jev-bench.py grade
-python plugin/scripts/jev-bench.py report
-python plugin/scripts/jev-bench.py run --arm jev --runs 2   # needs the key
-```
-
-Runs also get no MCP servers, no git credentials, pushes rewritten to an
-invalid URL, and a guard prompt telling Claude to stay inside the sandbox.
-Known limit: there is no filesystem isolation (runs use `bypassPermissions`),
-so a run could still read or change sibling repositories under the workspace.
 
 ## Scope
 
