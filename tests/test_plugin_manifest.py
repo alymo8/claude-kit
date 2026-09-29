@@ -78,10 +78,11 @@ def test_lean_context_skill_exists_and_is_short():
 def test_plugin_version_bumped():
     plugin_json = PLUGIN / ".claude-plugin" / "plugin.json"
     data = json.loads(plugin_json.read_text(encoding="utf-8"))
-    assert data["version"] == "0.4.0"
+    assert data["version"] == "0.5.0"
     assert "handoff" in data["description"]
     assert "/ship" in data["description"]
     assert "jev" in data["description"]
+    assert "audit-deep" in data["description"]
 
 
 def test_jev_triage_hook_registered_with_timeout():
