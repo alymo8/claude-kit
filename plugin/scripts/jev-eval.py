@@ -262,13 +262,33 @@ def write_labels(path: Path, rows: list[dict]) -> None:
     os.replace(tmp, path)
 
 
+def cmd_rescore(path: Path) -> int:
+    """Fill jev scores into an existing labels.csv, keeping every label."""
+    if not path.is_file():
+        print(f"{path} not found; run: jev-eval.py replay --no-judge", file=sys.stderr)
+        return 1
+    rows = read_labels(path)
+    try:
+        rows = [score_row(row) for row in rows]
+    except triage.JevError as exc:
+        print(f"cannot judge: {exc.code}; {path} left unchanged", file=sys.stderr)
+        return 1
+    write_labels(path, rows)
+    print(f"rescored {len(rows)} prompts in {path}; next: jev-eval.py score")
+    return 0
+
+
 def cmd_replay(args: argparse.Namespace) -> int:
+    if args.rescore:
+        return cmd_rescore(triage.jev_dir() / "labels.csv")
     out = triage.jev_dir() / "labels.csv"
     if out.exists() and not args.force:
         print(f"{out} exists; pass --force to overwrite", file=sys.stderr)
         return 1
     files = sorted(projects_dir().glob("*/*.jsonl"))
-    chosen = sample(list(iter_prompts(files, args.since)), args.n, args.seed)
+    n = 60 if args.n is None else args.n
+    seed = 0 if args.seed is None else args.seed
+    chosen = sample(list(iter_prompts(files, args.since)), n, seed)
     rows = [empty_row(i, p, s, t) for i, (p, s, t) in enumerate(chosen, 1)]
     if not args.no_judge:
         try:
@@ -646,17 +666,22 @@ def cmd_report(args: argparse.Namespace) -> int:
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Evaluate the jev triage pilot.")
     sub = parser.add_subparsers(dest="command", required=True)
-    replay = sub.add_parser("replay", help="judge a sample of past prompts")
-    replay.add_argument("--n", type=int, default=60)
-    replay.add_argument("--seed", type=int, default=0)
+    replay = sub.add_parser("replay", help="sample past prompts into labels.csv")
+    replay.add_argument("--n", type=int, default=None, help="default 60")
+    replay.add_argument("--seed", type=int, default=None, help="default 0")
     replay.add_argument("--force", action="store_true")
     replay.add_argument("--since", default="", help="YYYY-MM-DD")
-    replay.add_argument("--no-judge", action="store_true")
+    how = replay.add_mutually_exclusive_group()
+    how.add_argument("--no-judge", action="store_true", help="no key needed")
+    how.add_argument("--rescore", action="store_true", help="score labels.csv")
     score = sub.add_parser("score", help="score labels.csv against the gate")
     score.add_argument("labels", nargs="?")
     report = sub.add_parser("report", help="shadow vs active outcomes")
     report.add_argument("--since", default="")
     args = parser.parse_args(argv)
+    if args.command == "replay" and args.rescore:
+        if args.n is not None or args.seed is not None or args.since:
+            replay.error("--rescore keeps the existing sample; drop --n/--seed/--since")
     handler = {"replay": cmd_replay, "score": cmd_score, "report": cmd_report}
     return handler[args.command](args)
 

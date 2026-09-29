@@ -407,3 +407,63 @@ def test_score_reads_ansi_semicolon_decimal_comma(tmp_path, dirs):
     text = text.replace("prompt 0", "prompt – “smart”")
     path.write_bytes(text.encode("cp1252"))
     assert ev.main(["score", str(path)]) == 0
+
+
+def labelled_file(monkeypatch, dirs, delimiter=",", encoding="utf-8-sig"):
+    """Run replay --no-judge, label row 1 as a feature, save in a given format."""
+    projects, jev = dirs
+    write_jsonl(projects / "proj-a" / "s1.jsonl", FIXTURE)
+    monkeypatch.setattr(triage, "judge", must_not_call)
+    assert ev.main(["replay", "--no-judge"]) == 0
+    rows = read_rows(jev / "labels.csv")
+    rows[0].update(
+        label_underspecified="0", label_new_feature="1", label_key_decision="0"
+    )
+    rows[1]["prompt"] = rows[1]["prompt"] + " – “quoted”"
+    path = jev / "labels.csv"
+    with path.open("w", encoding=encoding, newline="") as fh:
+        writer = csv.DictWriter(fh, fieldnames=ev.LABEL_FIELDS, delimiter=delimiter)
+        writer.writeheader()
+        writer.writerows(rows)
+    return path, rows
+
+
+def test_rescore_keeps_labels_from_an_excel_file(monkeypatch, dirs):
+    path, before = labelled_file(monkeypatch, dirs, delimiter=";", encoding="cp1252")
+    monkeypatch.setattr(triage, "judge", fake)
+    assert ev.main(["replay", "--rescore"]) == 0
+    after = read_rows(path)
+    assert [r["prompt"] for r in after] == [r["prompt"] for r in before]
+    assert [r["session_id"] for r in after] == ["s1", "s1"]
+    assert after[0]["label_new_feature"] == "1"
+    assert after[1]["label_new_feature"] == ""
+    assert {r["s_new_feature"] for r in after} == {"0.9000"}
+    assert {r["input_tokens"] for r in after} == {"10"}
+    assert not path.with_name("labels.csv.tmp").exists()
+
+
+def test_rescore_missing_key_leaves_file_untouched(monkeypatch, dirs):
+    path, _ = labelled_file(monkeypatch, dirs)
+    original = path.read_bytes()
+
+    def no_key(prompt):
+        raise triage.JevError("missing_key")
+
+    monkeypatch.setattr(triage, "judge", no_key)
+    assert ev.main(["replay", "--rescore"]) == 1
+    assert path.read_bytes() == original
+
+
+def test_rescore_without_labels_file(dirs, capsys):
+    assert ev.main(["replay", "--rescore"]) == 1
+    assert "not found" in capsys.readouterr().err
+
+
+@pytest.mark.parametrize(
+    "extra",
+    [["--no-judge"], ["--n", "5"], ["--seed", "1"], ["--since", "2026-08-01"]],
+)
+def test_rescore_rejects_sampling_options(dirs, extra):
+    with pytest.raises(SystemExit) as info:
+        ev.main(["replay", "--rescore", *extra])
+    assert info.value.code == 2
