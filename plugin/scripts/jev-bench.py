@@ -24,11 +24,13 @@ import os
 import random
 import re
 import shutil
+import signal
 import stat
 import statistics
 import subprocess
 import sys
 import tempfile
+import time
 from collections import Counter
 from collections.abc import Callable
 from dataclasses import dataclass
@@ -150,26 +152,54 @@ def claude_bin() -> str | None:
 
 
 SECRET_RE = re.compile(
-    r"TOKEN|SECRET|PASSWORD|KEY|SUPABASE|AZURE|AWS|GH_|GITHUB|DATABASE_URL", re.I
+    r"TOKEN|SECRET|PASSWORD|PASSWD|KEY|SUPABASE|AZURE|AWS|GH_|GITHUB|CREDENTIAL"
+    r"|AUTH|PRIVATE|DSN|PAT$|_URI$|_URL$",
+    re.I,
 )
 KEEP_PREFIXES = ("ANTHROPIC_", "CLAUDE_")
-# Nothing may leave the machine or pop up on the user's screen.
+# Nothing may leave the machine or pop up on the user's screen. Prefix rules
+# are easy to route around, so the real guards are elsewhere: no remote, no git
+# credentials, pushes rewritten to an invalid URL (child_env), and GUARD.
+_BLOCKED = (
+    "git push",
+    "gh",
+    "supabase",
+    "npx supabase",
+    "pnpm dlx supabase",
+    "bunx supabase",
+    "az",
+    "vercel",
+    "npx vercel",
+    "pnpm dlx vercel",
+    "bunx vercel",
+    "explorer",
+    "explorer.exe",
+    "start",
+    "cmd",
+    "cmd.exe",
+    "powershell",
+    "pwsh",
+)
 DENIED = (
-    "Bash(git push:*)",
-    "Bash(gh:*)",
-    "Bash(supabase:*)",
-    "Bash(npx supabase:*)",
-    "Bash(az:*)",
-    "Bash(vercel:*)",
-    "Bash(explorer:*)",
-    "Bash(start:*)",
-    "PowerShell(git push:*)",
-    "PowerShell(gh:*)",
+    *(f"Bash({command}:*)" for command in _BLOCKED),
+    *(f"PowerShell({command}:*)" for command in _BLOCKED),
     "PowerShell(Invoke-Item:*)",
     "PowerShell(ii:*)",
-    "PowerShell(explorer:*)",
-    "PowerShell(start:*)",
     "PowerShell(Start-Process:*)",
+)
+GUARD = (
+    "You are working in a disposable copy of this repository. Keep every read "
+    "and write inside the current directory: do not read, copy or modify files "
+    "outside it (sibling repositories and their .env files included). Do not "
+    "push, deploy, publish, or open windows or browsers. Otherwise work exactly "
+    "as you normally would."
+)
+EMPTY_DIR = Path(tempfile.gettempdir()) / "jev-bench-empty"
+# Pushes go nowhere and git can use no stored credentials.
+GIT_CONFIG = (
+    ("credential.helper", ""),
+    ("url.https://invalid.invalid/.pushInsteadOf", "https://"),
+    ("url.https://invalid.invalid/.pushInsteadOf", "git@"),
 )
 NO_TOOLS = (
     "Bash",
@@ -201,6 +231,14 @@ def child_env(arm: str, base: dict[str, str] | None = None) -> dict[str, str]:
     env["CLAUDE_KIT_JEV"] = "active" if arm == "jev" else "off"
     if arm == "jev" and source.get("TYPESAFE_API_KEY"):
         env["TYPESAFE_API_KEY"] = source["TYPESAFE_API_KEY"]
+    EMPTY_DIR.mkdir(parents=True, exist_ok=True)
+    # GIT_CONFIG_PARAMETERS is what `git -c` uses; GIT_CONFIG_COUNT with an
+    # empty value does not reach git on Windows.
+    env["GIT_CONFIG_PARAMETERS"] = " ".join(f"'{k}={v}'" for k, v in GIT_CONFIG)
+    env["GIT_TERMINAL_PROMPT"] = "0"
+    env["GCM_INTERACTIVE"] = "Never"
+    env["GH_CONFIG_DIR"] = str(EMPTY_DIR)
+    env["NPM_CONFIG_USERCONFIG"] = str(EMPTY_DIR / "npmrc")
     return env
 
 
@@ -210,8 +248,10 @@ def claude_args(
     resume: str | None = None,
     tools: tuple[str, ...] = DENIED,
     permission: str = "bypassPermissions",
+    system: str = "",
 ) -> list[str]:
-    """argv for one headless call; the prompt goes on stdin."""
+    """argv for one headless call; the prompt goes on stdin. MCP servers and
+    connectors are off (--strict-mcp-config with no --mcp-config)."""
     argv = [
         claude_bin() or "claude",
         "-p",
@@ -221,9 +261,12 @@ def claude_args(
         "json",
         "--max-budget-usd",
         f"{budget:.2f}",
+        "--strict-mcp-config",
     ]
     if permission:
         argv += ["--permission-mode", permission]
+    if system:
+        argv += ["--append-system-prompt", system]
     if resume:
         argv += ["--resume", resume]
     return [*argv, "--disallowedTools", *tools]
@@ -280,25 +323,60 @@ def make_sandbox(task: Task, root: Path, name: str) -> Path:
 
 
 CALL_TIMEOUT_S = 3600
+SIDE_TIMEOUT_S = 300  # simulated user and judge
 MIN_CALL_BUDGET = 0.5
 MAX_REPLIES = 6
-Runner = Callable[[list[str], Path, dict[str, str], str], subprocess.CompletedProcess]
+Runner = Callable[..., subprocess.CompletedProcess]
+
+
+def kill_tree(proc: subprocess.Popen) -> None:
+    """Kill the process and everything it started (dev servers, test runners)."""
+    if os.name == "nt":
+        subprocess.run(
+            ["taskkill", "/T", "/F", "/PID", str(proc.pid)], capture_output=True
+        )
+    else:  # pragma: no cover - POSIX
+        try:
+            os.killpg(proc.pid, signal.SIGKILL)
+        except ProcessLookupError:
+            pass
 
 
 def default_runner(
-    argv: list[str], cwd: Path, env: dict[str, str], stdin: str
+    argv: list[str],
+    cwd: Path,
+    env: dict[str, str],
+    stdin: str,
+    timeout: float = CALL_TIMEOUT_S,
 ) -> subprocess.CompletedProcess:
-    return subprocess.run(
-        argv,
-        cwd=cwd,
-        env=env,
-        input=stdin,
-        capture_output=True,
-        text=True,
-        encoding="utf-8",
-        errors="replace",
-        timeout=CALL_TIMEOUT_S,
+    """Run one call. Output goes to temporary files, not pipes, so orphaned
+    grandchildren cannot block us; on timeout the whole tree is killed."""
+    group = (
+        {"creationflags": subprocess.CREATE_NEW_PROCESS_GROUP}
+        if os.name == "nt"
+        else {"start_new_session": True}
     )
+    with tempfile.TemporaryFile() as out, tempfile.TemporaryFile() as err:
+        proc = subprocess.Popen(
+            argv,
+            cwd=cwd,
+            env=env,
+            stdin=subprocess.PIPE,
+            stdout=out,
+            stderr=err,
+            **group,
+        )
+        try:
+            proc.communicate(stdin.encode("utf-8"), timeout=timeout)
+        except subprocess.TimeoutExpired:
+            kill_tree(proc)
+            proc.wait(timeout=30)
+            raise subprocess.TimeoutExpired(argv, timeout) from None
+        out.seek(0)
+        err.seek(0)
+        stdout = out.read().decode("utf-8", "replace")
+        stderr = err.read().decode("utf-8", "replace")
+    return subprocess.CompletedProcess(argv, proc.returncode, stdout, stderr)
 
 
 RUNNER: Runner = default_runner  # tests replace this
@@ -366,6 +444,7 @@ def sim_reply(task: Task, last: str) -> tuple[str, float] | None:
                 Path(tmp),
                 child_env("off"),
                 prompt,
+                timeout=SIDE_TIMEOUT_S,
             )
         except subprocess.TimeoutExpired:
             return None
@@ -375,12 +454,50 @@ def sim_reply(task: Task, last: str) -> tuple[str, float] | None:
     return str(out.get("result") or ""), float(out.get("total_cost_usd") or 0)
 
 
+# Nested worktrees are diffed on their own; the rest is kit-hook noise.
+NOISE = (
+    ":(exclude).claude/worktrees",
+    ":(exclude).worktrees",
+    ":(exclude).claude/handoffs",
+    ":(exclude)docs/superpowers/README.md",
+)
+
+
+def worktrees(sandbox: Path) -> list[tuple[Path, str]]:
+    """(path, branch) of every worktree of the sandbox repo, main first."""
+    found: list[tuple[Path, str]] = []
+    path = None
+    listing = git(sandbox, "worktree", "list", "--porcelain").stdout
+    for line in listing.splitlines():
+        if line.startswith("worktree "):
+            path = Path(line[len("worktree ") :])
+        elif path is not None and line.startswith("branch "):
+            found.append((path, line[len("branch ") :].removeprefix("refs/heads/")))
+        elif path is not None and line == "detached":
+            found.append((path, "detached"))
+    return found or [(sandbox, "main")]
+
+
 def sandbox_changes(sandbox: Path, base: str) -> tuple[str, str]:
-    """The run's diff against base (untracked files included) and its git log."""
-    git(sandbox, "add", "-A", "--intent-to-add")
-    diff = git(sandbox, "diff", base).stdout
-    log = git(sandbox, "log", "--oneline", f"{base}..HEAD").stdout
-    return diff, log
+    """Diff against base of every worktree (untracked files included), and the
+    log of every branch. The workflow builds features in worktrees, so the main
+    tree alone would miss the work."""
+    sections = []
+    for tree, branch in worktrees(sandbox):
+        git(tree, "add", "-A", "--intent-to-add", "--", ".", *NOISE)
+        diff = git(tree, "diff", base, "--", ".", *NOISE).stdout
+        if diff.strip():
+            sections.append(f"### worktree: {branch}\n{diff}")
+    log = git(sandbox, "log", "--oneline", "--branches", "--not", base).stdout
+    return "\n".join(sections), log
+
+
+def drop_outside_worktrees(sandbox: Path) -> None:
+    """Remove worktrees the run created outside the sandbox, if any."""
+    inside = sandbox.resolve()
+    for tree, _ in worktrees(sandbox):
+        if tree.resolve() != inside and inside not in tree.resolve().parents:
+            git(sandbox, "worktree", "remove", "--force", str(tree))
 
 
 def run_verify(command: str, sandbox: Path, env: dict[str, str]) -> bool:
@@ -422,6 +539,10 @@ def new_record(task: Task, arm: str, n: int) -> dict:
         "log": "",
         "final_text": "",
         "error": "",
+        "uncounted_usd": 0.0,
+        "cleanup_error": "",
+        "session_costs": {},
+        "session_turns": {},
         "started": datetime.now(UTC).isoformat(timespec="seconds"),
     }
 
@@ -435,29 +556,42 @@ def converse(
     budget: float,
     max_replies: int,
 ) -> None:
-    """Claude and the simulated user take turns until a stop rule fires."""
+    """Claude and the simulated user take turns until a stop rule fires.
+
+    claude -p reports total_cost_usd and num_turns cumulatively for the session
+    (a --resume included), so each session counts once, at its latest value,
+    and --max-budget-usd gets the budget minus what other sessions spent."""
     prompt, session = task.prompt, None
+    costs, turns = record["session_costs"], record["session_turns"]
     while True:
-        remaining = budget - record["cost_usd"]
-        if remaining < MIN_CALL_BUDGET:
+        cap = budget - (record["cost_usd"] - costs.get(session, 0.0))
+        if cap - costs.get(session, 0.0) < MIN_CALL_BUDGET:
             record["status"] = "budget"
             return
+        start = time.perf_counter()
         try:
-            proc = RUNNER(claude_args(model, remaining, session), sandbox, env, prompt)
+            proc = RUNNER(
+                claude_args(model, cap, session, system=GUARD), sandbox, env, prompt
+            )
         except subprocess.TimeoutExpired:
             record["error"] = "claude call timed out"
+            record["uncounted_usd"] = cap - costs.get(session, 0.0)
             return
+        finally:
+            record["duration_ms"] += round((time.perf_counter() - start) * 1000)
         out = parse_output(proc)
         if out is None:
             tail = (proc.stderr or proc.stdout or "")[-500:]
             record["error"] = f"claude exited {proc.returncode}: {tail}"
+            record["uncounted_usd"] = cap - costs.get(session, 0.0)
             return
         session = str(out["session_id"])
         if session not in record["session_ids"]:
             record["session_ids"].append(session)
-        record["cost_usd"] += float(out.get("total_cost_usd") or 0)
-        record["turns"] += int(out.get("num_turns") or 0)
-        record["duration_ms"] += int(out.get("duration_ms") or 0)
+        costs[session] = max(costs.get(session, 0.0), float(out["total_cost_usd"] or 0))
+        turns[session] = max(turns.get(session, 0), int(out.get("num_turns") or 0))
+        record["cost_usd"] = sum(costs.values())
+        record["turns"] = sum(turns.values())
         record["final_text"] = str(out.get("result") or "")
         if out.get("is_error"):
             subtype = str(out.get("subtype") or "error")
@@ -501,13 +635,23 @@ def run_one(
         return record
     env = child_env(arm)
     try:
-        converse(task, record, sandbox, env, model, budget, max_replies)
+        try:
+            converse(task, record, sandbox, env, model, budget, max_replies)
+        except Exception as exc:  # a harness bug must not lose the record
+            record["status"] = "error"
+            record["error"] = f"harness error: {exc}"
         record["diff"], record["log"] = sandbox_changes(sandbox, task.base_commit)
         if task.verify:
             record["verify"] = run_verify(task.verify, sandbox, env)
+    except Exception as exc:
+        record["error"] = record["error"] or f"harness error: {exc}"
     finally:
-        if not keep:
-            remove_tree(sandbox)
+        try:
+            drop_outside_worktrees(sandbox)
+            if not keep:
+                remove_tree(sandbox)
+        except OSError as exc:  # e.g. files still locked on Windows
+            record["cleanup_error"] = f"sandbox not removed: {sandbox}: {exc}"
     record["jev_evaluations"] = count_jev(record["session_ids"])
     return record
 
@@ -523,6 +667,29 @@ def save_result(record: dict) -> None:
     path.write_text(text, encoding="utf-8")
 
 
+def sane(record: object) -> bool:
+    """A result file with the fields and types report and grade rely on."""
+    if not isinstance(record, dict) or not {"task", "arm", "n"} <= set(record):
+        return False
+    try:
+        for key in ("cost_usd", "sim_cost_usd", "uncounted_usd"):
+            float(record.get(key) or 0)
+        for key in ("turns", "replies", "duration_ms", "jev_evaluations"):
+            int(record.get(key) or 0)
+        grade = record.get("grade")
+        if grade is None:
+            return True
+        if not isinstance(grade, dict):
+            return False
+        float(grade.get("cost_usd") or 0)
+    except (TypeError, ValueError):
+        return False
+    checks = grade.get("checks")
+    return checks is None or (
+        isinstance(checks, list) and all(isinstance(c, bool) for c in checks)
+    )
+
+
 def load_results() -> list[dict]:
     records = []
     for path in sorted(results_dir().glob("*.json")):
@@ -531,8 +698,10 @@ def load_results() -> list[dict]:
         except (OSError, ValueError):
             print(f"skipping unreadable {path.name}", file=sys.stderr)
             continue
-        if isinstance(record, dict) and {"task", "arm", "n"} <= set(record):
+        if sane(record):
             records.append(record)
+        else:
+            print(f"skipping malformed {path.name}", file=sys.stderr)
     return records
 
 
@@ -565,7 +734,12 @@ def cmd_run(args: argparse.Namespace) -> int:
                     task, arm, n, root, args.model, args.budget, MAX_REPLIES, args.keep
                 )
                 save_result(record)
-                spent += record["cost_usd"] + record["sim_cost_usd"]
+                # a crashed or timed-out call may have spent up to its cap
+                spent += (
+                    record["cost_usd"]
+                    + record["sim_cost_usd"]
+                    + record["uncounted_usd"]
+                )
                 ran += 1
                 print(
                     f"  {record['status']} ${record['cost_usd']:.2f}"
@@ -625,7 +799,12 @@ Run B:
 Which run better does what the user wanted? Reply with JSON only: \
 {{"winner": "A" or "B" or "tie", "reason": "<one sentence>"}}
 """
-JEV_LINE_RE = re.compile(r"^.*\bjev\b.*$", re.I | re.M)
+# Lines that could reveal the arm: jev, its hints, or Claude paraphrasing them.
+ARM_LINE_RE = re.compile(
+    r"^.*(\bjev\b|triage|typesafe|looks underspecified|pre-flight branch check"
+    r"|hinge on a key decision).*(\n|$)",
+    re.I | re.M,
+)
 MALFORMED = "judge reply malformed twice"
 GRADE_FIELDS = [
     "task",
@@ -646,8 +825,9 @@ GRADE_FIELDS = [
 
 
 def redact(text: str) -> str:
-    """Hide anything that would reveal the arm to the judge."""
-    return JEV_LINE_RE.sub("[redacted]", text)
+    """Drop lines that would reveal the arm, silently: a marker would itself
+    appear almost only in the jev arm. Applied to both arms alike."""
+    return ARM_LINE_RE.sub("", text)
 
 
 def clip(text: str, limit: int = 60_000) -> str:
@@ -678,6 +858,7 @@ def ask_judge(prompt: str, valid, model: str) -> tuple[dict | None, float]:
                     Path(tmp),
                     child_env("off"),
                     prompt,
+                    timeout=SIDE_TIMEOUT_S,
                 )
             except subprocess.TimeoutExpired:
                 continue
@@ -782,6 +963,7 @@ def head_to_head(
     return {
         "task": task.id,
         "n": jev_run["n"],
+        "runs": run_pair_key(jev_run, off_run),
         "winner": winner,
         "jev_was": "A" if jev_first else "B",
         "reason": str((data or {}).get("reason") or "")[:300],
@@ -819,13 +1001,20 @@ def write_grades_csv(results: list[dict]) -> None:
         writer.writerows(grade_row(run) for run in results)
 
 
+def run_pair_key(jev_run: dict, off_run: dict) -> str:
+    """Identifies the exact two runs compared; a redone run changes it."""
+    return f"{jev_run.get('started', '')}|{off_run.get('started', '')}"
+
+
 def load_h2h() -> list[dict]:
     path = bench_dir() / "h2h.json"
     try:
         data = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, ValueError):
         return []
-    return [h for h in data if isinstance(h, dict)] if isinstance(data, list) else []
+    if not isinstance(data, list):
+        return []
+    return [h for h in data if isinstance(h, dict) and {"task", "n"} <= set(h)]
 
 
 def cmd_grade(args: argparse.Namespace) -> int:
@@ -839,9 +1028,17 @@ def cmd_grade(args: argparse.Namespace) -> int:
         run["grade"] = grade_run(task, run, args.model)
         save_result(run)
         graded += 1
-    h2h = [] if args.regrade else load_h2h()
-    have = {(h["task"], h["n"]) for h in h2h}
     by_key = {(r["task"], r["arm"], r["n"]): r for r in results}
+
+    def current(h: dict) -> bool:
+        jev_run = by_key.get((h["task"], "jev", h["n"]))
+        off_run = by_key.get((h["task"], "off", h["n"]))
+        return bool(jev_run and off_run) and h.get("runs") == run_pair_key(
+            jev_run, off_run
+        )
+
+    h2h = [] if args.regrade else [h for h in load_h2h() if current(h)]
+    have = {(h["task"], h["n"]) for h in h2h}
     rng = random.Random(args.seed)
     for (task_id, arm, n), run in sorted(by_key.items()):
         off = by_key.get((task_id, "off", n))
@@ -936,28 +1133,39 @@ def pair(counts: tuple[int, int]) -> str:
     return f"{k}/{n}" if n else "n/a"
 
 
+def wins_ties_losses(h2h: list[dict]) -> str:
+    counts = Counter(h.get("winner") for h in h2h)
+    return f"{counts['jev']} / {counts['tie']} / {counts['off']}"
+
+
 def render(stats: dict[str, dict], per_task: dict, h2h: list[dict]) -> str:
     lines = []
     for arm, s in stats.items():
+        runs = s["runs"] or 1
         lines += [
             f"{arm}: {s['runs']} runs {s['statuses']}",
             f"  rubric pass rate {fmt(s['pass_rate'], '.0%')}, "
             f"mean score {fmt(s['mean_score'])}",
             f"  pre-flight skipped {pair(s['preflight_miss'])}, "
             f"did not ask {pair(s['no_ask'])}, verify passed {pair(s['verify'])}",
-            f"  Claude cost per run ${fmt(s['cost'])}, jev evaluations "
-            f"{s['jev_evaluations']}, simulated user ${s['sim_cost']:.2f}, "
-            f"judge ${s['judge_cost']:.2f}",
+            f"  cost: Claude ${fmt(s['cost'])}/run, simulated user "
+            f"${s['sim_cost'] / runs:.2f}/run, judge ${s['judge_cost'] / runs:.2f}"
+            f"/run; jev evaluations {s['jev_evaluations']} in total",
             f"  per run: {fmt(s['turns'], '.1f')} turns, "
             f"{fmt(s['replies'], '.1f')} replies, {fmt(s['minutes'], '.1f')} min",
         ]
-    lines.append("per task (mean score / pass rate / cost):")
+    if h2h:
+        lines.append(f"head-to-head, jev wins / ties / losses: {wins_ties_losses(h2h)}")
+    lines.append("per task (arm: mean score / pass rate / cost per run):")
     for task_id in sorted(per_task):
         cells = [
             f"{arm} {fmt(s['mean_score'], '.1f')} / {fmt(s['pass_rate'], '.0%')} / "
             f"${fmt(s['cost'])}"
             for arm, s in per_task[task_id].items()
         ]
+        task_h2h = [h for h in h2h if h.get("task") == task_id]
+        if task_h2h:
+            cells.append(f"h2h {wins_ties_losses(task_h2h)}")
         lines.append(f"  {task_id}: " + " | ".join(cells))
     lines += [verdict(stats, h2h), CAVEAT]
     return "\n".join(lines)

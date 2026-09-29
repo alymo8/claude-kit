@@ -150,6 +150,43 @@ the head-to-heads, and it adds under about 10% Claude cost. With 20 runs per arm
 only a large effect can show, and the report says so. While the jev arm has not
 run, the report shows the no-jev arm alone as the baseline.
 
+### Hardening added after review, and known limits
+
+- **Pushes and credentials.** Every child process gets `GIT_CONFIG_PARAMETERS`
+  with `credential.helper=` (git uses no stored credentials) and
+  `pushInsteadOf` rules that send any push to `https://invalid.invalid/`, even
+  to a remote the run re-adds. Also `GIT_TERMINAL_PROMPT=0`,
+  `GCM_INTERACTIVE=Never`, and `GH_CONFIG_DIR` and `NPM_CONFIG_USERCONFIG`
+  pointing at an empty directory. `cmd`, `pwsh`, `powershell` and the
+  `npx`/`pnpm dlx`/`bunx` forms of `supabase` and `vercel` are denied as well.
+- **No MCP servers or connectors.** Every call passes `--strict-mcp-config`.
+  Without it, headless runs loaded the user's claude.ai connector tools.
+- **Guard prompt.** Task runs get `--append-system-prompt` (`GUARD`), identical in
+  both arms: stay inside the current directory, don't copy sibling repos'
+  `.env` files, don't push, deploy or open windows.
+- **Cost accounting.** `claude -p` reports `total_cost_usd` and `num_turns`
+  cumulatively for a session, `--resume` included (measured). Each session
+  therefore counts once at its latest value, and `--max-budget-usd` gets the run
+  budget minus what other sessions spent. Wall time is measured by the harness.
+  A call that crashes or times out is charged at its whole remaining cap toward
+  `--max-total-usd` (`uncounted_usd`), since its real cost is unknown.
+- **Worktrees.** The run's diff covers every git worktree of the sandbox, each
+  labelled by branch, and the log covers every branch. The workflow builds
+  features in worktrees, so the main tree alone would miss the work. Kit-hook
+  output (`.claude/handoffs/`, the spec index) is left out of the diff.
+- **Process trees.** A timed-out call is killed with everything it started
+  (`taskkill /T` on Windows). A sandbox that cannot be removed is recorded in
+  `cleanup_error` and does not stop the batch.
+- **Blind grading.** Lines mentioning jev, triage, TypeSafe or the hint phrases
+  are dropped silently in both arms. A marker would itself reveal the arm.
+- **Known limit: no filesystem isolation.** `bypassPermissions` allows reads
+  and writes anywhere. The guard prompt asks Claude to stay in the sandbox but
+  cannot enforce it, and deny rules on paths are easy to bypass (e.g. `cat` via
+  Bash). Because sandboxes sit inside the workspace, sibling repositories and
+  their `.env` files are reachable, and for the kit task the real kit repo
+  is the sandbox's parent. This is a known limit to settle with the user before
+  any real run.
+
 ### Budget
 
 - Per run: `--max-budget-usd 10` on each call, and the harness stops the run once

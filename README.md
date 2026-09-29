@@ -95,6 +95,11 @@ python plugin/scripts/jev-bench.py report
 python plugin/scripts/jev-bench.py run --arm jev --runs 2   # needs the key
 ```
 
+Runs also get no MCP servers, no git credentials, pushes rewritten to an
+invalid URL, and a guard prompt telling Claude to stay inside the sandbox.
+Known limit: there is no filesystem isolation (runs use `bypassPermissions`),
+so a run could still read or change sibling repositories under the workspace.
+
 ## Scope
 
 By design this repo tracks **only** the files above. The project folders that also
