@@ -1,10 +1,9 @@
 import json
-import os
 import subprocess
 import sys
 from pathlib import Path
 
-from helpers import PLUGIN, load_module, run_script
+from helpers import PLUGIN, clean_env, load_module, run_script
 
 HOOK = PLUGIN / "hooks" / "context_nudge.py"
 
@@ -42,7 +41,7 @@ def run(tmp_path: Path, tokens: int, env: dict | None = None, padding: int = 0):
         capture_output=True,
         text=True,
         encoding="utf-8",
-        env={**os.environ, **(env or {})},
+        env={**clean_env(), **(env or {})},
         timeout=60,
     )
 
