@@ -23,7 +23,7 @@ import re
 import statistics
 import sys
 import time
-from collections import defaultdict
+from collections import Counter, defaultdict
 from collections.abc import Iterable, Iterator
 from dataclasses import dataclass
 from pathlib import Path
@@ -663,6 +663,99 @@ def cmd_report(args: argparse.Namespace) -> int:
     return 0
 
 
+BASELINE_FIELDS = [
+    "id",
+    "session_id",
+    *(f"label_{k}" for k in triage.KEYS),
+    "asked",
+    "preflight",
+    "corrected",
+]
+BASELINE_LABELS = {
+    "preflight_miss": "pre-flight skipped (new feature, code edited)",
+    "not_asked": "did not ask (underspecified or key decision)",
+    "corrected_positive": "corrected or interrupted (any label = 1)",
+    "corrected_other": "corrected or interrupted (all labels = 0)",
+}
+SKIP_REASONS = ("unlabelled", "no transcript", "not found")
+Labelled = tuple[dict, dict[str, int], Outcome]
+
+
+def baseline_rows(rows: list[dict]) -> tuple[list[Labelled], Counter]:
+    """Labelled rows matched to their transcript turn, and why others were skipped."""
+    results: list[Labelled] = []
+    skipped: Counter = Counter()
+    cache: dict[str, list[Turn]] = {}
+    for row in rows:
+        labels = {k: parse_label(row.get(f"label_{k}", "")) for k in triage.KEYS}
+        if any(v is None for v in labels.values()):
+            skipped["unlabelled"] += 1
+            continue
+        session_id = str(row.get("session_id") or "")
+        path = transcript_for(session_id)
+        if path is None:
+            skipped["no transcript"] += 1
+            continue
+        if session_id not in cache:
+            cache[session_id] = turns(path)
+        found = match([{"prompt": row.get("prompt")}], cache[session_id])
+        if not found:
+            skipped["not found"] += 1
+            continue
+        results.append((row, labels, found[0][1]))  # type: ignore[arg-type]
+    return results, skipped
+
+
+def baseline_stats(results: list[Labelled]) -> dict[str, tuple[int, int]]:
+    """(k, n) per measure; the user's labels decide which prompts count."""
+    feature = [
+        o for _, lab, o in results if lab["new_feature"] and o.preflight is not None
+    ]
+    ask = [o for _, lab, o in results if lab["underspecified"] or lab["key_decision"]]
+    positive = [o for _, lab, o in results if any(lab.values())]
+    other = [o for _, lab, o in results if not any(lab.values())]
+    return {
+        "preflight_miss": (sum(1 for o in feature if not o.preflight), len(feature)),
+        "not_asked": (sum(1 for o in ask if not o.asked), len(ask)),
+        "corrected_positive": (sum(1 for o in positive if o.corrected), len(positive)),
+        "corrected_other": (sum(1 for o in other if o.corrected), len(other)),
+    }
+
+
+def write_baseline(out: Path, results: list[Labelled]) -> None:
+    with out.open("w", encoding="utf-8-sig", newline="") as fh:
+        writer = csv.DictWriter(fh, fieldnames=BASELINE_FIELDS)
+        writer.writeheader()
+        for row, labels, result in results:
+            preflight = "n/a" if result.preflight is None else result.preflight
+            writer.writerow(
+                {
+                    "id": row.get("id"),
+                    "session_id": row.get("session_id"),
+                    **{f"label_{k}": labels[k] for k in triage.KEYS},
+                    "asked": result.asked,
+                    "preflight": preflight,
+                    "corrected": result.corrected,
+                }
+            )
+
+
+def cmd_baseline(args: argparse.Namespace) -> int:
+    path = Path(args.labels) if args.labels else triage.jev_dir() / "labels.csv"
+    if not path.is_file():
+        print(f"{path} not found; run: jev-eval.py replay --no-judge", file=sys.stderr)
+        return 1
+    results, skipped = baseline_rows(read_labels(path))
+    print(f"baseline (no jev): {len(results)} labelled prompts matched")
+    for key, (k, n) in baseline_stats(results).items():
+        print(f"  {BASELINE_LABELS[key]}: {k}/{n} ({fmt(ratio(k, n), True)})")
+    print("  skipped: " + ", ".join(f"{why} {skipped[why]}" for why in SKIP_REASONS))
+    out = path.parent / "baseline.csv"
+    write_baseline(out, results)
+    print(f"per-prompt outcomes in {out}")
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Evaluate the jev triage pilot.")
     sub = parser.add_subparsers(dest="command", required=True)
@@ -678,11 +771,18 @@ def main(argv: list[str] | None = None) -> int:
     score.add_argument("labels", nargs="?")
     report = sub.add_parser("report", help="shadow vs active outcomes")
     report.add_argument("--since", default="")
+    baseline = sub.add_parser("baseline", help="no-jev baseline from your labels")
+    baseline.add_argument("labels", nargs="?")
     args = parser.parse_args(argv)
     if args.command == "replay" and args.rescore:
         if args.n is not None or args.seed is not None or args.since:
             replay.error("--rescore keeps the existing sample; drop --n/--seed/--since")
-    handler = {"replay": cmd_replay, "score": cmd_score, "report": cmd_report}
+    handler = {
+        "replay": cmd_replay,
+        "score": cmd_score,
+        "report": cmd_report,
+        "baseline": cmd_baseline,
+    }
     return handler[args.command](args)
 
 

@@ -467,3 +467,62 @@ def test_rescore_rejects_sampling_options(dirs, extra):
     with pytest.raises(SystemExit) as info:
         ev.main(["replay", "--rescore", *extra])
     assert info.value.code == 2
+
+
+def label_rows(entries):
+    """entries: (session_id, prompt, (u, f, k)) with "" for a blank label."""
+    rows = []
+    for i, (session_id, prompt, (u, f, k)) in enumerate(entries, 1):
+        row = ev.empty_row(i, "proj-a", session_id, prompt)
+        row.update(label_underspecified=u, label_new_feature=f, label_key_decision=k)
+        rows.append(row)
+    return rows
+
+
+def test_baseline_end_to_end(dirs, capsys):
+    projects, jev = dirs
+    write_jsonl(projects / "proj-a" / "s1.jsonl", SESSION, junk=True)
+    rows = label_rows(
+        [
+            ("s1", P1, ("0", "1", "0")),  # feature, edited before the check: miss
+            ("s1", P2, ("0", "1", "0")),  # feature, check then Write: ok
+            ("s1", P3, ("1", "0", "0")),  # vague, Claude asked: ok
+            ("s1", P4, ("0", "0", "0")),  # neither
+            ("s1", P4, ("", "", "")),  # unlabelled
+            ("gone", P1, ("0", "1", "0")),  # transcript missing
+            ("s1", "never typed here", ("1", "0", "0")),  # not in the transcript
+        ]
+    )
+    ev.write_labels(jev / "labels.csv", rows)
+
+    results, skipped = ev.baseline_rows(ev.read_labels(jev / "labels.csv"))
+    assert dict(skipped) == {"unlabelled": 1, "no transcript": 1, "not found": 1}
+    stats = ev.baseline_stats(results)
+    assert stats["preflight_miss"] == (1, 2)
+    assert stats["not_asked"] == (0, 1)
+    assert stats["corrected_positive"] == (1, 3)
+    assert stats["corrected_other"] == (0, 1)
+
+    assert ev.main(["baseline"]) == 0
+    out = capsys.readouterr().out
+    assert "1/2 (50%)" in out
+    assert "unlabelled 1" in out
+    spot = read_rows(jev / "baseline.csv")
+    assert len(spot) == 4
+    assert spot[0]["preflight"] == "False"
+
+
+def test_baseline_unlabelled_file(monkeypatch, dirs, capsys):
+    projects, jev = dirs
+    write_jsonl(projects / "proj-a" / "s1.jsonl", FIXTURE)
+    monkeypatch.setattr(triage, "judge", must_not_call)
+    assert ev.main(["replay", "--no-judge"]) == 0
+    assert ev.main(["baseline"]) == 0
+    out = capsys.readouterr().out
+    assert "unlabelled 2" in out
+    assert "n/a" in out
+
+
+def test_baseline_missing_file(tmp_path, dirs, capsys):
+    assert ev.main(["baseline", str(tmp_path / "nope.csv")]) == 1
+    assert "not found" in capsys.readouterr().err
