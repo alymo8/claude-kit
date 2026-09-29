@@ -1,12 +1,17 @@
 #!/usr/bin/env python3
 """Evaluate the jev triage pilot.
 
-  replay [--n 60] [--seed 0] [--force]  sample past prompts, judge, write labels.csv
+  replay [--n 60] [--seed 0] [--since YYYY-MM-DD] [--force] [--no-judge]
+                                        sample past prompts into labels.csv
+  replay --rescore                      fill jev scores into labels.csv
   score [labels.csv]                    precision/recall vs your labels; Replay gate
+  baseline [labels.csv]                 no-jev baseline from your labels and history
   report [--since YYYY-MM-DD]           shadow vs active outcomes from the hook log
 
-Outputs go to ~/.claude/claude-kit/jev/. replay needs typesafe-sdk and
-TYPESAFE_API_KEY. Spec: docs/superpowers/specs/2026-09-28-jev-triage-pilot-design.md
+Outputs go to ~/.claude/claude-kit/jev/. Only replay (without --no-judge) and
+--rescore call jev; they need typesafe-sdk and TYPESAFE_API_KEY. Specs:
+docs/superpowers/specs/2026-09-28-jev-triage-pilot-design.md and
+docs/superpowers/specs/2026-09-28-jev-offline-baseline-design.md
 """
 
 from __future__ import annotations

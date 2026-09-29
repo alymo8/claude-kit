@@ -56,15 +56,19 @@ mode, adds a one-line hint for Claude. It is **off by default**; see
 [spec](docs/superpowers/specs/2026-09-28-jev-triage-pilot-design.md).
 
 ```
-python -m pip install "typesafe-sdk>=0.7"  # once, into the python hooks run
-setx TYPESAFE_API_KEY <key>              # new terminals pick it up
-python plugin/scripts/jev-eval.py replay # 1. judge ~60 past prompts
+# no key needed
+python plugin/scripts/jev-eval.py replay --no-judge --since 2026-08-01
 #    fill label_* in ~/.claude/claude-kit/jev/labels.csv with 1/0
-python plugin/scripts/jev-eval.py score  # Replay gate PASS/FAIL
-setx CLAUDE_KIT_JEV shadow               # 2. log only, 1-2 weeks
-setx CLAUDE_KIT_JEV active               # 3. add hints, 1-2 weeks
+python plugin/scripts/jev-eval.py baseline   # how often the rules slip today
+# with a key (https://console.typesafe.ai/keys)
+python -m pip install "typesafe-sdk>=0.7"    # once, into the python hooks run
+setx TYPESAFE_API_KEY <key>                  # restart Claude Code afterwards
+python plugin/scripts/jev-eval.py replay --rescore
+python plugin/scripts/jev-eval.py score      # Replay gate PASS/FAIL
+setx CLAUDE_KIT_JEV shadow                   # log only, 1-2 weeks
+setx CLAUDE_KIT_JEV active                   # add hints, 1-2 weeks
 python plugin/scripts/jev-eval.py report --since 2026-10-01
-setx CLAUDE_KIT_JEV off                  # stop
+setx CLAUDE_KIT_JEV off                      # stop
 ```
 
 Judgments are logged to `~/.claude/claude-kit/jev/log.jsonl`; prompts go to

@@ -1,6 +1,6 @@
 # jev pilot: label without a key, and a no-jev baseline from history
 
-- **Status:** approved
+- **Status:** implemented
 - **Date:** 2026-09-28
 - **Extends:** `docs/superpowers/specs/2026-09-28-jev-triage-pilot-design.md`
   (the pilot spec; everything not changed here still holds)

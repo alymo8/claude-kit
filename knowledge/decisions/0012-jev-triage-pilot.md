@@ -31,6 +31,9 @@ API, and nothing yet shows that it helps.
 - In `shadow`/`active`, each prompt of 3+ words costs one jev evaluation and up
   to a 2 s wall-clock deadline; failures and timeouts are logged and the prompt
   passes unchanged (ADR 0007).
+- Labelling and a no-jev baseline need no key (`replay --no-judge`, `baseline`;
+  `docs/superpowers/specs/2026-09-28-jev-offline-baseline-design.md`). The
+  active stage is still compared with shadow; the baseline is a reference.
 
 ## Outcome
 Pending: replay gate not yet run.
