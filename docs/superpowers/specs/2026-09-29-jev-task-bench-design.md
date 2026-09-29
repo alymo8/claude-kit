@@ -1,6 +1,6 @@
 # jev task bench: 10 real tasks, with and without jev
 
-- **Status:** draft
+- **Status:** implemented
 - **Date:** 2026-09-29
 - **Extends:** the jev triage pilot
   (`docs/superpowers/specs/2026-09-28-jev-triage-pilot-design.md`)

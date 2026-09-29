@@ -76,6 +76,25 @@ Judgments are logged to `~/.claude/claude-kit/jev/log.jsonl`. Prompts go to
 TypeSafe only while the flag is `shadow` or `active`, and when you run
 `replay` without `--no-judge` or `replay --rescore`.
 
+### Task bench: real tasks with and without jev
+
+`plugin/scripts/jev-bench.py` replays real past tasks headless, in throwaway
+sandboxes under `.jev-bench/`. Each sandbox is a clone with no remote and no
+later commits. `git push`, `gh`, deploy CLIs and file-opening commands are
+denied, and secrets are stripped from the environment. A simulated user
+(Haiku) answers Claude's questions from a brief of the real session, and a
+blind Opus judge grades each run against a rubric and the real commit. Task
+files are private and live in `~/.claude/claude-kit/jev/bench/tasks/`; see
+the [spec](docs/superpowers/specs/2026-09-29-jev-task-bench-design.md).
+
+```
+python plugin/scripts/jev-bench.py check
+python plugin/scripts/jev-bench.py run --arm off --runs 2   # cap: $150
+python plugin/scripts/jev-bench.py grade
+python plugin/scripts/jev-bench.py report
+python plugin/scripts/jev-bench.py run --arm jev --runs 2   # needs the key
+```
+
 ## Scope
 
 By design this repo tracks **only** the files above. The project folders that also
