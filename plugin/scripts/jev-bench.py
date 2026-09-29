@@ -17,9 +17,11 @@ docs/superpowers/specs/2026-09-29-jev-task-bench-design.md
 from __future__ import annotations
 
 import argparse
+import csv
 import importlib.util
 import json
 import os
+import random
 import re
 import shutil
 import stat
@@ -572,6 +574,286 @@ def cmd_run(args: argparse.Namespace) -> int:
     return 0
 
 
+JUDGE_TEMPLATE = """You are grading an AI coding assistant's work on a real task. \
+You do not know which configuration produced it; judge only the work.
+
+Task type: {type}
+
+The user's request:
+{prompt}
+
+What the user actually wanted:
+{brief}
+
+Rubric (judge each item pass or fail):
+{rubric}
+
+Reference, what the user's real session delivered (git diff):
+{reference}
+
+The run to grade. Git log:
+{log}
+Git diff:
+{diff}
+The assistant's final message:
+{final}
+
+Reply with JSON only: {{"checks": [true or false for each rubric item, in \
+order], "score": <integer 1-5, overall quality>, "rationale": "<one or two \
+sentences>"}}
+"""
+H2H_TEMPLATE = """Two runs, A and B, of an AI coding assistant on the same real \
+task. You do not know which configuration produced which; judge only the work.
+
+The user's request:
+{prompt}
+
+What the user actually wanted:
+{brief}
+
+Rubric:
+{rubric}
+
+Run A:
+{a}
+
+Run B:
+{b}
+
+Which run better does what the user wanted? Reply with JSON only: \
+{{"winner": "A" or "B" or "tie", "reason": "<one sentence>"}}
+"""
+JEV_LINE_RE = re.compile(r"^.*\bjev\b.*$", re.I | re.M)
+MALFORMED = "judge reply malformed twice"
+GRADE_FIELDS = [
+    "task",
+    "arm",
+    "n",
+    "status",
+    "checks_passed",
+    "checks_total",
+    "score",
+    "asked",
+    "preflight",
+    "verify",
+    "cost_usd",
+    "judge_cost_usd",
+    "rationale",
+    "error",
+]
+
+
+def redact(text: str) -> str:
+    """Hide anything that would reveal the arm to the judge."""
+    return JEV_LINE_RE.sub("[redacted]", text)
+
+
+def clip(text: str, limit: int = 60_000) -> str:
+    if len(text) <= limit:
+        return text
+    return text[:limit] + f"\n[... cut {len(text) - limit} characters ...]"
+
+
+def reply_json(text: str) -> dict | None:
+    match = re.search(r"\{.*\}", text or "", re.S)
+    if not match:
+        return None
+    try:
+        data = json.loads(match.group(0))
+    except ValueError:
+        return None
+    return data if isinstance(data, dict) else None
+
+
+def ask_judge(prompt: str, valid, model: str) -> tuple[dict | None, float]:
+    """Ask up to twice for a valid JSON verdict; returns it and the total cost."""
+    cost = 0.0
+    for _ in range(2):
+        with tempfile.TemporaryDirectory(prefix="jev-judge-") as tmp:
+            try:
+                proc = RUNNER(
+                    claude_args(model, 2.0, tools=NO_TOOLS, permission=""),
+                    Path(tmp),
+                    child_env("off"),
+                    prompt,
+                )
+            except subprocess.TimeoutExpired:
+                continue
+        out = parse_output(proc)
+        if out is None:
+            continue
+        cost += float(out.get("total_cost_usd") or 0)
+        data = reply_json(str(out.get("result") or ""))
+        if data is not None and valid(data):
+            return data, cost
+    return None, cost
+
+
+def numbered(items: tuple[str, ...]) -> str:
+    return "\n".join(f"{i}. {item}" for i, item in enumerate(items, 1))
+
+
+def rules_of(run: dict) -> dict:
+    """asked (before acting) and preflight, from the run's transcripts."""
+    ev = load_eval()
+    first = None
+    records: list[dict] = []
+    for session_id in run.get("session_ids") or []:
+        path = ev.transcript_for(session_id)
+        if path is None:
+            continue
+        for _, assistant, next_prompt in ev.turns(path):
+            if first is None:
+                first = (assistant, next_prompt)
+            records += assistant
+    if first is None:
+        return {"asked": None, "preflight": None}
+    result = ev.outcome(first[0], first[1], records)
+    return {"asked": result.asked, "preflight": result.preflight}
+
+
+def grade_run(task: Task, run: dict, model: str = "opus") -> dict:
+    prompt = JUDGE_TEMPLATE.format(
+        type=task.type,
+        prompt=task.prompt,
+        brief=task.brief,
+        rubric=numbered(task.rubric),
+        reference=clip(git(task.repo, "diff", task.reference).stdout),
+        log=redact(run.get("log") or ""),
+        diff=clip(redact(run.get("diff") or "")),
+        final=clip(redact(run.get("final_text") or ""), 8_000),
+    )
+
+    def valid(data: dict) -> bool:
+        checks, score = data.get("checks"), data.get("score")
+        return (
+            isinstance(checks, list)
+            and len(checks) == len(task.rubric)
+            and all(isinstance(c, bool) for c in checks)
+            and type(score) is int
+            and 1 <= score <= 5
+        )
+
+    data, cost = ask_judge(prompt, valid, model)
+    grade = {"cost_usd": cost, **rules_of(run)}
+    if data is None:
+        grade.update(checks=None, score=None, rationale="", error=MALFORMED)
+    else:
+        grade.update(
+            checks=data["checks"],
+            score=data["score"],
+            rationale=str(data.get("rationale") or "")[:500],
+            error="",
+        )
+    return grade
+
+
+def run_block(run: dict) -> str:
+    return (
+        f"Git log:\n{redact(run.get('log') or '')}\n"
+        f"Git diff:\n{clip(redact(run.get('diff') or ''), 30_000)}\n"
+        f"Final message:\n{clip(redact(run.get('final_text') or ''), 4_000)}"
+    )
+
+
+def head_to_head(
+    task: Task, jev_run: dict, off_run: dict, rng: random.Random, model: str = "opus"
+) -> dict:
+    jev_first = rng.random() < 0.5
+    a, b = (jev_run, off_run) if jev_first else (off_run, jev_run)
+    prompt = H2H_TEMPLATE.format(
+        prompt=task.prompt,
+        brief=task.brief,
+        rubric=numbered(task.rubric),
+        a=run_block(a),
+        b=run_block(b),
+    )
+    data, cost = ask_judge(
+        prompt, lambda d: d.get("winner") in ("A", "B", "tie"), model
+    )
+    if data is None:
+        winner = None
+    elif data["winner"] == "tie":
+        winner = "tie"
+    else:
+        winner = "jev" if (data["winner"] == "A") == jev_first else "off"
+    return {
+        "task": task.id,
+        "n": jev_run["n"],
+        "winner": winner,
+        "jev_was": "A" if jev_first else "B",
+        "reason": str((data or {}).get("reason") or "")[:300],
+        "cost_usd": cost,
+        "error": "" if data else MALFORMED,
+    }
+
+
+def grade_row(run: dict) -> dict:
+    grade = run.get("grade") or {}
+    checks = grade.get("checks")
+    return {
+        "task": run["task"],
+        "arm": run["arm"],
+        "n": run["n"],
+        "status": run.get("status"),
+        "checks_passed": sum(checks) if checks else "",
+        "checks_total": len(checks) if checks else "",
+        "score": grade.get("score"),
+        "asked": grade.get("asked"),
+        "preflight": grade.get("preflight"),
+        "verify": run.get("verify"),
+        "cost_usd": round(float(run.get("cost_usd") or 0), 4),
+        "judge_cost_usd": round(float(grade.get("cost_usd") or 0), 4),
+        "rationale": grade.get("rationale"),
+        "error": grade.get("error") or run.get("error"),
+    }
+
+
+def write_grades_csv(results: list[dict]) -> None:
+    path = bench_dir() / "grades.csv"
+    with path.open("w", encoding="utf-8-sig", newline="") as fh:
+        writer = csv.DictWriter(fh, fieldnames=GRADE_FIELDS)
+        writer.writeheader()
+        writer.writerows(grade_row(run) for run in results)
+
+
+def load_h2h() -> list[dict]:
+    path = bench_dir() / "h2h.json"
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return []
+    return [h for h in data if isinstance(h, dict)] if isinstance(data, list) else []
+
+
+def cmd_grade(args: argparse.Namespace) -> int:
+    tasks = {t.id: t for t in load_tasks()[0]}
+    results = load_results()
+    graded = 0
+    for run in results:
+        task = tasks.get(run["task"])
+        if task is None or (run.get("grade") and not args.regrade):
+            continue
+        run["grade"] = grade_run(task, run, args.model)
+        save_result(run)
+        graded += 1
+    h2h = [] if args.regrade else load_h2h()
+    have = {(h["task"], h["n"]) for h in h2h}
+    by_key = {(r["task"], r["arm"], r["n"]): r for r in results}
+    rng = random.Random(args.seed)
+    for (task_id, arm, n), run in sorted(by_key.items()):
+        off = by_key.get((task_id, "off", n))
+        if arm != "jev" or off is None or (task_id, n) in have:
+            continue
+        if task_id in tasks:
+            h2h.append(head_to_head(tasks[task_id], run, off, rng, args.model))
+    bench_dir().mkdir(parents=True, exist_ok=True)
+    (bench_dir() / "h2h.json").write_text(json.dumps(h2h, indent=1), encoding="utf-8")
+    write_grades_csv(results)
+    print(f"graded {graded} run(s); {len(h2h)} head-to-head(s)")
+    return 0
+
+
 def prerequisites(tasks: list[Task], arms: tuple[str, ...]) -> list[str]:
     found = [f"{t.id}: {p}" for t in tasks for p in problems(t)]
     if not tasks:
@@ -613,8 +895,12 @@ def main(argv: list[str] | None = None) -> int:
     run.add_argument("--keep", action="store_true", help="keep sandboxes")
     run.add_argument("--force", action="store_true", help="redo existing runs")
     run.add_argument("--sandbox-root", default="")
+    grade = sub.add_parser("grade", help="blind rubric grades and head-to-heads")
+    grade.add_argument("--regrade", action="store_true")
+    grade.add_argument("--model", default="opus")
+    grade.add_argument("--seed", type=int, default=0)
     args = parser.parse_args(argv)
-    handler = {"check": cmd_check, "run": cmd_run}
+    handler = {"check": cmd_check, "run": cmd_run, "grade": cmd_grade}
     return handler[args.command](args)
 
 

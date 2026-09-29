@@ -1,5 +1,7 @@
+import csv
 import json
 import os
+import random
 import stat
 import subprocess
 from pathlib import Path
@@ -358,3 +360,139 @@ def test_cmd_run_jev_arm_needs_key(home, repo, capsys):
     write_task(home, repo)
     assert bench.main(["run", "--arm", "jev"]) == 1
     assert "TYPESAFE_API_KEY" in capsys.readouterr().err
+
+
+class FakeJudge:
+    """Returns the queued result texts in order, as claude JSON replies."""
+
+    def __init__(self, texts):
+        self.texts = list(texts)
+        self.prompts = []
+
+    def __call__(self, argv, cwd, env, stdin):
+        self.prompts.append(stdin)
+        assert tuple(argv[argv.index("--disallowedTools") + 1 :]) == bench.NO_TOOLS
+        payload = {"session_id": "J", "total_cost_usd": 0.2}
+        return ok(argv, {**payload, "result": self.texts.pop(0)})
+
+
+GOOD = '{"checks": [true, false, true], "score": 4, "rationale": "mostly right"}'
+
+
+def a_run(arm="off", n=1, diff="+a change", final="All done."):
+    return {
+        "task": "t01",
+        "arm": arm,
+        "n": n,
+        "status": "done",
+        "session_ids": [],
+        "cost_usd": 2.0,
+        "sim_cost_usd": 0.02,
+        "turns": 5,
+        "duration_ms": 60000,
+        "replies": 1,
+        "jev_evaluations": 0,
+        "verify": None,
+        "diff": diff,
+        "log": "abc123 change",
+        "final_text": final,
+        "error": "",
+    }
+
+
+def test_reply_json_tolerates_fences():
+    fenced = "Here you go:\n```json\n" + GOOD + "\n```"
+    assert bench.reply_json(fenced)["score"] == 4
+    assert bench.reply_json("no json here") is None
+
+
+def test_redact_and_clip():
+    text = "keep this\njev triage: looks like a new feature\nand this"
+    assert bench.redact(text) == "keep this\n[redacted]\nand this"
+    clipped = bench.clip("x" * 100, 40)
+    assert clipped.startswith("x" * 40) and "cut 60 characters" in clipped
+
+
+def test_grade_run(home, repo, monkeypatch):
+    task = load(repo, home)
+    judge = FakeJudge([GOOD])
+    monkeypatch.setattr(bench, "RUNNER", judge)
+    grade = bench.grade_run(task, a_run(final="jev triage said so\nAll done."))
+    assert grade["checks"] == [True, False, True]
+    assert grade["score"] == 4
+    assert grade["error"] == ""
+    assert grade["cost_usd"] == pytest.approx(0.2)
+    prompt = judge.prompts[0]
+    assert "v2 the answer" in prompt  # the reference diff from the real repo
+    assert "jev triage said so" not in prompt
+    assert "1. app.txt says v2" in prompt
+
+
+def test_grade_retries_then_records_error(home, repo, monkeypatch):
+    task = load(repo, home)
+    wrong_length = '{"checks": [true], "score": 4, "rationale": "x"}'
+    monkeypatch.setattr(bench, "RUNNER", FakeJudge(["not json", wrong_length]))
+    grade = bench.grade_run(task, a_run())
+    assert grade["checks"] is None
+    assert grade["error"] == "judge reply malformed twice"
+    assert grade["cost_usd"] == pytest.approx(0.4)
+
+
+def test_grade_rejects_bool_score(home, repo, monkeypatch):
+    task = load(repo, home)
+    bad = '{"checks": [true, true, true], "score": true, "rationale": "x"}'
+    monkeypatch.setattr(bench, "RUNNER", FakeJudge([bad, GOOD]))
+    assert bench.grade_run(task, a_run())["score"] == 4
+
+
+@pytest.mark.parametrize("seed", [0, 1, 2, 3])
+def test_head_to_head_is_blind_and_mapped_back(home, repo, monkeypatch, seed):
+    task = load(repo, home)
+    jev = a_run("jev", diff="+ALPHA SIDE", final="jev triage hint seen\nok")
+    off = a_run("off", diff="+OMEGA SIDE")
+    judge = FakeJudge(['{"winner": "A", "reason": "A is better"}'])
+    monkeypatch.setattr(bench, "RUNNER", judge)
+    result = bench.head_to_head(task, jev, off, random.Random(seed))
+    prompt = judge.prompts[0]
+    jev_first = prompt.index("ALPHA SIDE") < prompt.index("OMEGA SIDE")
+    assert result["jev_was"] == ("A" if jev_first else "B")
+    assert result["winner"] == ("jev" if jev_first else "off")
+    assert "jev" not in prompt.lower()
+
+
+def test_rules_of_reads_the_transcript(home, monkeypatch):
+    ev = bench.load_eval()
+    transcript = home.parent / "projects" / "p" / "S1.jsonl"
+    transcript.parent.mkdir(parents=True)
+    edit = {"type": "tool_use", "id": "1", "name": "Edit"}
+    records = [
+        {"type": "user", "message": {"content": "add a csv export to the report"}},
+        {
+            "type": "assistant",
+            "message": {"content": [{**edit, "input": {"file_path": "src/a.py"}}]},
+        },
+    ]
+    transcript.write_text("\n".join(json.dumps(r) for r in records), encoding="utf-8")
+    monkeypatch.setattr(ev, "projects_dir", lambda: home.parent / "projects")
+    run = a_run()
+    run["session_ids"] = ["S1"]
+    assert bench.rules_of(run) == {"asked": False, "preflight": False}
+    assert bench.rules_of(a_run()) == {"asked": None, "preflight": None}
+
+
+def test_cmd_grade(home, repo, monkeypatch):
+    write_task(home, repo)
+    for record in (a_run("off", 1), a_run("jev", 1), a_run("off", 2)):
+        bench.save_result(record)
+    judge = FakeJudge([GOOD, GOOD, GOOD, '{"winner": "tie", "reason": "same"}'])
+    monkeypatch.setattr(bench, "RUNNER", judge)
+    assert bench.main(["grade"]) == 0
+    results = bench.load_results()
+    assert all(r["grade"]["score"] == 4 for r in results)
+    h2h = json.loads((home / "h2h.json").read_text(encoding="utf-8"))
+    assert [(h["task"], h["n"], h["winner"]) for h in h2h] == [("t01", 1, "tie")]
+    with (home / "grades.csv").open(encoding="utf-8-sig", newline="") as fh:
+        rows = list(csv.DictReader(fh))
+    assert len(rows) == 3 and rows[0]["checks_passed"] == "2"
+    assert bench.main(["grade"]) == 0  # nothing left to grade
+    assert judge.texts == []
