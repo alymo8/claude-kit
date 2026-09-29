@@ -494,8 +494,8 @@ def test_cmd_run_skips_done_runs_and_respects_the_cap(
     fake = FakeClaude([reply(cost=3.0)] * 4, ["DONE"] * 4)
     monkeypatch.setattr(bench, "RUNNER", fake)
     argv = ["run", "--runs", "2", "--sandbox-root", str(tmp_path / "root")]
-    # $3 spent + $10 budget for the next run > $12
-    assert bench.main([*argv, "--max-total-usd", "12"]) == 1
+    # $3 spent + $10 budget + $6 simulated user for the next run > $18
+    assert bench.main([*argv, "--max-total-usd", "18"]) == 1
     assert "cap" in capsys.readouterr().out
     names = [p.name for p in (home / "results").glob("*.json")]
     assert names == ["t01-off-1.json"]
@@ -503,6 +503,19 @@ def test_cmd_run_skips_done_runs_and_respects_the_cap(
     names = sorted(p.name for p in (home / "results").glob("*.json"))
     assert names == ["t01-off-1.json", "t01-off-2.json"]
     assert len(main_calls(fake)) == 2
+
+
+def test_cmd_run_cap_reserves_simulated_user_spend(
+    home, repo, tmp_path, monkeypatch, capsys
+):
+    write_task(home, repo)
+    fake = FakeClaude([reply()], ["DONE"])
+    monkeypatch.setattr(bench, "RUNNER", fake)
+    argv = ["run", "--runs", "1", "--sandbox-root", str(tmp_path / "root")]
+    # $10 budget + 6 replies at $1 > $15, so not even the first run starts
+    assert bench.main([*argv, "--max-total-usd", "15"]) == 1
+    assert "cap" in capsys.readouterr().out
+    assert main_calls(fake) == []
 
 
 def test_cmd_run_jev_arm_needs_key(home, repo, capsys):
@@ -515,8 +528,8 @@ def test_cmd_run_charges_crashed_runs_to_the_cap(home, repo, tmp_path, monkeypat
     write_task(home, repo)
     monkeypatch.setattr(bench, "RUNNER", FakeClaude(["crash", "crash"]))
     argv = ["run", "--runs", "2", "--sandbox-root", str(tmp_path / "root")]
-    # a crash may have spent its whole $10 budget: $10 + $10 > $15
-    assert bench.main([*argv, "--max-total-usd", "15"]) == 1
+    # a crash may have spent its whole $10 budget: $10 + $10 + $6 > $20
+    assert bench.main([*argv, "--max-total-usd", "20"]) == 1
     assert len(list((home / "results").glob("*.json"))) == 1
 
 

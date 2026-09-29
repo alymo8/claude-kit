@@ -326,6 +326,7 @@ CALL_TIMEOUT_S = 3600
 SIDE_TIMEOUT_S = 300  # simulated user and judge
 MIN_CALL_BUDGET = 0.5
 MAX_REPLIES = 6
+SIM_USD = 1.0  # cap per simulated-user reply
 Runner = Callable[..., subprocess.CompletedProcess]
 
 
@@ -440,7 +441,7 @@ def sim_reply(task: Task, last: str) -> tuple[str, float] | None:
     with tempfile.TemporaryDirectory(prefix="jev-sim-") as tmp:
         try:
             proc = RUNNER(
-                claude_args("haiku", 1.0, tools=NO_TOOLS, permission=""),
+                claude_args("haiku", SIM_USD, tools=NO_TOOLS, permission=""),
                 Path(tmp),
                 child_env("off"),
                 prompt,
@@ -724,7 +725,8 @@ def cmd_run(args: argparse.Namespace) -> int:
             for arm in arms:
                 if (task.id, arm, n) in done:
                     continue
-                if spent + args.budget > args.max_total_usd:
+                reserve = args.budget + MAX_REPLIES * SIM_USD
+                if spent + reserve > args.max_total_usd:
                     cap = f"${args.max_total_usd:.0f}"
                     print(f"stopping: the next run could pass the {cap} cap"
                           f" (spent ${spent:.2f})")  # fmt: skip

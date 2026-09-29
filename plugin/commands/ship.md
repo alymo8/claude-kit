@@ -94,7 +94,8 @@ These are the only reasons to stop. When one fires: write the handoff with the
     branch: `worktree remove <worktree-path>`, `worktree prune`,
     `branch -D feat/<slug>`, `push origin --delete feat/<slug>` (the merge's
     `--delete-branch` aborts before the remote step when run from a worktree),
-    `fetch --prune`. Delete `.claude/handoffs/feat-<slug>.md` if present, and
+    `fetch --prune`. Delete `.claude/handoffs/feat_<slug>.md` (`handoff.py` writes `/`
+    as `_`) if present, and
     delete any scratch files you created outside the repo. Then bring local `main`
     up only when that is safe: if `git -C <main-checkout> branch --show-current`
     is `main` and `git -C <main-checkout> status --porcelain` is empty (a clean

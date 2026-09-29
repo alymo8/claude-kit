@@ -138,4 +138,4 @@ supabase db push
 
 ## Tools
 
-- `tools/new-migration.sh` — create a migration and open it for editing in one step (bash).
+- `tools/new-migration.sh` — create a migration and print its path (bash).

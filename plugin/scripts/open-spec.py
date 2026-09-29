@@ -59,10 +59,11 @@ def _launch(path: Path) -> None:
 
 def main(argv: list[str]) -> int:
     no_open = "--no-open" in argv
-    args = [a for a in argv if a != "--no-open"]
-    target = resolve_target(args[0] if args else None, Path.cwd())
+    # the command passes a quoted, possibly empty, path; words are rejoined too
+    arg = " ".join(a for a in argv if a != "--no-open").strip() or None
+    target = resolve_target(arg, Path.cwd())
     if target is None:
-        where = args[0] if args else " or ".join(SEARCH_DIRS)
+        where = arg or " or ".join(SEARCH_DIRS)
         print(f"No spec found: {where}", file=sys.stderr)
         return 1
     html = _renderer().render(target)

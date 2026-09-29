@@ -61,3 +61,22 @@ def test_open_uses_platform_opener(tmp_path, monkeypatch):
     md.write_text("# C\n", encoding="utf-8")
     assert mod.main([str(md)]) == 0
     assert opened == [md.with_suffix(".html")]
+
+
+def test_path_with_spaces_split_into_words(tmp_path):
+    folder = tmp_path / "my specs"
+    folder.mkdir()
+    md = folder / "a spec.md"
+    md.write_text("# A\n", encoding="utf-8")
+    result = run_script(SCRIPT, "--no-open", *str(md).split(" "), cwd=tmp_path)
+    assert result.returncode == 0, result.stderr
+    assert md.with_suffix(".html").exists()
+
+
+def test_empty_argument_means_latest_spec(tmp_path):
+    specs, _ = make_repo(tmp_path)
+    md = specs / "2026-01-01-a.md"
+    md.write_text("# A\n", encoding="utf-8")
+    result = run_script(SCRIPT, "--no-open", "", cwd=tmp_path)
+    assert result.returncode == 0, result.stderr
+    assert md.with_suffix(".html").exists()

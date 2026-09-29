@@ -1,6 +1,6 @@
 ---
 name: audit
-description: Use when asked to audit, review or health-check a repository, or a Claude Code setup (CLAUDE.md, .claude/, hooks, skills, commands, plugin), in one pass. Read-only; writes one report of cited, checked findings to docs/audit/audit.md. For a large or unfamiliar codebase the user can run /audit-deep instead.
+description: Use when asked to audit or health-check a whole repository, or a Claude Code setup (CLAUDE.md, .claude/, hooks, skills, commands, plugin), in one pass. Read-only; writes one report of cited, checked findings to docs/audit/audit.md. For a large or unfamiliar codebase the user can run /audit-deep instead.
 argument-hint: [path-to-repo]
 ---
 

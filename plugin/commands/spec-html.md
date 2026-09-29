@@ -6,7 +6,7 @@ disable-model-invocation: true
 Render the spec/plan to HTML and open it. Run exactly one command and reply with
 one line naming the opened file:
 
-    python "${CLAUDE_PLUGIN_ROOT}/scripts/open-spec.py" $ARGUMENTS
+    python "${CLAUDE_PLUGIN_ROOT}/scripts/open-spec.py" "$ARGUMENTS"
 
 (Fallback if the variable is not expanded:
 `~/.claude/skills/claude-kit/scripts/open-spec.py`.)
