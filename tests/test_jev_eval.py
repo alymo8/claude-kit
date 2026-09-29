@@ -186,3 +186,103 @@ def test_score_tolerates_excel_edits(tmp_path, dirs):
     c = ev.confusion(read_rows(path), "new_feature", 0.65)
     assert (c.tp, c.fp, c.fn, c.tn) == (3, 0, 0, 2)
     assert ev.main(["score", str(path)]) == 0
+
+
+USAGE = {
+    "input_tokens": 10,
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 90,
+}
+
+
+def assistant(*blocks):
+    return {"type": "assistant", "message": {"content": list(blocks), "usage": USAGE}}
+
+
+def say(text):
+    return {"type": "text", "text": text}
+
+
+def tool(name, **inp):
+    return {"type": "tool_use", "id": f"{name}-{len(inp)}", "name": name, "input": inp}
+
+
+P1 = "add a dark mode toggle to settings"
+P2 = "no, use the existing theme module"
+P3 = "make the thing better somehow please"
+P4 = "ok go ahead with option one"
+SESSION = [
+    user(P1),
+    assistant(say("On it."), tool("Edit", file_path="a.py")),
+    user(P2),
+    assistant(
+        tool("Bash", command="git branch --show-current"),
+        tool("Write", file_path="b.py"),
+    ),
+    user(P3),
+    assistant(tool("AskUserQuestion", questions=[])),
+    user(P4),
+    assistant(say("Done. Anything else?")),
+]
+
+
+def log_record(session, mode, prompt, fired=(), error=None, second=0):
+    return {
+        "ts": f"2026-09-28T10:00:{second:02d}",
+        "session_id": session,
+        "project": "proj-a",
+        "mode": mode,
+        "prompt": prompt,
+        "scores": None if error else {"new_feature": 0.5},
+        "thresholds": {},
+        "fired": list(fired),
+        "injected": bool(fired),
+        "latency_ms": 200,
+        "usage": None,
+        "error": error,
+    }
+
+
+def test_turns_and_outcomes(tmp_path):
+    path = write_jsonl(tmp_path / "proj-a" / "s1.jsonl", SESSION, junk=True)
+    result = ev.turns(path)
+    assert [t[0] for t in result] == [P1, P2, P3, P4]
+    o1, o2, o3, o4 = (ev.outcome(a, nxt) for _, a, nxt in result)
+    assert (o1.asked, o1.preflight, o1.corrected) == (False, False, True)
+    assert (o2.preflight, o2.corrected) == (True, False)
+    assert o3.asked is True and o3.preflight is None
+    assert o4.asked is True and o4.corrected is False
+
+
+def test_report_end_to_end(dirs, capsys):
+    projects, jev = dirs
+    write_jsonl(projects / "proj-a" / "s1.jsonl", SESSION, junk=True)
+    records = [
+        log_record("s1", "active", P1, ["new_feature"], second=1),
+        log_record("s1", "active", P2, second=2),
+        log_record("s1", "active", P3, ["underspecified"], second=3),
+        log_record("s1", "active", P4, second=4),
+        log_record("s1", "active", "never typed here", error="timeout", second=5),
+        log_record("s2-missing", "shadow", P1, ["key_decision"]),
+    ]
+    write_jsonl(jev / "log.jsonl", records)
+
+    matched, tokens = ev.collect(records)
+    stats = ev.summarize(records, matched, tokens)
+    active = stats["active"]
+    assert active["logged"] == 5
+    assert active["matched"] == 4
+    assert active["error_rate"] == pytest.approx(0.2)
+    assert active["fire_share"]["new_feature"] == pytest.approx(0.25)
+    assert active["convention_miss_rate"] == pytest.approx(0.5)
+    assert active["correction_rate"] == pytest.approx(0.25)
+    assert active["median_tokens"] == 400
+    assert stats["shadow"]["matched"] == 0
+    assert stats["shadow"]["convention_miss_rate"] is None
+
+    assert ev.main(["report"]) == 0
+    out = capsys.readouterr().out
+    assert "active" in out and "shadow" in out
+    spot = read_rows(jev / "spotcheck.csv")
+    assert [r["prompt"] for r in spot] == [P1, P3]
+    assert ev.main(["report", "--since", "2026-09-29"]) == 1

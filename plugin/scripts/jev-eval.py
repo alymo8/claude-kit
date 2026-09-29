@@ -13,9 +13,12 @@ from __future__ import annotations
 
 import argparse
 import csv
+import importlib.util
 import json
 import math
 import random
+import re
+import statistics
 import sys
 import time
 from collections import defaultdict
@@ -286,9 +289,260 @@ def cmd_score(args: argparse.Namespace) -> int:
     return 0
 
 
+CORRECTION_RE = re.compile(
+    r"^\s*(?:no\b|don['’]?t\b|do not\b|actually\b|stop\b|wait\b|that['’]?s not\b)",
+    re.I,
+)
+CHECK_RE = re.compile(r"git\s+branch\s+--show-current|git\s+fetch")
+SESSION_RE = re.compile(r"[\w-]+")
+SPOTCHECK_FIELDS = [
+    "session_id",
+    "mode",
+    "prompt",
+    "fired",
+    "asked",
+    "preflight",
+    "corrected",
+    "false_alarm",
+]
+
+
+@dataclass
+class Outcome:
+    asked: bool
+    preflight: bool | None  # None: the turn made no Write/Edit
+    corrected: bool
+
+
+Turn = tuple[str, list[dict], str | None]
+
+
+def turns(path: Path) -> list[Turn]:
+    """(typed prompt, assistant records until the next typed prompt, next prompt)."""
+    out: list[Turn] = []
+    current: str | None = None
+    bucket: list[dict] = []
+    for record in read_jsonl(path):
+        text = typed_text(record)
+        if text is not None:
+            if current is not None:
+                out.append((current, bucket, text))
+            current, bucket = text, []
+        elif current is not None and record.get("type") == "assistant":
+            bucket.append(record)
+    if current is not None:
+        out.append((current, bucket, None))
+    return out
+
+
+def outcome(assistant: list[dict], next_prompt: str | None) -> Outcome:
+    asked = False
+    checked = False
+    preflight: bool | None = None
+    last_text = ""
+    for record in assistant:
+        content = (record.get("message") or {}).get("content")
+        if not isinstance(content, list):
+            continue
+        for block in content:
+            if not isinstance(block, dict):
+                continue
+            if block.get("type") == "text":
+                last_text = str(block.get("text", ""))
+            elif block.get("type") == "tool_use":
+                name = block.get("name")
+                command = str((block.get("input") or {}).get("command", ""))
+                if name == "AskUserQuestion":
+                    asked = True
+                elif name in ("Bash", "PowerShell") and CHECK_RE.search(command):
+                    checked = True
+                elif name in ("Write", "Edit") and preflight is None:
+                    preflight = checked
+    asked = asked or last_text.rstrip().endswith("?")
+    corrected = bool(next_prompt and CORRECTION_RE.match(next_prompt))
+    return Outcome(asked, preflight, corrected)
+
+
+def match(records: list[dict], session_turns: list[Turn]) -> list[tuple[dict, Outcome]]:
+    """Pair log records (in time order) with transcript turns by prompt text."""
+    out: list[tuple[dict, Outcome]] = []
+    start = 0
+    for record in records:
+        k = start
+        while k < len(session_turns) and session_turns[k][0] != record.get("prompt"):
+            k += 1
+        if k == len(session_turns):
+            continue
+        _, assistant, next_prompt = session_turns[k]
+        out.append((record, outcome(assistant, next_prompt)))
+        start = k + 1
+    return out
+
+
+def token_report():
+    """token-report.py, loaded by path (hyphenated name) and cached."""
+    if "token_report" not in sys.modules:
+        spec = importlib.util.spec_from_file_location(
+            "token_report", HERE / "token-report.py"
+        )
+        assert spec and spec.loader
+        module = importlib.util.module_from_spec(spec)
+        sys.modules["token_report"] = module  # dataclasses look the module up
+        spec.loader.exec_module(module)
+    return sys.modules["token_report"]
+
+
+def session_tokens(path: Path) -> int:
+    report = token_report().scan([path])
+    return sum(report.contexts[0]) if report.contexts else 0
+
+
+def transcript_for(session_id: object) -> Path | None:
+    if not isinstance(session_id, str) or not SESSION_RE.fullmatch(session_id):
+        return None
+    return next(projects_dir().glob(f"*/{session_id}.jsonl"), None)
+
+
+def collect(
+    records: list[dict],
+) -> tuple[list[tuple[dict, Outcome]], dict[str, int]]:
+    """Matched (record, outcome) pairs and tokens per session with a transcript."""
+    by_session: dict[str, list[dict]] = defaultdict(list)
+    for record in records:
+        by_session[str(record.get("session_id"))].append(record)
+    matched: list[tuple[dict, Outcome]] = []
+    tokens: dict[str, int] = {}
+    for session_id, recs in by_session.items():
+        path = transcript_for(session_id)
+        if path is None:
+            continue
+        recs.sort(key=lambda r: str(r.get("ts", "")))
+        matched += match(recs, turns(path))
+        tokens[session_id] = session_tokens(path)
+    return matched, tokens
+
+
+def ratio(part: int, whole: int) -> float | None:
+    return part / whole if whole else None
+
+
+def misses_of(pairs: list[tuple[dict, Outcome]]) -> tuple[int, int]:
+    """(convention misses, applicable checks) over fired prompts."""
+    applicable = misses = 0
+    for record, result in pairs:
+        keys = set(record.get("fired") or [])
+        if "new_feature" in keys and result.preflight is not None:
+            applicable += 1
+            misses += not result.preflight
+        if keys & {"underspecified", "key_decision"}:
+            applicable += 1
+            misses += not result.asked
+    return misses, applicable
+
+
+def summarize(
+    records: list[dict], matched: list[tuple[dict, Outcome]], tokens: dict[str, int]
+) -> dict[str, dict]:
+    stats: dict[str, dict] = {}
+    for mode in ("shadow", "active"):
+        recs = [r for r in records if r.get("mode") == mode]
+        if not recs:
+            continue
+        judged = [r for r in recs if r.get("scores")]
+        pairs = [(r, o) for r, o in matched if r.get("mode") == mode]
+        misses, applicable = misses_of(pairs)
+        sessions = {str(r.get("session_id")) for r in recs}
+        totals = [tokens[s] for s in sessions if s in tokens]
+        latencies = [
+            r["latency_ms"] for r in judged if isinstance(r.get("latency_ms"), int)
+        ]
+        errors = sum(1 for r in recs if r.get("error"))
+        corrected = sum(1 for _, o in pairs if o.corrected)
+        stats[mode] = {
+            "logged": len(recs),
+            "matched": len(pairs),
+            "error_rate": ratio(errors, len(recs)),
+            "fire_share": {
+                k: ratio(
+                    sum(1 for r in judged if k in (r.get("fired") or [])), len(judged)
+                )
+                for k in triage.KEYS
+            },
+            "convention_miss_rate": ratio(misses, applicable),
+            "correction_rate": ratio(corrected, len(pairs)),
+            "median_tokens": statistics.median(totals) if totals else None,
+            "latency_p50": percentile(latencies, 50),
+            "latency_p95": percentile(latencies, 95),
+        }
+    return stats
+
+
+def fmt(value: float | None, pct: bool = False) -> str:
+    if value is None:
+        return "n/a"
+    return f"{value:.0%}" if pct else f"{value:.0f}"
+
+
+def render(stats: dict[str, dict]) -> str:
+    lines = []
+    for mode, s in stats.items():
+        shares = ", ".join(f"{k} {fmt(v, True)}" for k, v in s["fire_share"].items())
+        lines += [
+            f"{mode}: {s['logged']} prompts logged, "
+            f"{s['matched']} matched to transcripts",
+            f"  fired: {shares}",
+            "  convention misses per applicable check: "
+            f"{fmt(s['convention_miss_rate'], True)}",
+            f"  correction rate: {fmt(s['correction_rate'], True)}",
+            f"  median tokens per session: {fmt(s['median_tokens'])}",
+            f"  latency p50 {fmt(s['latency_p50'])} ms, "
+            f"p95 {fmt(s['latency_p95'])} ms; errors {fmt(s['error_rate'], True)}",
+        ]
+    return "\n".join(lines)
+
+
+def read_log(since: str) -> list[dict]:
+    path = triage.jev_dir() / "log.jsonl"
+    if not path.exists():
+        return []
+    return [r for r in read_jsonl(path) if str(r.get("ts", ""))[:10] >= since]
+
+
+def write_spotcheck(matched: list[tuple[dict, Outcome]]) -> tuple[int, Path]:
+    fired_pairs = [(r, o) for r, o in matched if r.get("fired")]
+    chosen = random.Random(0).sample(fired_pairs, min(20, len(fired_pairs)))
+    chosen.sort(key=lambda pair: str(pair[0].get("ts", "")))
+    out = triage.jev_dir() / "spotcheck.csv"
+    with out.open("w", encoding="utf-8-sig", newline="") as fh:
+        writer = csv.DictWriter(fh, fieldnames=SPOTCHECK_FIELDS)
+        writer.writeheader()
+        for record, result in chosen:
+            preflight = "n/a" if result.preflight is None else result.preflight
+            writer.writerow(
+                {
+                    "session_id": record.get("session_id"),
+                    "mode": record.get("mode"),
+                    "prompt": record.get("prompt"),
+                    "fired": " ".join(record.get("fired") or []),
+                    "asked": result.asked,
+                    "preflight": preflight,
+                    "corrected": result.corrected,
+                    "false_alarm": "",
+                }
+            )
+    return len(chosen), out
+
+
 def cmd_report(args: argparse.Namespace) -> int:
-    print("report is not implemented yet", file=sys.stderr)
-    return 1
+    records = read_log(args.since)
+    if not records:
+        print("no log records" + (f" since {args.since}" if args.since else ""))
+        return 1
+    matched, tokens = collect(records)
+    print(render(summarize(records, matched, tokens)))
+    count, out = write_spotcheck(matched)
+    print(f"spot-check {count} fired prompts in {out} (fill false_alarm 1/0)")
+    return 0
 
 
 def main(argv: list[str] | None = None) -> int:
