@@ -19,7 +19,9 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import shutil
+import stat
 import subprocess
 import sys
 from dataclasses import dataclass
@@ -137,6 +139,136 @@ def load_tasks(names: list[str] | None = None) -> tuple[list[Task], list[str]]:
 
 def claude_bin() -> str | None:
     return shutil.which("claude")
+
+
+SECRET_RE = re.compile(
+    r"TOKEN|SECRET|PASSWORD|KEY|SUPABASE|AZURE|AWS|GH_|GITHUB|DATABASE_URL", re.I
+)
+KEEP_PREFIXES = ("ANTHROPIC_", "CLAUDE_")
+# Nothing may leave the machine or pop up on the user's screen.
+DENIED = (
+    "Bash(git push:*)",
+    "Bash(gh:*)",
+    "Bash(supabase:*)",
+    "Bash(npx supabase:*)",
+    "Bash(az:*)",
+    "Bash(vercel:*)",
+    "Bash(explorer:*)",
+    "Bash(start:*)",
+    "PowerShell(git push:*)",
+    "PowerShell(gh:*)",
+    "PowerShell(Invoke-Item:*)",
+    "PowerShell(ii:*)",
+    "PowerShell(explorer:*)",
+    "PowerShell(start:*)",
+    "PowerShell(Start-Process:*)",
+)
+NO_TOOLS = (
+    "Bash",
+    "PowerShell",
+    "Edit",
+    "Write",
+    "Read",
+    "Glob",
+    "Grep",
+    "NotebookEdit",
+    "WebFetch",
+    "WebSearch",
+    "Task",
+    "Agent",
+    "TodoWrite",
+    "Skill",
+)
+
+
+def child_env(arm: str, base: dict[str, str] | None = None) -> dict[str, str]:
+    """The environment for a run: no secrets; jev on only in the jev arm."""
+    source = dict(os.environ if base is None else base)
+    env = {
+        k: v
+        for k, v in source.items()
+        if k.upper().startswith(KEEP_PREFIXES) or not SECRET_RE.search(k)
+    }
+    env.pop("TYPESAFE_API_KEY", None)
+    env["CLAUDE_KIT_JEV"] = "active" if arm == "jev" else "off"
+    if arm == "jev" and source.get("TYPESAFE_API_KEY"):
+        env["TYPESAFE_API_KEY"] = source["TYPESAFE_API_KEY"]
+    return env
+
+
+def claude_args(
+    model: str,
+    budget: float,
+    resume: str | None = None,
+    tools: tuple[str, ...] = DENIED,
+    permission: str = "bypassPermissions",
+) -> list[str]:
+    """argv for one headless call; the prompt goes on stdin."""
+    argv = [
+        claude_bin() or "claude",
+        "-p",
+        "--model",
+        model,
+        "--output-format",
+        "json",
+        "--max-budget-usd",
+        f"{budget:.2f}",
+    ]
+    if permission:
+        argv += ["--permission-mode", permission]
+    if resume:
+        argv += ["--resume", resume]
+    return [*argv, "--disallowedTools", *tools]
+
+
+def default_sandbox_root() -> Path:
+    """<repo root>/.jev-bench: inside the workspace, ignored by .gitignore."""
+    return HERE.parents[1] / ".jev-bench"
+
+
+def _force_remove(func, path, _exc) -> None:
+    os.chmod(path, stat.S_IWRITE)
+    func(path)
+
+
+def remove_tree(path: Path) -> None:
+    if not path.exists():
+        return
+    if sys.version_info >= (3, 12):
+        shutil.rmtree(path, onexc=_force_remove)
+    else:  # pragma: no cover - 3.11
+        shutil.rmtree(path, onerror=_force_remove)
+
+
+def _git_or_raise(repo: Path, *args: str) -> None:
+    out = git(repo, *args)
+    if out.returncode:
+        raise RuntimeError(f"sandbox: git {args[0]} failed: {out.stderr.strip()}")
+
+
+def make_sandbox(task: Task, root: Path, name: str) -> Path:
+    """A clone at base_commit with no remote and no later commits or tags."""
+    dest = root / name
+    remove_tree(dest)
+    root.mkdir(parents=True, exist_ok=True)
+    clone = subprocess.run(
+        ["git", "clone", "--quiet", "--no-local", "--no-checkout", str(task.repo)]
+        + [str(dest)],
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+    )
+    if clone.returncode:
+        raise RuntimeError(f"sandbox: git clone failed: {clone.stderr.strip()}")
+    _git_or_raise(dest, "checkout", "--quiet", "-B", "main", task.base_commit)
+    _git_or_raise(dest, "remote", "remove", "origin")
+    for ref in git(dest, "for-each-ref", "--format=%(refname)").stdout.split():
+        if ref != "refs/heads/main":
+            _git_or_raise(dest, "update-ref", "-d", ref)
+    _git_or_raise(dest, "reflog", "expire", "--expire=now", "--all")
+    _git_or_raise(dest, "gc", "--quiet", "--prune=now")
+    return dest
 
 
 def prerequisites(tasks: list[Task], arms: tuple[str, ...]) -> list[str]:
