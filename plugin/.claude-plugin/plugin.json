@@ -1,6 +1,6 @@
 {
   "name": "claude-kit",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "license": "MIT",
-  "description": "Workspace conventions as a plugin: /new-project and /adopt-conventions scaffolding, /handoff with session-start injection, /ship autonomous spec-to-merge, context nudge and status line, lean-context skill, token report, spec index hook, /spec-html to render and open a spec on demand, worktree audit, supabase-cli skill."
+  "description": "Workspace conventions as a plugin: /new-project and /adopt-conventions scaffolding, /handoff with session-start injection, /ship autonomous spec-to-merge, context nudge and status line, lean-context skill, token report, spec index hook, /spec-html to render and open a spec on demand, opt-in jev triage pilot (CLAUDE_KIT_JEV), worktree audit, supabase-cli skill."
 }
