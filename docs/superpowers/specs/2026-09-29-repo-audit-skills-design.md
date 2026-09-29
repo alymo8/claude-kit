@@ -1,6 +1,6 @@
 # Repo audit skills: `audit` (basic) and `audit-deep`
 
-- **Status:** approved
+- **Status:** implemented
 - **Date:** 2026-09-29
 
 ## Purpose
