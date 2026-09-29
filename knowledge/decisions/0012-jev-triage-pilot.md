@@ -34,6 +34,9 @@ API, and nothing yet shows that it helps.
 - Labelling and a no-jev baseline need no key (`replay --no-judge`, `baseline`;
   `docs/superpowers/specs/2026-09-28-jev-offline-baseline-design.md`). The
   active stage is still compared with shadow; the baseline is a reference.
+- The go/no-go evidence is task-level: `plugin/scripts/jev-bench.py` replays
+  10 real tasks with jev on and off and compares blind-graded quality and cost
+  (`docs/superpowers/specs/2026-09-29-jev-task-bench-design.md`).
 
 ## Outcome
 Pending: replay gate not yet run.

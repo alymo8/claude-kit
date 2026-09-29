@@ -6,6 +6,7 @@
 
 | Date | Spec | Status |
 |---|---|---|
+| 2026-09-29 | [jev task bench: 10 real tasks, with and without jev](specs/2026-09-29-jev-task-bench-design.md) | implemented |
 | 2026-09-28 | [jev pilot: label without a key, and a no-jev baseline from history](specs/2026-09-28-jev-offline-baseline-design.md) | implemented |
 | 2026-09-28 | [jev triage pilot: an opt-in System-1 judge on every prompt](specs/2026-09-28-jev-triage-pilot-design.md) | implemented |
 | 2026-09-18 | [Session hygiene: handoff, context meter, lean exploration](specs/2026-09-18-session-hygiene-design.md) | implemented |
@@ -16,6 +17,7 @@
 
 | Date | Plan | Status |
 |---|---|---|
+| 2026-09-29 | [jev task bench Implementation Plan](plans/2026-09-29-jev-task-bench.md) | implemented |
 | 2026-09-28 | [jev offline labelling and baseline Implementation Plan](plans/2026-09-28-jev-offline-baseline.md) | implemented |
 | 2026-09-28 | [jev triage pilot Implementation Plan](plans/2026-09-28-jev-triage-pilot.md) | implemented |
 | 2026-09-18 | [Session Hygiene Implementation Plan](plans/2026-09-18-session-hygiene.md) | implemented |
