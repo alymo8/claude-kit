@@ -25,9 +25,11 @@ import random
 import re
 import shutil
 import stat
+import statistics
 import subprocess
 import sys
 import tempfile
+from collections import Counter
 from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import UTC, datetime
@@ -854,6 +856,135 @@ def cmd_grade(args: argparse.Namespace) -> int:
     return 0
 
 
+CAVEAT = (
+    "note: with about 20 runs per arm only a large effect can show; treat small "
+    "differences as noise"
+)
+
+
+def mean(values) -> float | None:
+    present = [v for v in values if v is not None]
+    return statistics.mean(present) if present else None
+
+
+def ratio(part: float, whole: float) -> float | None:
+    return part / whole if whole else None
+
+
+def rule_values(runs: list[dict], types: dict[str, str], key: str, kinds) -> list:
+    return [
+        r["grade"][key]
+        for r in runs
+        if types.get(r["task"]) in kinds and (r.get("grade") or {}).get(key) is not None
+    ]
+
+
+def arm_stats(runs: list[dict], types: dict[str, str]) -> dict:
+    grades = [r.get("grade") or {} for r in runs]
+    scored = [g for g in grades if g.get("checks") is not None]
+    passed = sum(sum(g["checks"]) for g in scored)
+    total = sum(len(g["checks"]) for g in scored)
+    pre = rule_values(runs, types, "preflight", ("feature", "decision"))
+    ask = rule_values(runs, types, "asked", ("vague", "decision"))
+    verify = [r["verify"] for r in runs if r.get("verify") is not None]
+    return {
+        "runs": len(runs),
+        "statuses": dict(Counter(r.get("status") for r in runs)),
+        "pass_rate": ratio(passed, total),
+        "mean_score": mean(g.get("score") for g in scored),
+        "preflight_miss": (sum(1 for p in pre if not p), len(pre)),
+        "no_ask": (sum(1 for a in ask if not a), len(ask)),
+        "verify": (sum(1 for v in verify if v), len(verify)),
+        "cost": mean(float(r.get("cost_usd") or 0) for r in runs),
+        "jev_evaluations": sum(int(r.get("jev_evaluations") or 0) for r in runs),
+        "sim_cost": sum(float(r.get("sim_cost_usd") or 0) for r in runs),
+        "judge_cost": sum(float(g.get("cost_usd") or 0) for g in grades),
+        "turns": mean(r.get("turns") for r in runs),
+        "replies": mean(r.get("replies") for r in runs),
+        "minutes": mean(int(r.get("duration_ms") or 0) / 60_000 for r in runs),
+    }
+
+
+def verdict(stats: dict[str, dict], h2h: list[dict]) -> str:
+    jev, off = stats.get("jev"), stats.get("off")
+    if not jev:
+        return "baseline only: the jev arm has not run yet"
+    if not off:
+        return "no no-jev runs to compare with"
+    decided = [h for h in h2h if h.get("winner")]
+    wins = sum(1 for h in decided if h["winner"] == "jev")
+    quality = (jev["mean_score"] or 0) >= (off["mean_score"] or 0) and (
+        jev["pass_rate"] or 0
+    ) >= (off["pass_rate"] or 0)
+    head = bool(decided) and wins > len(decided) / 2
+    cost = bool(off["cost"]) and (jev["cost"] or 0) <= 1.10 * off["cost"]
+    keep = quality and head and cost
+    return (
+        f"verdict: {'keep jev' if keep else 'jev not worth it'} "
+        f"(quality {'equal or better' if quality else 'worse'}; "
+        f"head-to-head: jev won {wins} of {len(decided)}; "
+        f"cost {'within' if cost else 'over'} +10%)"
+    )
+
+
+def fmt(value: float | None, spec: str = ".2f") -> str:
+    return "n/a" if value is None else format(value, spec)
+
+
+def pair(counts: tuple[int, int]) -> str:
+    k, n = counts
+    return f"{k}/{n}" if n else "n/a"
+
+
+def render(stats: dict[str, dict], per_task: dict, h2h: list[dict]) -> str:
+    lines = []
+    for arm, s in stats.items():
+        lines += [
+            f"{arm}: {s['runs']} runs {s['statuses']}",
+            f"  rubric pass rate {fmt(s['pass_rate'], '.0%')}, "
+            f"mean score {fmt(s['mean_score'])}",
+            f"  pre-flight skipped {pair(s['preflight_miss'])}, "
+            f"did not ask {pair(s['no_ask'])}, verify passed {pair(s['verify'])}",
+            f"  Claude cost per run ${fmt(s['cost'])}, jev evaluations "
+            f"{s['jev_evaluations']}, simulated user ${s['sim_cost']:.2f}, "
+            f"judge ${s['judge_cost']:.2f}",
+            f"  per run: {fmt(s['turns'], '.1f')} turns, "
+            f"{fmt(s['replies'], '.1f')} replies, {fmt(s['minutes'], '.1f')} min",
+        ]
+    lines.append("per task (mean score / pass rate / cost):")
+    for task_id in sorted(per_task):
+        cells = [
+            f"{arm} {fmt(s['mean_score'], '.1f')} / {fmt(s['pass_rate'], '.0%')} / "
+            f"${fmt(s['cost'])}"
+            for arm, s in per_task[task_id].items()
+        ]
+        lines.append(f"  {task_id}: " + " | ".join(cells))
+    lines += [verdict(stats, h2h), CAVEAT]
+    return "\n".join(lines)
+
+
+def by_arm(runs: list[dict], types: dict[str, str]) -> dict[str, dict]:
+    return {
+        arm: arm_stats([r for r in runs if r["arm"] == arm], types)
+        for arm in ARMS
+        if any(r["arm"] == arm for r in runs)
+    }
+
+
+def cmd_report(args: argparse.Namespace) -> int:
+    results = load_results()
+    if not results:
+        print(f"no results in {results_dir()}; run: jev-bench.py run")
+        return 1
+    types = {t.id: t.type for t in load_tasks()[0]}
+    per_task = {
+        task_id: by_arm([r for r in results if r["task"] == task_id], types)
+        for task_id in sorted({r["task"] for r in results})
+    }
+    print(render(by_arm(results, types), per_task, load_h2h()))
+    return 0
+
+
 def prerequisites(tasks: list[Task], arms: tuple[str, ...]) -> list[str]:
     found = [f"{t.id}: {p}" for t in tasks for p in problems(t)]
     if not tasks:
@@ -899,8 +1030,14 @@ def main(argv: list[str] | None = None) -> int:
     grade.add_argument("--regrade", action="store_true")
     grade.add_argument("--model", default="opus")
     grade.add_argument("--seed", type=int, default=0)
+    sub.add_parser("report", help="jev vs no-jev quality and cost")
     args = parser.parse_args(argv)
-    handler = {"check": cmd_check, "run": cmd_run, "grade": cmd_grade}
+    handler = {
+        "check": cmd_check,
+        "run": cmd_run,
+        "grade": cmd_grade,
+        "report": cmd_report,
+    }
     return handler[args.command](args)
 
 

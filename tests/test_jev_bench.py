@@ -496,3 +496,62 @@ def test_cmd_grade(home, repo, monkeypatch):
     assert len(rows) == 3 and rows[0]["checks_passed"] == "2"
     assert bench.main(["grade"]) == 0  # nothing left to grade
     assert judge.texts == []
+
+
+def graded(arm, n, checks, score, cost, preflight=None, asked=None):
+    run = a_run(arm, n)
+    run["cost_usd"] = cost
+    grade = {"checks": checks, "score": score, "rationale": "", "error": ""}
+    run["grade"] = {**grade, "cost_usd": 0.1, "asked": asked, "preflight": preflight}
+    return run
+
+
+def test_arm_stats():
+    types = {"t01": "feature"}
+    runs = [
+        graded("off", 1, [True, True, False], 3, 2.0, preflight=False),
+        graded("off", 2, [True, True, True], 5, 4.0, preflight=True),
+    ]
+    stats = bench.arm_stats(runs, types)
+    assert stats["runs"] == 2
+    assert stats["pass_rate"] == pytest.approx(5 / 6)
+    assert stats["mean_score"] == pytest.approx(4)
+    assert stats["preflight_miss"] == (1, 2)
+    assert stats["no_ask"] == (0, 0)
+    assert stats["cost"] == pytest.approx(3.0)
+    assert stats["judge_cost"] == pytest.approx(0.2)
+
+
+def test_verdict():
+    base = {"runs": 2, "mean_score": 4, "pass_rate": 0.8, "cost": 3.0}
+    assert "baseline only" in bench.verdict({"off": base}, [])
+    better = {**base, "mean_score": 4.5, "cost": 3.2}
+    wins = [{"winner": "jev"}, {"winner": "jev"}, {"winner": "tie"}]
+    assert "keep jev" in bench.verdict({"off": base, "jev": better}, wins)
+    pricey = {**better, "cost": 3.5}
+    assert "not worth it" in bench.verdict({"off": base, "jev": pricey}, wins)
+    losing = [{"winner": "off"}, {"winner": "jev"}]
+    assert "not worth it" in bench.verdict({"off": base, "jev": better}, losing)
+
+
+def test_report_baseline_only(home, repo, capsys):
+    write_task(home, repo)
+    bench.save_result(graded("off", 1, [True, True, False], 3, 2.0, preflight=False))
+    assert bench.main(["report"]) == 0
+    out = capsys.readouterr().out
+    assert "baseline only" in out
+    assert "t01" in out
+    assert "large effect" in out
+    assert "pre-flight skipped 1/1" in out
+
+
+def test_load_results_skips_bad_files(home, capsys):
+    bench.save_result(a_run())
+    (home / "results" / "broken.json").write_text("{half", encoding="utf-8")
+    assert len(bench.load_results()) == 1
+    assert "broken.json" in capsys.readouterr().err
+
+
+def test_report_without_results(home, capsys):
+    assert bench.main(["report"]) == 1
+    assert "no results" in capsys.readouterr().out
