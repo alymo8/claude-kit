@@ -1,6 +1,6 @@
 # jev triage pilot: an opt-in System-1 judge on every prompt
 
-- **Status:** draft
+- **Status:** implemented
 - **Date:** 2026-09-28
 
 ## Purpose
@@ -94,24 +94,24 @@ and pandas and is far too slow to import in a per-prompt hook. The SDK is import
 only when the mode is `shadow` or `active`. It is an **optional, per-machine
 install** (`pip install "typesafe-sdk>=0.7"`), not a kit requirement.
 
-The call goes through one function, `judge(prompt: str) -> dict[str, float]`, which
-is the seam tests replace. It uses a 1.5 s client timeout and disables SDK retries,
-so the worst case stays well inside the hook's 3 s entry timeout in `hooks.json`.
+The call goes through one function, `judge(prompt: str) -> Judgment` (scores and
+usage), which is the seam tests replace. It uses a 1.5 s client timeout and
+disables SDK retries, so the worst case stays well inside the hook's 3 s entry
+timeout in `hooks.json`.
 
-The first implementation step is a short spike confirming the SDK's exact call
-shape (sync vs async client, how to set timeout and disable retries, response
-fields). The reference usage is `AsyncTypeSafeClient(api_key=...).system_one(
-state=..., questions={key: typesafe_sdk.Noul(instructions=..., criteria={"true":
-..., "false": ...})}, model=...)` returning `response.nouls[key].noul`, taken from
-`judgment_base_agent/backends/typesafe.py` in
-`github.com/mbonnardot/judgment-base-agent`.
+Confirmed against `typesafe-sdk` 0.7.2: the sync
+`TypeSafeClient(timeout=1.5, retry=RetryPolicy(max_retries=0)).system_one(
+state=prompt, questions={key: Noul(instructions=..., criteria={"true": ...,
+"false": ...})})` returns `nouls[key].noul`, `usage` and `model`.
 
 ### Data flow
 
 1. Claude Code runs the hook with the `UserPromptSubmit` event on stdin.
 2. Mode `off` → exit 0, no output.
-3. Otherwise read `prompt`; if empty, or it starts with `/` (a slash command),
-   exit 0 without calling jev.
+3. Otherwise clean `prompt` (strip `<system-reminder>` and `<pasted_content …>`
+   blocks); if the cleaned text is empty, starts with `/` or `<`, or has fewer
+   than 3 words (replies such as "lgtm"), exit 0 without calling jev. Replay
+   applies the same filter, so both judge the same prompts.
 4. Call `judge(prompt)`, timing it.
 5. Append one record to the log.
 6. Mode `active` and at least one score ≥ its threshold → print
@@ -158,12 +158,13 @@ go to `~/.claude/claude-kit/jev/`.
   harness-injected content, slash commands, and prompts under 3 words. Deduplicates,
   samples `n` prompts stratified by project, judges each with `judge`, and writes
   `labels.csv` with columns `id, project, prompt, s_underspecified, s_new_feature,
-  s_key_decision, latency_ms, label_underspecified, label_new_feature,
-  label_key_decision`. Label columns are empty for the user to fill with `1`/`0`.
+  s_key_decision, latency_ms, input_tokens, output_tokens, label_underspecified,
+  label_new_feature, label_key_decision`. Label columns are empty for the user to fill with `1`/`0`.
   Refuses to overwrite an existing `labels.csv` unless `--force`.
 - **`score [labels.csv]`.** For each question: precision, recall and F1 at the
   configured threshold; a sweep of thresholds 0.50–0.90 in steps of 0.05; p50/p95
-  latency; total and per-1k-call cost from usage if available. Rows with an empty
+  latency; call count and token totals from usage (cost = calls × the
+  per-evaluation price on the TypeSafe dashboard). Rows with an empty
   label are skipped and counted. Prints the Replay gate result as `PASS` or `FAIL`
   with the failing metrics.
 - **`report [--since YYYY-MM-DD]`.** Joins log records with their session
@@ -172,7 +173,8 @@ go to `~/.claude/claude-kit/jev/`.
     `?`;
   - *preflight*: for prompts where `new_feature` fired, a Bash/PowerShell call
     containing `git branch --show-current` or `git fetch` appears before the first
-    `Write`/`Edit` of that turn sequence;
+    `Write`/`Edit` of that turn sequence; `n/a` (excluded from the miss rate)
+    when the turn made no `Write`/`Edit`;
   - *corrected*: the user's next prompt starts with a correction marker (`no`,
     `don't`, `do not`, `actually`, `stop`, `wait`, `that's not`,
     case-insensitive);

@@ -26,10 +26,10 @@ setup that sits above my individual project repos — it defines *how* I work, n
     per-branch handoff file, a context meter, lean exploration.
 - **[`plugin/`](plugin/)** — a Claude Code plugin: the `supabase-cli` and
   `lean-context` skills, the on-demand spec → HTML renderer, the `token-report.py`
-  measurement script, a status line, and six hooks (regenerate the spec/plan
+  measurement script, a status line, and seven hooks (regenerate the spec/plan
   index after edits and at every stop; report leftover worktrees, inject the
   branch handoff and nudge past a context threshold at the right moments;
-  snapshot git state at session end). Install once per machine with `plugin\install.ps1` — it junctions
+  snapshot git state at session end; an opt-in jev triage of each prompt). Install once per machine with `plugin\install.ps1` — it junctions
   `~/.claude/skills/claude-kit` to this folder so edits are live, and adds the
   kit's status line to `~/.claude/settings.json` when none is configured. If
   PowerShell refuses to run the script (execution policy), use
@@ -46,6 +46,29 @@ setup that sits above my individual project repos — it defines *how* I work, n
 - **[`knowledge/decisions/`](knowledge/decisions/)** — this repo's own ADRs.
 - **[`docs/superpowers/`](docs/superpowers/)** — specs and plans for changes to
   the kit itself.
+
+## Trying jev (opt-in pilot)
+
+An experiment: [jev](https://typesafe.ai), a fast "System One" judge, scores
+each prompt (underspecified? new feature? key decision?) and, in `active`
+mode, adds a one-line hint for Claude. It is **off by default**; see
+[ADR 0012](knowledge/decisions/0012-jev-triage-pilot.md) and the
+[spec](docs/superpowers/specs/2026-09-28-jev-triage-pilot-design.md).
+
+```
+pip install "typesafe-sdk>=0.7"          # once per machine
+setx TYPESAFE_API_KEY <key>              # new terminals pick it up
+python plugin/scripts/jev-eval.py replay # 1. judge ~60 past prompts
+#    fill label_* in ~/.claude/claude-kit/jev/labels.csv with 1/0
+python plugin/scripts/jev-eval.py score  # Replay gate PASS/FAIL
+setx CLAUDE_KIT_JEV shadow               # 2. log only, 1-2 weeks
+setx CLAUDE_KIT_JEV active               # 3. add hints, 1-2 weeks
+python plugin/scripts/jev-eval.py report --since 2026-10-01
+setx CLAUDE_KIT_JEV off                  # stop
+```
+
+Judgments are logged to `~/.claude/claude-kit/jev/log.jsonl`; prompts go to
+TypeSafe only while the flag is `shadow` or `active`.
 
 ## Scope
 

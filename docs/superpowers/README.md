@@ -6,7 +6,7 @@
 
 | Date | Spec | Status |
 |---|---|---|
-| 2026-09-28 | [jev triage pilot: an opt-in System-1 judge on every prompt](specs/2026-09-28-jev-triage-pilot-design.md) | draft |
+| 2026-09-28 | [jev triage pilot: an opt-in System-1 judge on every prompt](specs/2026-09-28-jev-triage-pilot-design.md) | implemented |
 | 2026-09-18 | [Session hygiene: handoff, context meter, lean exploration](specs/2026-09-18-session-hygiene-design.md) | implemented |
 | 2026-09-15 | [Project scaffolder and spec lifecycle](specs/2026-09-15-project-scaffolder-design.md) | implemented |
 | 2026-09-14 | [Kit foundation: plugin packaging, hooks, tests, decision log](specs/2026-09-14-kit-foundation-design.md) | implemented |
@@ -15,7 +15,7 @@
 
 | Date | Plan | Status |
 |---|---|---|
-| 2026-09-28 | [jev triage pilot Implementation Plan](plans/2026-09-28-jev-triage-pilot.md) | draft |
+| 2026-09-28 | [jev triage pilot Implementation Plan](plans/2026-09-28-jev-triage-pilot.md) | implemented |
 | 2026-09-18 | [Session Hygiene Implementation Plan](plans/2026-09-18-session-hygiene.md) | implemented |
 | 2026-09-15 | [Project Scaffolder and Spec Lifecycle Implementation Plan](plans/2026-09-15-project-scaffolder.md) | implemented |
 | 2026-09-14 | [Kit Foundation Implementation Plan](plans/2026-09-14-kit-foundation.md) | implemented |
