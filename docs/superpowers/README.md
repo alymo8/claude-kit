@@ -17,6 +17,7 @@
 
 | Date | Plan | Status |
 |---|---|---|
+| 2026-09-29 | [jev task bench Implementation Plan](plans/2026-09-29-jev-task-bench.md) | draft |
 | 2026-09-28 | [jev offline labelling and baseline Implementation Plan](plans/2026-09-28-jev-offline-baseline.md) | implemented |
 | 2026-09-28 | [jev triage pilot Implementation Plan](plans/2026-09-28-jev-triage-pilot.md) | implemented |
 | 2026-09-18 | [Session Hygiene Implementation Plan](plans/2026-09-18-session-hygiene.md) | implemented |
