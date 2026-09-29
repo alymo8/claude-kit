@@ -2,6 +2,7 @@ import json
 import os
 import stat
 import subprocess
+from pathlib import Path
 
 import pytest
 from helpers import PLUGIN, load_module
@@ -189,3 +190,171 @@ def test_claude_args(monkeypatch):
     quiet = bench.claude_args("haiku", 1, tools=bench.NO_TOOLS, permission="")
     assert "--permission-mode" not in quiet
     assert "Bash" in quiet and "Write" in quiet
+
+
+def ok(argv, payload):
+    return subprocess.CompletedProcess(argv, 0, json.dumps(payload), "")
+
+
+def reply(session="S1", cost=1.5, text="Done. Anything else?", **extra):
+    payload = {"session_id": session, "total_cost_usd": cost, "num_turns": 3}
+    return {**payload, "duration_ms": 1000, "result": text, **extra}
+
+
+class FakeClaude:
+    """Main task calls pop `main`; simulated-user (haiku) calls pop `sim`."""
+
+    def __init__(self, main, sim=()):
+        self.main = list(main)
+        self.sim = list(sim)
+        self.calls = []
+
+    def __call__(self, argv, cwd, env, stdin):
+        self.calls.append((argv, Path(cwd), env, stdin))
+        if "haiku" in argv:
+            payload = {"session_id": "sim", "total_cost_usd": 0.01}
+            return ok(argv, {**payload, "result": self.sim.pop(0)})
+        item = self.main.pop(0)
+        if item == "crash":
+            return subprocess.CompletedProcess(argv, 1, "", "boom")
+        if item == "timeout":
+            raise subprocess.TimeoutExpired(argv, 1)
+        (Path(cwd) / "new.txt").write_text("made by the run\n", encoding="utf-8")
+        return ok(argv, item)
+
+
+def main_calls(fake):
+    return [c for c in fake.calls if "haiku" not in c[0]]
+
+
+def test_run_stops_when_user_says_done(home, repo, tmp_path, monkeypatch):
+    task = load(repo, home)
+    main = [reply(text="Use X or Y?"), reply(cost=2.0)]
+    fake = FakeClaude(main, ["Use X please", "DONE"])
+    monkeypatch.setattr(bench, "RUNNER", fake)
+    record = bench.run_one(task, "off", 1, tmp_path / "root")
+    assert record["status"] == "done"
+    assert record["replies"] == 1
+    assert record["cost_usd"] == pytest.approx(3.5)
+    assert record["sim_cost_usd"] == pytest.approx(0.02)
+    assert record["turns"] == 6
+    assert record["session_ids"] == ["S1"]
+    assert "new.txt" in record["diff"]
+    first, second = main_calls(fake)
+    assert first[3] == task.prompt
+    assert second[3] == "Use X please"
+    assert second[0][second[0].index("--resume") + 1] == "S1"
+    for argv, cwd, env, _ in main_calls(fake):
+        assert tuple(argv[argv.index("--disallowedTools") + 1 :]) == bench.DENIED
+        assert argv[argv.index("--model") + 1] == "opus"
+        assert env["CLAUDE_KIT_JEV"] == "off"
+        assert cwd == tmp_path / "root" / "t01-off-1"
+    assert not (tmp_path / "root" / "t01-off-1").exists()
+
+
+def test_run_max_replies(home, repo, tmp_path, monkeypatch):
+    task = load(repo, home)
+    fake = FakeClaude([reply(cost=0.1)] * 3, ["keep going please"] * 3)
+    monkeypatch.setattr(bench, "RUNNER", fake)
+    record = bench.run_one(task, "off", 1, tmp_path / "root", max_replies=2)
+    assert record["status"] == "max_replies"
+    assert record["replies"] == 2
+
+
+def test_run_budget(home, repo, tmp_path, monkeypatch):
+    task = load(repo, home)
+    fake = FakeClaude([reply(cost=2.0), reply(cost=2.0)], ["more please now"] * 2)
+    monkeypatch.setattr(bench, "RUNNER", fake)
+    record = bench.run_one(task, "off", 1, tmp_path / "root", budget=3.0)
+    assert record["status"] == "budget"
+    second = main_calls(fake)[1][0]
+    assert second[second.index("--max-budget-usd") + 1] == "1.00"
+
+
+def test_run_budget_reported_by_claude(home, repo, tmp_path, monkeypatch):
+    task = load(repo, home)
+    over = reply(is_error=True, subtype="error_max_budget_usd")
+    monkeypatch.setattr(bench, "RUNNER", FakeClaude([over]))
+    assert bench.run_one(task, "off", 1, tmp_path / "root")["status"] == "budget"
+
+
+def test_run_crash_is_an_error(home, repo, tmp_path, monkeypatch):
+    task = load(repo, home)
+    monkeypatch.setattr(bench, "RUNNER", FakeClaude(["crash"]))
+    record = bench.run_one(task, "off", 1, tmp_path / "root")
+    assert record["status"] == "error"
+    assert "exited 1" in record["error"]
+    assert not (tmp_path / "root" / "t01-off-1").exists()
+
+
+def test_run_timeout_is_an_error(home, repo, tmp_path, monkeypatch):
+    task = load(repo, home)
+    monkeypatch.setattr(bench, "RUNNER", FakeClaude(["timeout"]))
+    record = bench.run_one(task, "off", 1, tmp_path / "root")
+    assert record["status"] == "error"
+    assert "timed out" in record["error"]
+
+
+def test_run_jev_arm_env(home, repo, tmp_path, monkeypatch):
+    task = load(repo, home)
+    monkeypatch.setenv("TYPESAFE_API_KEY", "tk")
+    fake = FakeClaude([reply()], ["DONE"])
+    monkeypatch.setattr(bench, "RUNNER", fake)
+    bench.run_one(task, "jev", 1, tmp_path / "root")
+    env = main_calls(fake)[0][2]
+    assert env["CLAUDE_KIT_JEV"] == "active"
+    assert env["TYPESAFE_API_KEY"] == "tk"
+    sim_env = [c for c in fake.calls if "haiku" in c[0]][0][2]
+    assert sim_env["CLAUDE_KIT_JEV"] == "off"
+    assert "TYPESAFE_API_KEY" not in sim_env
+
+
+@pytest.mark.parametrize("command,expected", [("exit 0", True), ("exit 3", False)])
+def test_run_records_verify(home, repo, tmp_path, monkeypatch, command, expected):
+    task = load(repo, home, verify=command)
+    monkeypatch.setattr(bench, "RUNNER", FakeClaude([reply()], ["DONE"]))
+    assert bench.run_one(task, "off", 1, tmp_path / "root")["verify"] is expected
+
+
+def test_run_keep_leaves_the_sandbox(home, repo, tmp_path, monkeypatch):
+    task = load(repo, home)
+    monkeypatch.setattr(bench, "RUNNER", FakeClaude([reply()], ["DONE"]))
+    bench.run_one(task, "off", 1, tmp_path / "root", keep=True)
+    assert (tmp_path / "root" / "t01-off-1" / "new.txt").exists()
+
+
+def test_count_jev(home):
+    log = triage.jev_dir() / "log.jsonl"
+    log.parent.mkdir(parents=True, exist_ok=True)
+    rows = [
+        {"session_id": "S1", "scores": {"new_feature": 0.9}},
+        {"session_id": "S1", "scores": None, "error": "timeout"},
+        {"session_id": "S2", "scores": {"new_feature": 0.1}},
+    ]
+    log.write_text("\n".join(json.dumps(r) for r in rows) + "\n", encoding="utf-8")
+    assert bench.count_jev(["S1"]) == 1
+    assert bench.count_jev([]) == 0
+
+
+def test_cmd_run_skips_done_runs_and_respects_the_cap(
+    home, repo, tmp_path, monkeypatch, capsys
+):
+    write_task(home, repo)
+    fake = FakeClaude([reply(cost=3.0)] * 4, ["DONE"] * 4)
+    monkeypatch.setattr(bench, "RUNNER", fake)
+    argv = ["run", "--runs", "2", "--sandbox-root", str(tmp_path / "root")]
+    # $3 spent + $10 budget for the next run > $12
+    assert bench.main([*argv, "--max-total-usd", "12"]) == 1
+    assert "cap" in capsys.readouterr().out
+    names = [p.name for p in (home / "results").glob("*.json")]
+    assert names == ["t01-off-1.json"]
+    assert bench.main([*argv, "--max-total-usd", "100"]) == 0
+    names = sorted(p.name for p in (home / "results").glob("*.json"))
+    assert names == ["t01-off-1.json", "t01-off-2.json"]
+    assert len(main_calls(fake)) == 2
+
+
+def test_cmd_run_jev_arm_needs_key(home, repo, capsys):
+    write_task(home, repo)
+    assert bench.main(["run", "--arm", "jev"]) == 1
+    assert "TYPESAFE_API_KEY" in capsys.readouterr().err
