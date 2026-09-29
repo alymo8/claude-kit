@@ -1,12 +1,17 @@
 #!/usr/bin/env python3
 """Evaluate the jev triage pilot.
 
-  replay [--n 60] [--seed 0] [--force]  sample past prompts, judge, write labels.csv
+  replay [--n 60] [--seed 0] [--since YYYY-MM-DD] [--force] [--no-judge]
+                                        sample past prompts into labels.csv
+  replay --rescore                      fill jev scores into labels.csv
   score [labels.csv]                    precision/recall vs your labels; Replay gate
+  baseline [labels.csv]                 no-jev baseline from your labels and history
   report [--since YYYY-MM-DD]           shadow vs active outcomes from the hook log
 
-Outputs go to ~/.claude/claude-kit/jev/. replay needs typesafe-sdk and
-TYPESAFE_API_KEY. Spec: docs/superpowers/specs/2026-09-28-jev-triage-pilot-design.md
+Outputs go to ~/.claude/claude-kit/jev/. Only replay (without --no-judge) and
+--rescore call jev; they need typesafe-sdk and TYPESAFE_API_KEY. Specs:
+docs/superpowers/specs/2026-09-28-jev-triage-pilot-design.md and
+docs/superpowers/specs/2026-09-28-jev-offline-baseline-design.md
 """
 
 from __future__ import annotations
@@ -17,14 +22,16 @@ import importlib.util
 import io
 import json
 import math
+import os
 import random
 import re
 import statistics
 import sys
 import time
-from collections import defaultdict
+from collections import Counter, defaultdict
 from collections.abc import Iterable, Iterator
 from dataclasses import dataclass
+from datetime import date
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
@@ -41,6 +48,7 @@ INTERRUPT_PREFIX = "[Request interrupted by user"
 LABEL_FIELDS = [
     "id",
     "project",
+    "session_id",
     "prompt",
     *(f"s_{k}" for k in triage.KEYS),
     "latency_ms",
@@ -109,32 +117,40 @@ def prompt_text(record: dict) -> str | None:
     return text if text and triage.should_judge(text) else None
 
 
-def iter_prompts(files: Iterable[Path]) -> Iterator[tuple[str, str]]:
+def iter_prompts(
+    files: Iterable[Path], since: str = ""
+) -> Iterator[tuple[str, str, str]]:
+    """(project, session_id, text) for every prompt the hook would judge."""
     for path in files:
         for record in read_jsonl(path):
+            if since and str(record.get("timestamp") or "")[:10] < since:
+                continue
             text = prompt_text(record)
             if text:
-                yield path.parent.name, text
+                yield path.parent.name, path.stem, text
 
 
-def sample(prompts: list[tuple[str, str]], n: int, seed: int) -> list[tuple[str, str]]:
+def sample(
+    prompts: list[tuple[str, str, str]], n: int, seed: int
+) -> list[tuple[str, str, str]]:
     """Up to n distinct prompts, round-robin across projects."""
     rng = random.Random(seed)
-    groups: dict[str, list[str]] = defaultdict(list)
+    groups: dict[str, list[tuple[str, str]]] = defaultdict(list)
     seen: set[str] = set()
-    for project, text in prompts:
+    for project, session_id, text in prompts:
         if text not in seen:
             seen.add(text)
-            groups[project].append(text)
-    for texts in groups.values():
-        rng.shuffle(texts)
+            groups[project].append((session_id, text))
+    for entries in groups.values():
+        rng.shuffle(entries)
     order = sorted(groups)
     rng.shuffle(order)
-    chosen: list[tuple[str, str]] = []
+    chosen: list[tuple[str, str, str]] = []
     while len(chosen) < n and any(groups[p] for p in order):
         for project in order:
             if groups[project] and len(chosen) < n:
-                chosen.append((project, groups[project].pop()))
+                session_id, text = groups[project].pop()
+                chosen.append((project, session_id, text))
     return chosen
 
 
@@ -201,49 +217,140 @@ def confusion(rows: list[dict], key: str, threshold: float) -> Confusion:
     return c
 
 
-def label_row(i: int, project: str, text: str) -> dict:
-    """Judge one prompt and build its labels.csv row; raises JevError."""
+SCORE_FIELDS = (
+    *(f"s_{k}" for k in triage.KEYS),
+    "latency_ms",
+    "input_tokens",
+    "output_tokens",
+)
+
+
+def empty_row(i: int, project: str, session_id: str, text: str) -> dict:
+    """A labels.csv row with no scores and no labels."""
+    row = dict.fromkeys(LABEL_FIELDS, "")
+    row.update(id=i, project=project, session_id=session_id, prompt=text)
+    return row
+
+
+def score_row(row: dict) -> bool:
+    """Judge row["prompt"] and replace its score columns; True on success.
+
+    On a per-prompt error (bad key, timeout) the row keeps its previous scores and
+    False is returned. Raises JevError when jev cannot be reached at all (missing
+    key or SDK)."""
     start = time.perf_counter()
     try:
-        judgment = triage.judge(text)
+        judgment = triage.judge(str(row.get("prompt") or ""))
     except triage.JevError as exc:
         if exc.code in ("missing_key", "missing_sdk"):
             raise
-        print(f"prompt {i}: {exc.code}", file=sys.stderr)
-        judgment = triage.Judgment({}, None)
+        print(f"prompt {row.get('id')}: {exc.code}", file=sys.stderr)
+        return False
+    for name in SCORE_FIELDS:
+        row[name] = ""
     usage = judgment.usage or {}
-    scores = judgment.scores
-    return {
-        "id": i,
-        "project": project,
-        "prompt": text,
-        **{f"s_{k}": f"{scores[k]:.4f}" if k in scores else "" for k in triage.KEYS},
-        "latency_ms": round((time.perf_counter() - start) * 1000),
-        "input_tokens": usage.get("input_tokens") or "",
-        "output_tokens": usage.get("output_tokens") or "",
-        **{f"label_{k}": "" for k in triage.KEYS},
-    }
+    for key in triage.KEYS:
+        if key in judgment.scores:
+            row[f"s_{key}"] = f"{judgment.scores[key]:.4f}"
+    row["latency_ms"] = round((time.perf_counter() - start) * 1000)
+    row["input_tokens"] = usage.get("input_tokens") or ""
+    row["output_tokens"] = usage.get("output_tokens") or ""
+    return True
+
+
+def write_labels(path: Path, rows: list[dict], extra: Iterable[str] = ()) -> None:
+    """Write via a temporary file and a rename, so a failure never truncates.
+
+    ``extra`` are columns the user added (e.g. notes), kept after ours."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp = path.with_name(path.name + ".tmp")
+    with tmp.open("w", encoding="utf-8-sig", newline="") as fh:
+        writer = csv.DictWriter(
+            fh, fieldnames=[*LABEL_FIELDS, *extra], restval="", extrasaction="ignore"
+        )
+        writer.writeheader()
+        writer.writerows(rows)
+    os.replace(tmp, path)
+
+
+def locked(path: Path, kept: Path | None = None) -> None:
+    where = f"; results kept in {kept}" if kept else ""
+    print(
+        f"cannot write {path}: close it (open in Excel?) and re-run{where}",
+        file=sys.stderr,
+    )
+
+
+def writable(path: Path) -> bool:
+    """False when another program (Excel, on Windows) holds the file locked."""
+    try:
+        with path.open("r+b"):
+            return True
+    except PermissionError:
+        return False
+
+
+def save_labels(path: Path, rows: list[dict], extra: Iterable[str] = ()) -> bool:
+    try:
+        write_labels(path, rows, extra)
+    except PermissionError:
+        locked(path, path.with_name(path.name + ".tmp"))
+        return False
+    return True
+
+
+def cmd_rescore(path: Path) -> int:
+    """Fill jev scores into an existing labels.csv, keeping every label."""
+    if not path.is_file():
+        print(f"{path} not found; run: jev-eval.py replay --no-judge", file=sys.stderr)
+        return 1
+    if not writable(path):
+        locked(path)
+        return 1
+    rows = read_labels(path)
+    extra = [k for k in (rows[0] if rows else {}) if k not in LABEL_FIELDS]
+    try:
+        ok = [score_row(row) for row in rows]
+    except triage.JevError as exc:
+        print(f"cannot judge: {exc.code}; {path} left unchanged", file=sys.stderr)
+        return 1
+    errors = ok.count(False)
+    if rows and errors == len(rows):
+        print(f"no prompt could be judged; {path} left unchanged", file=sys.stderr)
+        return 1
+    if not save_labels(path, rows, extra):
+        return 1
+    note = f"; {errors} error(s), previous scores kept for those" if errors else ""
+    print(f"rescored {len(rows) - errors}/{len(rows)} prompts in {path}{note}")
+    if errors:
+        return 1
+    print("next: jev-eval.py score")
+    return 0
 
 
 def cmd_replay(args: argparse.Namespace) -> int:
+    if args.rescore:
+        return cmd_rescore(triage.jev_dir() / "labels.csv")
     out = triage.jev_dir() / "labels.csv"
     if out.exists() and not args.force:
         print(f"{out} exists; pass --force to overwrite", file=sys.stderr)
         return 1
     files = sorted(projects_dir().glob("*/*.jsonl"))
-    chosen = sample(list(iter_prompts(files)), args.n, args.seed)
-    try:
-        rows = [label_row(i, p, t) for i, (p, t) in enumerate(chosen, 1)]
-    except triage.JevError as exc:
-        print(f"cannot judge: {exc.code}", file=sys.stderr)
+    n = 60 if args.n is None else args.n
+    seed = 0 if args.seed is None else args.seed
+    chosen = sample(list(iter_prompts(files, args.since)), n, seed)
+    rows = [empty_row(i, p, s, t) for i, (p, s, t) in enumerate(chosen, 1)]
+    if not args.no_judge:
+        try:
+            for row in rows:
+                score_row(row)
+        except triage.JevError as exc:
+            print(f"cannot judge: {exc.code}", file=sys.stderr)
+            return 1
+    if not save_labels(out, rows):
         return 1
-    out.parent.mkdir(parents=True, exist_ok=True)
-    with out.open("w", encoding="utf-8-sig", newline="") as fh:
-        writer = csv.DictWriter(fh, fieldnames=LABEL_FIELDS)
-        writer.writeheader()
-        writer.writerows(rows)
     print(f"wrote {len(rows)} prompts to {out}")
-    print("fill the label_* columns with 1 or 0, then run: jev-eval.py score")
+    print("fill the label_* columns with 1 or 0, then run: jev-eval.py baseline")
     return 0
 
 
@@ -256,7 +363,9 @@ def read_labels(path: Path) -> list[dict]:
         text = raw.decode("cp1252", "replace")
     header = text.splitlines()[0] if text else ""
     delimiter = ";" if header.count(";") > header.count(",") else ","
-    rows = list(csv.DictReader(io.StringIO(text, newline=""), delimiter=delimiter))
+    reader = csv.DictReader(io.StringIO(text, newline=""), delimiter=delimiter)
+    # Cells beyond the header land under the key None; they are not ours.
+    rows = [{k: v for k, v in r.items() if isinstance(k, str)} for r in reader]
     return [r for r in rows if any((v or "").strip() for v in r.values())]
 
 
@@ -608,19 +717,144 @@ def cmd_report(args: argparse.Namespace) -> int:
     return 0
 
 
+BASELINE_FIELDS = [
+    "id",
+    "session_id",
+    *(f"label_{k}" for k in triage.KEYS),
+    "asked",
+    "preflight",
+    "corrected",
+]
+BASELINE_LABELS = {
+    "preflight_miss": "pre-flight skipped (new feature, code edited)",
+    "not_asked": "did not ask (underspecified or key decision)",
+    "corrected_positive": "corrected or interrupted (any label = 1)",
+    "corrected_other": "corrected or interrupted (all labels = 0)",
+}
+SKIP_REASONS = ("unlabelled", "no transcript", "not found")
+Labelled = tuple[dict, dict[str, int], Outcome]
+
+
+def baseline_rows(rows: list[dict]) -> tuple[list[Labelled], Counter]:
+    """Labelled rows matched to their transcript turn, and why others were skipped."""
+    results: list[Labelled] = []
+    skipped: Counter = Counter()
+    cache: dict[str, list[Turn]] = {}
+    for row in rows:
+        labels = {k: parse_label(row.get(f"label_{k}", "")) for k in triage.KEYS}
+        if any(v is None for v in labels.values()):
+            skipped["unlabelled"] += 1
+            continue
+        session_id = str(row.get("session_id") or "")
+        path = transcript_for(session_id)
+        if path is None:
+            skipped["no transcript"] += 1
+            continue
+        if session_id not in cache:
+            cache[session_id] = turns(path)
+        found = match([{"prompt": row.get("prompt")}], cache[session_id])
+        if not found:
+            skipped["not found"] += 1
+            continue
+        results.append((row, labels, found[0][1]))  # type: ignore[arg-type]
+    return results, skipped
+
+
+def baseline_stats(results: list[Labelled]) -> dict[str, tuple[int, int]]:
+    """(k, n) per measure; the user's labels decide which prompts count."""
+    feature = [
+        o for _, lab, o in results if lab["new_feature"] and o.preflight is not None
+    ]
+    ask = [o for _, lab, o in results if lab["underspecified"] or lab["key_decision"]]
+    positive = [o for _, lab, o in results if any(lab.values())]
+    other = [o for _, lab, o in results if not any(lab.values())]
+    return {
+        "preflight_miss": (sum(1 for o in feature if not o.preflight), len(feature)),
+        "not_asked": (sum(1 for o in ask if not o.asked), len(ask)),
+        "corrected_positive": (sum(1 for o in positive if o.corrected), len(positive)),
+        "corrected_other": (sum(1 for o in other if o.corrected), len(other)),
+    }
+
+
+def write_baseline(out: Path, results: list[Labelled]) -> None:
+    with out.open("w", encoding="utf-8-sig", newline="") as fh:
+        writer = csv.DictWriter(fh, fieldnames=BASELINE_FIELDS)
+        writer.writeheader()
+        for row, labels, result in results:
+            preflight = "n/a" if result.preflight is None else result.preflight
+            writer.writerow(
+                {
+                    "id": row.get("id"),
+                    "session_id": row.get("session_id"),
+                    **{f"label_{k}": labels[k] for k in triage.KEYS},
+                    "asked": result.asked,
+                    "preflight": preflight,
+                    "corrected": result.corrected,
+                }
+            )
+
+
+def cmd_baseline(args: argparse.Namespace) -> int:
+    path = Path(args.labels) if args.labels else triage.jev_dir() / "labels.csv"
+    if not path.is_file():
+        print(f"{path} not found; run: jev-eval.py replay --no-judge", file=sys.stderr)
+        return 1
+    results, skipped = baseline_rows(read_labels(path))
+    print(f"baseline (no jev): {len(results)} labelled prompts matched")
+    for key, (k, n) in baseline_stats(results).items():
+        print(f"  {BASELINE_LABELS[key]}: {k}/{n} ({fmt(ratio(k, n), True)})")
+    print("  skipped: " + ", ".join(f"{why} {skipped[why]}" for why in SKIP_REASONS))
+    out = path.parent / "baseline.csv"
+    try:
+        write_baseline(out, results)
+    except PermissionError:
+        locked(out)
+        return 1
+    print(f"per-prompt outcomes in {out}")
+    return 0
+
+
+def iso_date(value: str) -> str:
+    """argparse type: '' or a YYYY-MM-DD date (normalised, compared as UTC)."""
+    if not value:
+        return ""
+    try:
+        return date.fromisoformat(value).isoformat()
+    except ValueError:
+        raise argparse.ArgumentTypeError(f"not a YYYY-MM-DD date: {value!r}") from None
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Evaluate the jev triage pilot.")
     sub = parser.add_subparsers(dest="command", required=True)
-    replay = sub.add_parser("replay", help="judge a sample of past prompts")
-    replay.add_argument("--n", type=int, default=60)
-    replay.add_argument("--seed", type=int, default=0)
+    replay = sub.add_parser("replay", help="sample past prompts into labels.csv")
+    replay.add_argument("--n", type=int, default=None, help="default 60")
+    replay.add_argument("--seed", type=int, default=None, help="default 0")
     replay.add_argument("--force", action="store_true")
+    replay.add_argument(
+        "--since", type=iso_date, default="", help="YYYY-MM-DD (UTC date)"
+    )
+    how = replay.add_mutually_exclusive_group()
+    how.add_argument("--no-judge", action="store_true", help="no key needed")
+    how.add_argument("--rescore", action="store_true", help="score labels.csv")
     score = sub.add_parser("score", help="score labels.csv against the gate")
     score.add_argument("labels", nargs="?")
     report = sub.add_parser("report", help="shadow vs active outcomes")
-    report.add_argument("--since", default="")
+    report.add_argument(
+        "--since", type=iso_date, default="", help="YYYY-MM-DD (UTC date)"
+    )
+    baseline = sub.add_parser("baseline", help="no-jev baseline from your labels")
+    baseline.add_argument("labels", nargs="?")
     args = parser.parse_args(argv)
-    handler = {"replay": cmd_replay, "score": cmd_score, "report": cmd_report}
+    if args.command == "replay" and args.rescore:
+        if args.n is not None or args.seed is not None or args.since:
+            replay.error("--rescore keeps the existing sample; drop --n/--seed/--since")
+    handler = {
+        "replay": cmd_replay,
+        "score": cmd_score,
+        "report": cmd_report,
+        "baseline": cmd_baseline,
+    }
     return handler[args.command](args)
 
 

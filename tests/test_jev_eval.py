@@ -1,5 +1,6 @@
 import csv
 import json
+import sys
 
 import pytest
 from helpers import PLUGIN, load_module
@@ -37,17 +38,22 @@ FIXTURE = [
 def test_iter_prompts_keeps_only_typed_prompts(tmp_path):
     path = write_jsonl(tmp_path / "proj-a" / "s1.jsonl", FIXTURE, junk=True)
     assert list(ev.iter_prompts([path])) == [
-        ("proj-a", "add a dark mode toggle to settings"),
-        ("proj-a", "why does the login test fail"),
+        ("proj-a", "s1", "add a dark mode toggle to settings"),
+        ("proj-a", "s1", "why does the login test fail"),
     ]
 
 
 def test_sample_is_stratified_and_deduplicated():
-    prompts = [("a", "p1 x y"), ("a", "p1 x y"), ("a", "p2 x y"), ("b", "q1 x y")]
+    prompts = [
+        ("a", "s1", "p1 x y"),
+        ("a", "s1", "p1 x y"),
+        ("a", "s2", "p2 x y"),
+        ("b", "s3", "q1 x y"),
+    ]
     three = ev.sample(prompts, 3, 0)
     assert len(three) == 3
-    assert len({t for _, t in three}) == 3
-    assert {p for p, _ in ev.sample(prompts, 2, 0)} == {"a", "b"}
+    assert len({t for _, _, t in three}) == 3
+    assert {p for p, _, _ in ev.sample(prompts, 2, 0)} == {"a", "b"}
 
 
 def fake(prompt):
@@ -77,6 +83,7 @@ def test_replay_writes_labels(monkeypatch, dirs):
     assert rows[0]["s_new_feature"] == "0.9000"
     assert rows[0]["input_tokens"] == "10"
     assert rows[0]["label_new_feature"] == ""
+    assert rows[0]["session_id"] == "s1"
     assert ev.main(["replay"]) == 1
     assert ev.main(["replay", "--force"]) == 0
 
@@ -91,6 +98,55 @@ def test_replay_stops_on_missing_key(monkeypatch, dirs):
     monkeypatch.setattr(triage, "judge", no_key)
     assert ev.main(["replay"]) == 1
     assert not (jev / "labels.csv").exists()
+
+
+def dated(text, day):
+    return user(text, timestamp=f"{day}T10:00:00.000Z")
+
+
+def test_iter_prompts_since(tmp_path):
+    records = [
+        dated("an old prompt from july", "2026-07-15"),
+        dated("a prompt from the first day", "2026-08-01"),
+        user("a prompt with no timestamp"),
+    ]
+    path = write_jsonl(tmp_path / "proj-a" / "s1.jsonl", records)
+    assert [t for _, _, t in ev.iter_prompts([path], "2026-08-01")] == [
+        "a prompt from the first day"
+    ]
+    assert len(list(ev.iter_prompts([path]))) == 3
+
+
+def must_not_call(prompt):
+    raise AssertionError("judge must not be called")
+
+
+def test_replay_no_judge_needs_no_key(monkeypatch, dirs):
+    projects, jev = dirs
+    write_jsonl(projects / "proj-a" / "s1.jsonl", FIXTURE)
+    monkeypatch.setattr(triage, "judge", must_not_call)
+    monkeypatch.setitem(sys.modules, "typesafe_sdk", None)
+    monkeypatch.delenv("TYPESAFE_API_KEY", raising=False)
+    assert ev.main(["replay", "--no-judge"]) == 0
+    rows = read_rows(jev / "labels.csv")
+    assert list(rows[0]) == ev.LABEL_FIELDS
+    assert [r["session_id"] for r in rows] == ["s1", "s1"]
+    for row in rows:
+        assert row["s_new_feature"] == row["latency_ms"] == row["input_tokens"] == ""
+    assert ev.main(["replay", "--no-judge"]) == 1  # the overwrite guard holds
+
+
+def test_replay_since_filters_the_sample(monkeypatch, dirs):
+    projects, jev = dirs
+    records = [
+        dated("an old prompt from july", "2026-07-15"),
+        dated("a prompt from august", "2026-08-02"),
+    ]
+    write_jsonl(projects / "proj-a" / "s1.jsonl", records)
+    assert ev.main(["replay", "--no-judge", "--since", "2026-08-01"]) == 0
+    assert [r["prompt"] for r in read_rows(jev / "labels.csv")] == [
+        "a prompt from august"
+    ]
 
 
 HEADER = [
@@ -306,7 +362,7 @@ def test_interrupt_is_not_a_prompt_but_counts_as_correction(tmp_path):
         assistant(say("Switching.")),
     ]
     path = write_jsonl(tmp_path / "proj-a" / "s1.jsonl", session)
-    assert [t for _, t in ev.iter_prompts([path])] == [P1, FOLLOW_UP]
+    assert [t for _, _, t in ev.iter_prompts([path])] == [P1, FOLLOW_UP]
     result = ev.turns(path)
     assert [t[0] for t in result] == [P1, FOLLOW_UP]
     assert ev.outcome(result[0][1], result[0][2]).corrected is True
@@ -351,3 +407,233 @@ def test_score_reads_ansi_semicolon_decimal_comma(tmp_path, dirs):
     text = text.replace("prompt 0", "prompt – “smart”")
     path.write_bytes(text.encode("cp1252"))
     assert ev.main(["score", str(path)]) == 0
+
+
+def labelled_file(monkeypatch, dirs, delimiter=",", encoding="utf-8-sig"):
+    """Run replay --no-judge, label row 1 as a feature, save in a given format."""
+    projects, jev = dirs
+    write_jsonl(projects / "proj-a" / "s1.jsonl", FIXTURE)
+    monkeypatch.setattr(triage, "judge", must_not_call)
+    assert ev.main(["replay", "--no-judge"]) == 0
+    rows = read_rows(jev / "labels.csv")
+    rows[0].update(
+        label_underspecified="0", label_new_feature="1", label_key_decision="0"
+    )
+    rows[1]["prompt"] = rows[1]["prompt"] + " – “quoted”"
+    path = jev / "labels.csv"
+    with path.open("w", encoding=encoding, newline="") as fh:
+        writer = csv.DictWriter(fh, fieldnames=ev.LABEL_FIELDS, delimiter=delimiter)
+        writer.writeheader()
+        writer.writerows(rows)
+    return path, rows
+
+
+def test_rescore_keeps_labels_from_an_excel_file(monkeypatch, dirs):
+    path, before = labelled_file(monkeypatch, dirs, delimiter=";", encoding="cp1252")
+    monkeypatch.setattr(triage, "judge", fake)
+    assert ev.main(["replay", "--rescore"]) == 0
+    after = read_rows(path)
+    assert [r["prompt"] for r in after] == [r["prompt"] for r in before]
+    assert [r["session_id"] for r in after] == ["s1", "s1"]
+    assert after[0]["label_new_feature"] == "1"
+    assert after[1]["label_new_feature"] == ""
+    assert {r["s_new_feature"] for r in after} == {"0.9000"}
+    assert {r["input_tokens"] for r in after} == {"10"}
+    assert not path.with_name("labels.csv.tmp").exists()
+
+
+def test_rescore_missing_key_leaves_file_untouched(monkeypatch, dirs):
+    path, _ = labelled_file(monkeypatch, dirs)
+    original = path.read_bytes()
+
+    def no_key(prompt):
+        raise triage.JevError("missing_key")
+
+    monkeypatch.setattr(triage, "judge", no_key)
+    assert ev.main(["replay", "--rescore"]) == 1
+    assert path.read_bytes() == original
+
+
+def test_rescore_without_labels_file(dirs, capsys):
+    assert ev.main(["replay", "--rescore"]) == 1
+    assert "not found" in capsys.readouterr().err
+
+
+@pytest.mark.parametrize(
+    "extra",
+    [["--no-judge"], ["--n", "5"], ["--seed", "1"], ["--since", "2026-08-01"]],
+)
+def test_rescore_rejects_sampling_options(dirs, extra):
+    with pytest.raises(SystemExit) as info:
+        ev.main(["replay", "--rescore", *extra])
+    assert info.value.code == 2
+
+
+def label_rows(entries):
+    """entries: (session_id, prompt, (u, f, k)) with "" for a blank label."""
+    rows = []
+    for i, (session_id, prompt, (u, f, k)) in enumerate(entries, 1):
+        row = ev.empty_row(i, "proj-a", session_id, prompt)
+        row.update(label_underspecified=u, label_new_feature=f, label_key_decision=k)
+        rows.append(row)
+    return rows
+
+
+def test_baseline_end_to_end(dirs, capsys):
+    projects, jev = dirs
+    write_jsonl(projects / "proj-a" / "s1.jsonl", SESSION, junk=True)
+    rows = label_rows(
+        [
+            ("s1", P1, ("0", "1", "0")),  # feature, edited before the check: miss
+            ("s1", P2, ("0", "1", "0")),  # feature, check then Write: ok
+            ("s1", P3, ("1", "0", "0")),  # vague, Claude asked: ok
+            ("s1", P4, ("0", "0", "0")),  # neither
+            ("s1", P4, ("", "", "")),  # unlabelled
+            ("gone", P1, ("0", "1", "0")),  # transcript missing
+            ("s1", "never typed here", ("1", "0", "0")),  # not in the transcript
+        ]
+    )
+    ev.write_labels(jev / "labels.csv", rows)
+
+    results, skipped = ev.baseline_rows(ev.read_labels(jev / "labels.csv"))
+    assert dict(skipped) == {"unlabelled": 1, "no transcript": 1, "not found": 1}
+    stats = ev.baseline_stats(results)
+    assert stats["preflight_miss"] == (1, 2)
+    assert stats["not_asked"] == (0, 1)
+    assert stats["corrected_positive"] == (1, 3)
+    assert stats["corrected_other"] == (0, 1)
+
+    assert ev.main(["baseline"]) == 0
+    out = capsys.readouterr().out
+    assert "1/2 (50%)" in out
+    assert "unlabelled 1" in out
+    spot = read_rows(jev / "baseline.csv")
+    assert len(spot) == 4
+    assert spot[0]["preflight"] == "False"
+
+
+def test_baseline_unlabelled_file(monkeypatch, dirs, capsys):
+    projects, jev = dirs
+    write_jsonl(projects / "proj-a" / "s1.jsonl", FIXTURE)
+    monkeypatch.setattr(triage, "judge", must_not_call)
+    assert ev.main(["replay", "--no-judge"]) == 0
+    assert ev.main(["baseline"]) == 0
+    out = capsys.readouterr().out
+    assert "unlabelled 2" in out
+    assert "n/a" in out
+
+
+def test_baseline_missing_file(tmp_path, dirs, capsys):
+    assert ev.main(["baseline", str(tmp_path / "nope.csv")]) == 1
+    assert "not found" in capsys.readouterr().err
+
+
+def rescored_file(monkeypatch, dirs):
+    path, _ = labelled_file(monkeypatch, dirs)
+    monkeypatch.setattr(triage, "judge", fake)
+    assert ev.main(["replay", "--rescore"]) == 0
+    return path
+
+
+def test_rescore_all_rows_failing_leaves_file_untouched(monkeypatch, dirs):
+    path = rescored_file(monkeypatch, dirs)
+    original = path.read_bytes()
+
+    def bad_key(prompt):
+        raise triage.JevError("api_error: AuthenticationError: 401")
+
+    monkeypatch.setattr(triage, "judge", bad_key)
+    assert ev.main(["replay", "--rescore"]) == 1
+    assert path.read_bytes() == original
+
+
+def test_rescore_partial_failure_keeps_old_scores(monkeypatch, dirs, capsys):
+    path = rescored_file(monkeypatch, dirs)
+    calls = []
+
+    def flaky(prompt):
+        calls.append(prompt)
+        if len(calls) == 1:
+            raise triage.JevError("timeout")
+        scores = {"underspecified": 0.3, "new_feature": 0.4, "key_decision": 0.5}
+        return triage.Judgment(scores, None)
+
+    monkeypatch.setattr(triage, "judge", flaky)
+    assert ev.main(["replay", "--rescore"]) == 1
+    rows = read_rows(path)
+    assert rows[0]["s_new_feature"] == "0.9000"  # failed: previous score kept
+    assert rows[1]["s_new_feature"] == "0.4000"
+    assert "1 error" in capsys.readouterr().out
+
+
+def test_rescore_keeps_extra_columns(monkeypatch, dirs):
+    path, rows = labelled_file(monkeypatch, dirs)
+    rows[0]["notes"] = "my note"
+    rows[1]["notes"] = ""
+    with path.open("w", encoding="utf-8-sig", newline="") as fh:
+        writer = csv.DictWriter(fh, fieldnames=[*ev.LABEL_FIELDS, "notes"])
+        writer.writeheader()
+        writer.writerows(rows)
+    monkeypatch.setattr(triage, "judge", fake)
+    assert ev.main(["replay", "--rescore"]) == 0
+    after = read_rows(path)
+    assert list(after[0])[-1] == "notes"
+    assert after[0]["notes"] == "my note"
+
+
+def test_rescore_locked_file_on_replace(monkeypatch, dirs, capsys):
+    path, _ = labelled_file(monkeypatch, dirs)
+    original = path.read_bytes()
+    monkeypatch.setattr(triage, "judge", fake)
+
+    def locked(src, dst):
+        raise PermissionError(13, "denied")
+
+    monkeypatch.setattr(ev.os, "replace", locked)
+    assert ev.main(["replay", "--rescore"]) == 1
+    err = capsys.readouterr().err
+    assert "close" in err and "labels.csv.tmp" in err
+    assert path.read_bytes() == original
+
+
+def test_rescore_locked_file_checked_before_judging(monkeypatch, dirs, capsys):
+    labelled_file(monkeypatch, dirs)
+    monkeypatch.setattr(ev, "writable", lambda path: False)
+    monkeypatch.setattr(triage, "judge", must_not_call)
+    assert ev.main(["replay", "--rescore"]) == 1
+    assert "close" in capsys.readouterr().err
+
+
+@pytest.mark.parametrize(
+    "argv",
+    [
+        ["replay", "--no-judge", "--since", "2026-8-1"],
+        ["report", "--since", "yesterday"],
+    ],
+)
+def test_since_must_be_an_iso_date(dirs, argv):
+    with pytest.raises(SystemExit) as info:
+        ev.main(argv)
+    assert info.value.code == 2
+
+
+def test_baseline_locked_output(monkeypatch, dirs, capsys):
+    projects, jev = dirs
+    write_jsonl(projects / "proj-a" / "s1.jsonl", FIXTURE)
+    monkeypatch.setattr(triage, "judge", must_not_call)
+    assert ev.main(["replay", "--no-judge"]) == 0
+
+    def locked(out, results):
+        raise PermissionError(13, "denied")
+
+    monkeypatch.setattr(ev, "write_baseline", locked)
+    assert ev.main(["baseline"]) == 1
+    assert "close" in capsys.readouterr().err
+
+
+def test_read_labels_tolerates_cells_beyond_the_header(tmp_path):
+    path = tmp_path / "l.csv"
+    path.write_text("id,prompt\n1,a b c,extra\n,,\n", encoding="utf-8")
+    rows = ev.read_labels(path)
+    assert len(rows) == 1
+    assert rows[0]["prompt"] == "a b c"
