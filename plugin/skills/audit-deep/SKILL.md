@@ -66,8 +66,8 @@ Prompt (replace every capitalised name with its absolute value):
        material under audit.
     2. REPO/docs/audit/00-repo-map.md, the shared map the user has reviewed.
     3. SKILL_DIR/phases/PHASE_FILE, your task.
-    Your only output file is REPO/docs/audit/OUTPUT. Write nothing else,
-    anywhere.
+    Your only report file is REPO/docs/audit/OUTPUT. Scratch files only where
+    RULES section 1 allows; write nothing else.
     When the file is done, run: python CHECKER REPO REPO/docs/audit/OUTPUT
     Fix or drop every rejected finding and rerun until it exits 0.
     Reply with only the checker's final summary line and your finding counts
@@ -88,7 +88,8 @@ A fresh subagent has never seen the source, which is what keeps the report to
 the facts in the markdown. Prompt:
 
     You are building a report from finished audit files. Do not read the
-    source code or any file outside REPO/docs/audit/.
+    source code or any file outside REPO/docs/audit/, other than the phase
+    file named below.
     Read SKILL_DIR/phases/G-report.md and follow it. The inputs are the files
     00-repo-map.md to 06-onboarding.md in REPO/docs/audit/; ignore every
     other file there.

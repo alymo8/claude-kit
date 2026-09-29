@@ -132,3 +132,15 @@ def test_report_phase_is_offline_and_source_blind():
     text = read(DEEP / "phases" / "G-report.md")
     assert "No CDN" in text
     assert "Do not read the source" in text
+
+
+def test_rules_name_one_scratch_location():
+    rules = read(AUDIT / "rules.md")
+    assert "audit-scratch" in rules
+    body = " ".join(read(DEEP / "SKILL.md").split())
+    assert "Write nothing else, anywhere" not in body
+    assert "Scratch files only where RULES section 1 allows" in body
+
+
+def test_report_phase_may_read_its_own_instructions():
+    assert "other than this file" in read(DEEP / "phases" / "G-report.md")

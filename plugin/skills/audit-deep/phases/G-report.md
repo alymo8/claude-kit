@@ -1,7 +1,7 @@
 # Phase G: HTML report
 
 A formatting task. Do not read the source code or any file outside
-`docs/audit/`. Every fact in the output comes from the input markdown files;
+`docs/audit/` other than this file. Every fact in the output comes from the input markdown files;
 do not add, infer, reword or re-derive any finding.
 
 Produce one self-contained file, `docs/audit/report.html`:

@@ -167,3 +167,36 @@ def test_main_prints_non_ascii_titles(repo, capsys):
     md = report(repo, finding(title="Hook → never fires", where="`app.py:99`"))
     assert cf.main([str(repo), str(md)]) == 1
     assert "never fires" in capsys.readouterr().out
+
+
+@pytest.mark.parametrize(
+    "heading",
+    ["### **[High]** Shell call", "#### [High] Shell call", "### High: Shell call"],
+)
+def test_malformed_finding_heading_is_rejected(repo, heading):
+    text = finding().replace("### [High] Shell call", heading)
+    count, errors = check(repo, text)
+    assert count == 1
+    assert "malformed finding heading" in errors[0]
+
+
+def test_heading_starting_with_a_severity_word_is_not_a_finding(repo):
+    assert check(repo, "### High availability\n\nFine.\n") == (0, [])
+
+
+def test_tilde_fence_with_inner_backtick_line_does_not_hide_findings(repo):
+    fix = "Replace it:\n~~~md\n```python\n~~~\n"
+    bad = finding(title="Hidden", where="`app.py:99`")
+    count, errors = check(repo, finding() + fix, bad)
+    assert count == 2
+    assert len(errors) == 1 and '"Hidden"' in errors[0]
+
+
+def test_four_backtick_fence_hides_nested_example(repo):
+    example = "````markdown\n```\n" + finding(where="`x.py:1`") + "```\n````\n"
+    assert check(repo, example) == (0, [])
+
+
+def test_range_end_past_the_file_is_rejected(repo):
+    _, errors = check(repo, finding(where="`app.py:1-99999`"))
+    assert "past the end" in errors[0]

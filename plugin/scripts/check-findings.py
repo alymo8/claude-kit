@@ -31,9 +31,16 @@ FIELDS = ("Where", "Evidence", "Confidence", "Impact", "Fix")
 ABSENT = "(absent)"
 WINDOW = 3  # lines either side of the cited line that may hold the quote
 
+MALFORMED = "\0malformed"  # severity marker for a heading that looks like a finding
 FINDING_RE = re.compile(r"^###\s+\[([^\]]+)\]\s*(.*?)\s*$")
-BOUNDARY_RE = re.compile(r"^#{1,3}\s")
-FENCE_RE = re.compile(r"^\s*(```|~~~)")
+HEADING_RE = re.compile(r"^#{1,6}\s")
+# A heading meant as a finding but not in the ``### [Severity] Title`` form:
+# a bracketed severity anywhere, or a severity word followed by a colon.
+LOOKS_LIKE_FINDING_RE = re.compile(
+    r"\[\s*(critical|high|medium|low)\s*\]|^#{1,6}\s+\**(critical|high|medium|low)\**\s*:",
+    re.I,
+)
+FENCE_RE = re.compile(r"^ {0,3}(`{3,}|~{3,})(.*)$")
 FIELD_RE = re.compile(r"^\s*[-*]\s+\*\*([A-Za-z]+):\*\*\s*(.*?)\s*$")
 HISTORY_RE = re.compile(r"^\(history [0-9a-fA-F]{7,40}\)$")
 TICKED_WHERE_RE = re.compile(r"`([^`]+?):(\d+)(?:-(\d+))?`")
@@ -58,16 +65,30 @@ def quote(evidence: str) -> str:
 
 
 def blocks(text: str) -> list[tuple[str, str, list[str]]]:
-    """(severity, title, body lines) for every finding outside code fences."""
+    """(severity, title, body lines) for every finding outside code fences.
+
+    A fence closes only on the character that opened it, repeated at least as
+    many times, with nothing after it (as in CommonMark). A heading that looks
+    like a finding but is not in the exact form gets severity MALFORMED."""
     found: list[tuple[str, str, list[str]]] = []
     current: tuple[str, str, list[str]] | None = None
-    in_fence = False
+    fence: str | None = None  # the run of backticks or tildes that opened it
     for line in text.splitlines():
-        if FENCE_RE.match(line):
-            in_fence = not in_fence
-        elif not in_fence and BOUNDARY_RE.match(line):
-            m = FINDING_RE.match(line)
-            current = (m.group(1), m.group(2), []) if m else None
+        m = FENCE_RE.match(line)
+        if fence is None and m:
+            fence = m.group(1)
+        elif fence is not None:
+            if m and m.group(1)[0] == fence[0] and len(m.group(1)) >= len(fence):
+                if not m.group(2).strip():
+                    fence = None
+        elif HEADING_RE.match(line):
+            f = FINDING_RE.match(line)
+            if f:
+                current = (f.group(1), f.group(2), [])
+            elif LOOKS_LIKE_FINDING_RE.search(line):
+                current = (MALFORMED, line.lstrip("#").strip(), [])
+            else:
+                current = None
             if current is not None:
                 found.append(current)
             continue
@@ -101,6 +122,8 @@ def contains(lines: list[str], start: int, end: int, text: str) -> bool:
 
 def check_finding(severity: str, body: list[str], root: Path) -> str | None:
     """Why this finding is rejected, or None when it passes."""
+    if severity == MALFORMED:
+        return "malformed finding heading; use `### [Severity] Title`"
     if severity.strip().capitalize() not in SEVERITIES:
         return f"severity {severity!r} is not one of {', '.join(SEVERITIES)}"
     f = fields(body)
@@ -128,8 +151,8 @@ def check_finding(severity: str, body: list[str], root: Path) -> str | None:
     if start < 1 or end < start:
         return f"line range {m.group(2)}-{end} in {name} is invalid"
     lines = path.read_text(encoding="utf-8", errors="replace").splitlines()
-    if start > len(lines):
-        return f"line {start} is past the end of {name} ({len(lines)} lines)"
+    if end > len(lines):
+        return f"line {end} is past the end of {name} ({len(lines)} lines)"
     if not norm(ELLIPSIS_RE.sub(" ", text)):
         return "Evidence has no quote"
     if not contains(lines, start, end, text):
