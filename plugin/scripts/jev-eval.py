@@ -14,6 +14,7 @@ from __future__ import annotations
 import argparse
 import csv
 import importlib.util
+import io
 import json
 import math
 import random
@@ -36,6 +37,7 @@ GATE_PRECISION = 0.8
 GATE_RECALL = 0.6
 GATE_P95_MS = 500
 SWEEP = [round(0.50 + 0.05 * i, 2) for i in range(9)]
+INTERRUPT_PREFIX = "[Request interrupted by user"
 LABEL_FIELDS = [
     "id",
     "project",
@@ -84,9 +86,21 @@ def typed_text(record: dict) -> str | None:
     else:
         return None
     text = triage.clean(text)
-    if not text or text.startswith("<"):
+    if not text or text.startswith(("<", INTERRUPT_PREFIX)):
         return None
     return text
+
+
+def is_interrupt(record: dict) -> bool:
+    """The marker Claude Code records when the user interrupts a reply."""
+    if record.get("type") != "user":
+        return False
+    content = (record.get("message") or {}).get("content")
+    if isinstance(content, list):
+        content = " ".join(
+            str(b.get("text", "")) for b in content if isinstance(b, dict)
+        )
+    return isinstance(content, str) and content.startswith(INTERRUPT_PREFIX)
 
 
 def prompt_text(record: dict) -> str | None:
@@ -132,19 +146,17 @@ def percentile(values: list[float], pct: float) -> float | None:
     return ordered[max(0, math.ceil(pct / 100 * len(ordered)) - 1)]
 
 
-def parse_label(value: object) -> int | None:
-    try:
-        number = float(str(value).strip())
-    except ValueError:
-        return None
-    return int(number) if number in (0.0, 1.0) else None
-
-
 def parse_score(value: object) -> float | None:
+    """A number from a CSV cell; accepts a decimal comma (Excel in some locales)."""
     try:
-        return float(str(value).strip())
+        return float(str(value).strip().replace(",", "."))
     except ValueError:
         return None
+
+
+def parse_label(value: object) -> int | None:
+    number = parse_score(value)
+    return int(number) if number in (0.0, 1.0) else None
 
 
 @dataclass
@@ -236,8 +248,15 @@ def cmd_replay(args: argparse.Namespace) -> int:
 
 
 def read_labels(path: Path) -> list[dict]:
-    with path.open(encoding="utf-8-sig", newline="") as fh:
-        rows = list(csv.DictReader(fh))
+    """labels.csv as written by replay or re-saved by Excel (ANSI, semicolons)."""
+    raw = path.read_bytes()
+    try:
+        text = raw.decode("utf-8-sig")
+    except UnicodeDecodeError:
+        text = raw.decode("cp1252", "replace")
+    header = text.splitlines()[0] if text else ""
+    delimiter = ";" if header.count(";") > header.count(",") else ","
+    rows = list(csv.DictReader(io.StringIO(text, newline=""), delimiter=delimiter))
     return [r for r in rows if any((v or "").strip() for v in r.values())]
 
 
@@ -247,6 +266,9 @@ def column_total(rows: list[dict], name: str) -> int:
 
 def cmd_score(args: argparse.Namespace) -> int:
     path = Path(args.labels) if args.labels else triage.jev_dir() / "labels.csv"
+    if not path.is_file():
+        print(f"{path} not found; run: jev-eval.py replay", file=sys.stderr)
+        return 1
     rows = read_labels(path)
     limits = triage.thresholds()
     failures: list[str] = []
@@ -293,7 +315,11 @@ CORRECTION_RE = re.compile(
     r"^\s*(?:no\b|don['’]?t\b|do not\b|actually\b|stop\b|wait\b|that['’]?s not\b)",
     re.I,
 )
-CHECK_RE = re.compile(r"git\s+branch\s+--show-current|git\s+fetch")
+CHECK_RE = re.compile(r"git\s+(?:-C\s+\S+\s+)?(?:branch\s+--show-current|fetch)")
+EDIT_TOOLS = ("Write", "Edit", "MultiEdit", "NotebookEdit")
+# Specs, plans, ADRs and Claude's own files are written before the pre-flight
+# check by design (brainstorm -> spec -> plan -> build); they are not "building".
+DOC_PATH_RE = re.compile(r"(?:^|[\\/])(?:docs[\\/]superpowers|knowledge|\.claude)[\\/]")
 SESSION_RE = re.compile(r"[\w-]+")
 SPOTCHECK_FIELDS = [
     "session_id",
@@ -310,15 +336,19 @@ SPOTCHECK_FIELDS = [
 @dataclass
 class Outcome:
     asked: bool
-    preflight: bool | None  # None: the turn made no Write/Edit
+    preflight: bool | None  # None: no code edit in the turn sequence
     corrected: bool
 
 
 Turn = tuple[str, list[dict], str | None]
+INTERRUPTED = {"type": "interrupted"}  # marker kept in a turn's records
 
 
 def turns(path: Path) -> list[Turn]:
-    """(typed prompt, assistant records until the next typed prompt, next prompt)."""
+    """(typed prompt, assistant records until the next typed prompt, next prompt).
+
+    An interrupt is not a prompt: it stays in the turn as the INTERRUPTED marker.
+    """
     out: list[Turn] = []
     current: str | None = None
     bucket: list[dict] = []
@@ -328,43 +358,67 @@ def turns(path: Path) -> list[Turn]:
             if current is not None:
                 out.append((current, bucket, text))
             current, bucket = text, []
-        elif current is not None and record.get("type") == "assistant":
+        elif current is None:
+            continue
+        elif record.get("type") == "assistant":
             bucket.append(record)
+        elif is_interrupt(record):
+            bucket.append(INTERRUPTED)
     if current is not None:
         out.append((current, bucket, None))
     return out
 
 
-def outcome(assistant: list[dict], next_prompt: str | None) -> Outcome:
-    asked = False
-    checked = False
-    preflight: bool | None = None
-    last_text = ""
-    for record in assistant:
+def tool_uses(records: list[dict]) -> Iterator[dict]:
+    for record in records:
         content = (record.get("message") or {}).get("content")
-        if not isinstance(content, list):
+        if isinstance(content, list):
+            yield from (b for b in content if isinstance(b, dict))
+
+
+def preflight_of(records: list[dict]) -> bool | None:
+    """Was the pre-flight check run before the first code edit? None: no edit."""
+    checked = False
+    for block in tool_uses(records):
+        if block.get("type") != "tool_use":
             continue
-        for block in content:
-            if not isinstance(block, dict):
-                continue
-            if block.get("type") == "text":
-                last_text = str(block.get("text", ""))
-            elif block.get("type") == "tool_use":
-                name = block.get("name")
-                command = str((block.get("input") or {}).get("command", ""))
-                if name == "AskUserQuestion":
-                    asked = True
-                elif name in ("Bash", "PowerShell") and CHECK_RE.search(command):
-                    checked = True
-                elif name in ("Write", "Edit") and preflight is None:
-                    preflight = checked
+        name = block.get("name")
+        args = block.get("input") or {}
+        if name in ("Bash", "PowerShell"):
+            checked = checked or bool(CHECK_RE.search(str(args.get("command", ""))))
+        elif name in EDIT_TOOLS:
+            target = str(args.get("file_path") or args.get("notebook_path") or "")
+            if not DOC_PATH_RE.search(target):
+                return checked
+    return None
+
+
+def outcome(
+    assistant: list[dict], next_prompt: str | None, window: list[dict] | None = None
+) -> Outcome:
+    """Outcome of one turn; ``window`` (default: the turn) is scanned for preflight."""
+    asked = False
+    last_text = ""
+    for block in tool_uses(assistant):
+        if block.get("type") == "text":
+            last_text = str(block.get("text", ""))
+        elif block.get("type") == "tool_use" and block.get("name") == "AskUserQuestion":
+            asked = True
     asked = asked or last_text.rstrip().endswith("?")
-    corrected = bool(next_prompt and CORRECTION_RE.match(next_prompt))
-    return Outcome(asked, preflight, corrected)
+    corrected = INTERRUPTED in assistant or bool(
+        next_prompt and CORRECTION_RE.match(next_prompt)
+    )
+    return Outcome(
+        asked, preflight_of(assistant if window is None else window), corrected
+    )
 
 
 def match(records: list[dict], session_turns: list[Turn]) -> list[tuple[dict, Outcome]]:
-    """Pair log records (in time order) with transcript turns by prompt text."""
+    """Pair log records (in time order) with transcript turns by prompt text.
+
+    The preflight window is the matched turn plus the following turns whose prompt
+    the hook would not judge (short replies such as "lgtm"): one turn sequence.
+    """
     out: list[tuple[dict, Outcome]] = []
     start = 0
     for record in records:
@@ -374,7 +428,12 @@ def match(records: list[dict], session_turns: list[Turn]) -> list[tuple[dict, Ou
         if k == len(session_turns):
             continue
         _, assistant, next_prompt = session_turns[k]
-        out.append((record, outcome(assistant, next_prompt)))
+        window = list(assistant)
+        j = k + 1
+        while j < len(session_turns) and not triage.should_judge(session_turns[j][0]):
+            window += session_turns[j][1]
+            j += 1
+        out.append((record, outcome(assistant, next_prompt, window)))
         start = k + 1
     return out
 
@@ -453,8 +512,9 @@ def summarize(
         misses, applicable = misses_of(pairs)
         sessions = {str(r.get("session_id")) for r in recs}
         totals = [tokens[s] for s in sessions if s in tokens]
+        # Every record, errors included: the user waited for timeouts too.
         latencies = [
-            r["latency_ms"] for r in judged if isinstance(r.get("latency_ms"), int)
+            r["latency_ms"] for r in recs if isinstance(r.get("latency_ms"), int)
         ]
         errors = sum(1 for r in recs if r.get("error"))
         corrected = sum(1 for _, o in pairs if o.corrected)
@@ -468,6 +528,8 @@ def summarize(
                 )
                 for k in triage.KEYS
             },
+            "misses": misses,
+            "applicable": applicable,
             "convention_miss_rate": ratio(misses, applicable),
             "correction_rate": ratio(corrected, len(pairs)),
             "median_tokens": statistics.median(totals) if totals else None,
@@ -492,7 +554,8 @@ def render(stats: dict[str, dict]) -> str:
             f"{s['matched']} matched to transcripts",
             f"  fired: {shares}",
             "  convention misses per applicable check: "
-            f"{fmt(s['convention_miss_rate'], True)}",
+            f"{s['misses']}/{s['applicable']} "
+            f"({fmt(s['convention_miss_rate'], True)})",
             f"  correction rate: {fmt(s['correction_rate'], True)}",
             f"  median tokens per session: {fmt(s['median_tokens'])}",
             f"  latency p50 {fmt(s['latency_p50'])} ms, "

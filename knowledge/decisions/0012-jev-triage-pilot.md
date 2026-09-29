@@ -29,7 +29,8 @@ API, and nothing yet shows that it helps.
 ## Consequences
 - With the flag unset the kit behaves exactly as before.
 - In `shadow`/`active`, each prompt of 3+ words costs one jev evaluation and up
-  to 1.5 s; failures are logged and the prompt passes unchanged (ADR 0007).
+  to a 2 s wall-clock deadline; failures and timeouts are logged and the prompt
+  passes unchanged (ADR 0007).
 
 ## Outcome
 Pending: replay gate not yet run.

@@ -96,8 +96,10 @@ install** (`pip install "typesafe-sdk>=0.7"`), not a kit requirement.
 
 The call goes through one function, `judge(prompt: str) -> Judgment` (scores and
 usage), which is the seam tests replace. It uses a 1.5 s client timeout and
-disables SDK retries, so the worst case stays well inside the hook's 3 s entry
-timeout in `hooks.json`.
+disables SDK retries. That timeout applies per HTTP phase, so the hook also runs
+the call under a 2 s wall-clock deadline and logs `timeout` when it passes;
+the worst case stays inside the hook's 3 s entry timeout in `hooks.json`, and
+slow calls are recorded instead of being killed silently.
 
 Confirmed against `typesafe-sdk` 0.7.2: the sync
 `TypeSafeClient(timeout=1.5, retry=RetryPolicy(max_retries=0)).system_one(
@@ -172,12 +174,18 @@ go to `~/.claude/claude-kit/jev/`.
   - *asked*: Claude's next reply used `AskUserQuestion` or its final text ends in
     `?`;
   - *preflight*: for prompts where `new_feature` fired, a Bash/PowerShell call
-    containing `git branch --show-current` or `git fetch` appears before the first
-    `Write`/`Edit` of that turn sequence; `n/a` (excluded from the miss rate)
-    when the turn made no `Write`/`Edit`;
-  - *corrected*: the user's next prompt starts with a correction marker (`no`,
-    `don't`, `do not`, `actually`, `stop`, `wait`, `that's not`,
-    case-insensitive);
+    containing `git [-C <path>] branch --show-current` or `git fetch` appears
+    before the first code edit (`Write`, `Edit`, `MultiEdit`, `NotebookEdit`) of
+    that turn sequence. The turn sequence is the prompt's turn plus the following
+    turns whose prompt the hook would not judge (short replies such as "lgtm").
+    Edits under `docs/superpowers/`, `knowledge/` or `.claude/` do not count:
+    specs and plans are written before the check by design. `n/a` (excluded from
+    the miss rate) when the sequence made no code edit. Known limit: edits made
+    inside subagents (sidechain transcripts) and via shell commands are not seen;
+  - *corrected*: the user interrupted the reply (Claude Code's
+    `[Request interrupted by user…]` marker, which is not treated as a prompt),
+    or the user's next prompt starts with a correction marker (`no`, `don't`,
+    `do not`, `actually`, `stop`, `wait`, `that's not`, case-insensitive);
   - tokens per session, reusing the parsing in `plugin/scripts/token-report.py` (loaded by path, as the tests already do for hyphenated scripts).
 
   Prints, per mode (`shadow`, `active`): prompts logged, share that fired per

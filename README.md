@@ -56,7 +56,7 @@ mode, adds a one-line hint for Claude. It is **off by default**; see
 [spec](docs/superpowers/specs/2026-09-28-jev-triage-pilot-design.md).
 
 ```
-pip install "typesafe-sdk>=0.7"          # once per machine
+python -m pip install "typesafe-sdk>=0.7"  # once, into the python hooks run
 setx TYPESAFE_API_KEY <key>              # new terminals pick it up
 python plugin/scripts/jev-eval.py replay # 1. judge ~60 past prompts
 #    fill label_* in ~/.claude/claude-kit/jev/labels.csv with 1/0

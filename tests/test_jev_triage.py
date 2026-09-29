@@ -2,6 +2,7 @@ import io
 import json
 import os
 import sys
+import time
 import types
 
 import pytest
@@ -161,6 +162,36 @@ def test_off_does_nothing(monkeypatch, capsys, tmp_path):
     assert "typesafe_sdk" not in sys.modules
 
 
+def test_off_drains_stdin(monkeypatch, capsys, tmp_path):
+    # A large prompt must not leave Claude Code writing into a closed pipe.
+    run_main(monkeypatch, capsys, tmp_path, mode=None, judge=must_not_call)
+    assert sys.stdin.read() == ""
+
+
+def test_slow_judge_hits_the_deadline(monkeypatch, capsys, tmp_path):
+    monkeypatch.setattr(triage, "DEADLINE_S", 0.2)
+
+    def slow(prompt):
+        time.sleep(3)
+        return fake(HIGH)(prompt)
+
+    start = time.perf_counter()
+    out = run_main(monkeypatch, capsys, tmp_path, judge=slow)
+    assert time.perf_counter() - start < 2
+    assert out.out == ""
+    [record] = read_log(tmp_path)
+    assert record["error"] == "timeout"
+
+
+def test_unexpected_judge_exception_is_logged(monkeypatch, capsys, tmp_path):
+    def broken(prompt):
+        raise ValueError("bad\nthing")
+
+    out = run_main(monkeypatch, capsys, tmp_path, judge=broken)
+    assert out.out == ""
+    assert read_log(tmp_path)[0]["error"] == "api_error: ValueError: bad thing"
+
+
 def test_shadow_logs_without_context(monkeypatch, capsys, tmp_path):
     out = run_main(monkeypatch, capsys, tmp_path, mode="shadow", judge=fake(HIGH))
     assert out.out == ""
@@ -291,6 +322,10 @@ def test_judge_calls_sdk_with_pilot_settings(monkeypatch):
     [
         (TimeoutError("slow"), "timeout"),
         (RuntimeError("boom"), "api_error: RuntimeError: boom"),
+        (
+            RuntimeError("line one\n  line two"),
+            "api_error: RuntimeError: line one line two",
+        ),
     ],
 )
 def test_judge_maps_sdk_errors(monkeypatch, exc, code):

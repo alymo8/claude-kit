@@ -226,7 +226,7 @@ SESSION = [
 ]
 
 
-def log_record(session, mode, prompt, fired=(), error=None, second=0):
+def log_record(session, mode, prompt, fired=(), error=None, second=0, latency=200):
     return {
         "ts": f"2026-09-28T10:00:{second:02d}",
         "session_id": session,
@@ -237,7 +237,7 @@ def log_record(session, mode, prompt, fired=(), error=None, second=0):
         "thresholds": {},
         "fired": list(fired),
         "injected": bool(fired),
-        "latency_ms": 200,
+        "latency_ms": latency,
         "usage": None,
         "error": error,
     }
@@ -262,7 +262,9 @@ def test_report_end_to_end(dirs, capsys):
         log_record("s1", "active", P2, second=2),
         log_record("s1", "active", P3, ["underspecified"], second=3),
         log_record("s1", "active", P4, second=4),
-        log_record("s1", "active", "never typed here", error="timeout", second=5),
+        log_record(
+            "s1", "active", "never typed here", error="timeout", second=5, latency=2000
+        ),
         log_record("s2-missing", "shadow", P1, ["key_decision"]),
     ]
     write_jsonl(jev / "log.jsonl", records)
@@ -275,14 +277,77 @@ def test_report_end_to_end(dirs, capsys):
     assert active["error_rate"] == pytest.approx(0.2)
     assert active["fire_share"]["new_feature"] == pytest.approx(0.25)
     assert active["convention_miss_rate"] == pytest.approx(0.5)
+    assert (active["misses"], active["applicable"]) == (1, 2)
     assert active["correction_rate"] == pytest.approx(0.25)
     assert active["median_tokens"] == 400
+    assert active["latency_p95"] == 2000  # timeouts count: the user waited
     assert stats["shadow"]["matched"] == 0
     assert stats["shadow"]["convention_miss_rate"] is None
 
     assert ev.main(["report"]) == 0
     out = capsys.readouterr().out
     assert "active" in out and "shadow" in out
+    assert "1/2 (50%)" in out
     spot = read_rows(jev / "spotcheck.csv")
     assert [r["prompt"] for r in spot] == [P1, P3]
     assert ev.main(["report", "--since", "2026-09-29"]) == 1
+
+
+INTERRUPT = "[Request interrupted by user for tool use]"
+FOLLOW_UP = "please use the theme module instead"
+
+
+def test_interrupt_is_not_a_prompt_but_counts_as_correction(tmp_path):
+    session = [
+        user(P1),
+        assistant(tool("Edit", file_path="a.py")),
+        user([{"type": "text", "text": INTERRUPT}]),
+        user(FOLLOW_UP),
+        assistant(say("Switching.")),
+    ]
+    path = write_jsonl(tmp_path / "proj-a" / "s1.jsonl", session)
+    assert [t for _, t in ev.iter_prompts([path])] == [P1, FOLLOW_UP]
+    result = ev.turns(path)
+    assert [t[0] for t in result] == [P1, FOLLOW_UP]
+    assert ev.outcome(result[0][1], result[0][2]).corrected is True
+
+
+SPEC = "C:\\repo\\docs\\superpowers\\specs\\x.md"
+NEXT_FEATURE = "add a csv export for the report page"
+
+
+def test_preflight_ignores_docs_writes_and_spans_short_replies(tmp_path):
+    session = [
+        user(P1),
+        assistant(tool("Write", file_path=SPEC), say("Spec written. Approve?")),
+        user("lgtm"),
+        assistant(
+            tool("Bash", command="git -C /repo branch --show-current"),
+            tool("MultiEdit", file_path="src/a.py"),
+        ),
+        user(NEXT_FEATURE),
+        assistant(tool("NotebookEdit", notebook_path="nb.ipynb")),
+    ]
+    path = write_jsonl(tmp_path / "proj-a" / "s1.jsonl", session)
+    records = [
+        log_record("s1", "active", P1, ["new_feature"], second=1),
+        log_record("s1", "active", NEXT_FEATURE, ["new_feature"], second=2),
+    ]
+    [(_, first), (_, second)] = ev.match(records, ev.turns(path))
+    assert first.asked is True
+    assert first.preflight is True
+    assert second.preflight is False
+
+
+def test_score_missing_file(tmp_path, dirs, capsys):
+    assert ev.main(["score", str(tmp_path / "nope.csv")]) == 1
+    assert "not found" in capsys.readouterr().err
+
+
+def test_score_reads_ansi_semicolon_decimal_comma(tmp_path, dirs):
+    path = labels_csv(tmp_path / "l.csv", [1, 1, 1, 0, 0])
+    text = path.read_text(encoding="utf-8")
+    text = text.replace(",", ";").replace(".", ",")
+    text = text.replace("prompt 0", "prompt – “smart”")
+    path.write_bytes(text.encode("cp1252"))
+    assert ev.main(["score", str(path)]) == 0

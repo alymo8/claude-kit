@@ -18,6 +18,7 @@ import json
 import os
 import re
 import sys
+import threading
 import time
 from dataclasses import dataclass
 from datetime import UTC, datetime
@@ -25,7 +26,8 @@ from pathlib import Path
 
 MODES = ("off", "shadow", "active")
 DEFAULT_THRESHOLD = 0.65
-TIMEOUT_S = 1.5
+TIMEOUT_S = 1.5  # SDK timeout, per HTTP phase
+DEADLINE_S = 2.0  # wall clock for the whole judgment; hook entry timeout is 3 s
 MIN_WORDS = 3
 STRIP_RE = re.compile(
     r"<system-reminder>.*?</system-reminder>"
@@ -158,8 +160,36 @@ def judge(prompt: str) -> Judgment:
     except TimeoutError as exc:
         raise JevError("timeout") from exc
     except Exception as exc:
-        raise JevError(f"api_error: {type(exc).__name__}: {str(exc)[:200]}") from exc
+        raise api_error(exc) from exc
     return Judgment(scores, usage)
+
+
+def api_error(exc: BaseException) -> JevError:
+    detail = " ".join(str(exc).split())[:200]  # one line in stderr and the log
+    return JevError(f"api_error: {type(exc).__name__}: {detail}")
+
+
+def judge_before_deadline(prompt: str) -> Judgment:
+    """judge() with a wall-clock cap: the SDK timeout is per HTTP phase, and the
+    hook is killed at its 3 s entry timeout before it could log anything."""
+    box: dict[str, object] = {}
+
+    def run() -> None:
+        try:
+            box["judgment"] = judge(prompt)
+        except JevError as exc:
+            box["error"] = exc
+        except Exception as exc:
+            box["error"] = api_error(exc)
+
+    worker = threading.Thread(target=run, daemon=True)
+    worker.start()
+    worker.join(DEADLINE_S)
+    if worker.is_alive():
+        raise JevError("timeout")
+    if "error" in box:
+        raise box["error"]  # type: ignore[misc]
+    return box["judgment"]  # type: ignore[return-value]
 
 
 def append_log(record: dict) -> None:
@@ -188,11 +218,12 @@ def new_record(event: dict, current: str, prompt: str, limits: dict) -> dict:
 
 def main() -> int:
     try:
+        # Always drain stdin, so a large prompt never meets a closed pipe. Windows
+        # stdin defaults to the ANSI code page; Claude Code sends UTF-8.
+        raw = sys.stdin.buffer.read().decode("utf-8", "replace")
         current = mode()
         if current == "off":
             return 0
-        # Windows stdin defaults to the ANSI code page; Claude Code sends UTF-8.
-        raw = sys.stdin.buffer.read().decode("utf-8", "replace")
         event = json.loads(raw or "{}")
         if not isinstance(event, dict) or not isinstance(event.get("prompt"), str):
             return 0
@@ -203,7 +234,7 @@ def main() -> int:
         record = new_record(event, current, prompt, limits)
         start = time.perf_counter()
         try:
-            judgment = judge(prompt)
+            judgment = judge_before_deadline(prompt)
         except JevError as exc:
             record["error"] = exc.code
         else:
