@@ -103,3 +103,21 @@ def test_index_is_written_with_lf_newlines(tmp_path):
     make(docs, "specs", "2026-01-01-a.md", "# A\n")
     out = mod().write_index(docs)
     assert b"\r\n" not in out.read_bytes()
+
+
+def test_hand_written_readme_is_left_alone(tmp_path):
+    docs = tmp_path / "docs" / "superpowers"
+    (docs / "specs").mkdir(parents=True)
+    readme = docs / "README.md"
+    readme.write_text("# My own notes\n", encoding="utf-8")
+    assert mod().write_index(docs) is None
+    assert readme.read_text(encoding="utf-8") == "# My own notes\n"
+
+
+def test_generated_readme_is_rewritten(tmp_path):
+    docs = tmp_path / "docs" / "superpowers"
+    (docs / "specs").mkdir(parents=True)
+    mod().write_index(docs)
+    make(docs, "specs", "2026-01-01-a.md", "# A\n")
+    out = mod().write_index(docs)
+    assert "[A](specs/2026-01-01-a.md)" in out.read_text(encoding="utf-8")

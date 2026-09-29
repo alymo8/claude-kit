@@ -14,6 +14,15 @@ def test_title_from_h1(tmp_path):
     assert "<title>Hello Spec</title>" in (tmp_path / "x.html").read_text("utf-8")
 
 
+def test_title_is_html_escaped(tmp_path):
+    md = tmp_path / "x.md"
+    md.write_text("# A & B </title>\n", encoding="utf-8")
+    render(md)
+    assert "<title>A &amp; B &lt;/title&gt;</title>" in md.with_suffix(
+        ".html"
+    ).read_text("utf-8")
+
+
 def test_title_falls_back_to_filename(tmp_path):
     md = tmp_path / "fallback.md"
     md.write_text("no heading here\n", encoding="utf-8")

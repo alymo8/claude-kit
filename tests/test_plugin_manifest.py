@@ -78,7 +78,8 @@ def test_lean_context_skill_exists_and_is_short():
 def test_plugin_version_bumped():
     plugin_json = PLUGIN / ".claude-plugin" / "plugin.json"
     data = json.loads(plugin_json.read_text(encoding="utf-8"))
-    assert data["version"] == "0.5.0"
+    assert re.fullmatch(r"\d+\.\d+\.\d+", data["version"])
+    assert data["version"] != "0.5.0"
     assert "handoff" in data["description"]
     assert "/ship" in data["description"]
     assert "jev" in data["description"]

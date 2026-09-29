@@ -110,14 +110,15 @@ nothing project-specific (or any secrets) is ever committed here.
 ## Developing the kit
 
 ```
-pip install "markdown~=3.10" pytest "ruff~=0.16"       # once
-pytest                                                  # full suite
-pytest tests/test_render_spec.py::test_title_from_h1    # one test
-ruff check plugin tests                                 # lint
-ruff format plugin tests                                # format
+pip install "markdown~=3.10" "pytest>=8" "ruff~=0.16"   # once
+pytest                                                   # full suite
+pytest tests/test_render_spec.py::test_title_from_h1     # one test
+ruff check plugin tests                                  # lint
+ruff format --check plugin tests                         # format check
 ```
 
-CI runs the same three commands on Ubuntu and Windows for every push and PR.
+CI runs the lint, format check and full suite on Ubuntu and Windows for every
+push and PR.
 Feature-sized changes go through a branch and PR; one-line doc fixes may land on
 `main` directly (ADR 0006).
 

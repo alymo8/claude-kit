@@ -13,6 +13,7 @@ content in the specs renders correctly.
 Requires: pip install markdown
 """
 
+import html
 import sys
 from pathlib import Path
 
@@ -98,7 +99,9 @@ def render(md_path: Path) -> Path:
             title = line[2:].strip()
             break
     out_path = md_path.with_suffix(".html")
-    out_path.write_text(TEMPLATE.format(title=title, body=html_body), encoding="utf-8")
+    out_path.write_text(
+        TEMPLATE.format(title=html.escape(title), body=html_body), encoding="utf-8"
+    )
     return out_path
 
 
