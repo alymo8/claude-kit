@@ -82,20 +82,17 @@ def test_plugin_version_bumped():
     assert data["version"] != "0.5.0"
     assert "handoff" in data["description"]
     assert "/ship" in data["description"]
-    assert "jev" in data["description"]
+    assert "jev" not in data["description"]
     assert "audit-deep" in data["description"]
 
 
-def test_jev_triage_hook_registered_with_timeout():
+def test_no_jev_hook_registered():
     hooks = json.loads((PLUGIN / "hooks" / "hooks.json").read_text(encoding="utf-8"))
-    entries = [
-        h
-        for g in hooks["hooks"]["UserPromptSubmit"]
-        for h in g["hooks"]
-        if "jev_triage.py" in h["command"]
+    commands = [
+        h["command"] for g in hooks["hooks"]["UserPromptSubmit"] for h in g["hooks"]
     ]
-    assert len(entries) == 1
-    assert entries[0]["timeout"] == 3
+    assert not any("jev" in c for c in commands)
+    assert any("context_nudge.py" in c for c in commands)
 
 
 def test_session_end_hook_has_timeout_above_default_budget():

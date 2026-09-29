@@ -26,12 +26,8 @@ def load_module(path: Path, name: str) -> ModuleType:
 
 
 def clean_env(**extra: str) -> dict[str, str]:
-    """os.environ without the developer's CLAUDE_KIT_* and TYPESAFE_* settings."""
-    env = {
-        k: v
-        for k, v in os.environ.items()
-        if not k.startswith(("CLAUDE_KIT_", "TYPESAFE_"))
-    }
+    """os.environ without the developer's CLAUDE_KIT_* settings."""
+    env = {k: v for k, v in os.environ.items() if not k.startswith("CLAUDE_KIT_")}
     env.update(extra)
     return env
 
