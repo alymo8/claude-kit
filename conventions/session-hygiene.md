@@ -31,7 +31,9 @@ at 150k, by 65%.
 3. **Keep the main context for what the work needs.** Read in full the code you
    change, search instead of sweeping, send long output to disk first (the
    `claude-kit:lean-context` skill). Understanding is not waste; the restart
-   cap limits how long it is carried (ADR 0011).
+   cap limits how long it is carried (ADR 0011). The rule is on by default;
+   `CLAUDE_KIT_LEAN_CONTEXT=0` plus a `Skill(claude-kit:lean-context)` deny
+   switches it off (ADR 0014).
 4. **Make growth visible.** The status line shows context size at zero cost; a
    nudge at 300k tokens (then every 100k) says when to hand off.
 
