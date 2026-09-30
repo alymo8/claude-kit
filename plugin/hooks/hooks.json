@@ -21,6 +21,14 @@
         ]
       },
       {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python \"${CLAUDE_PLUGIN_ROOT}/hooks/lean_context_inject.py\""
+          }
+        ]
+      },
+      {
         "matcher": "startup|clear",
         "hooks": [
           {

@@ -46,9 +46,11 @@ context. Apply every bullet under "Self-contained plans" in
 
 ## Token discipline
 
-The cost of a session is context size times turn count. Before exploring or
-running anything with long output, use the `claude-kit:lean-context` skill.
-Details: [conventions/session-hygiene.md](conventions/session-hygiene.md).
+The lean-context rule is injected at session start by the kit's
+`lean_context_inject.py` hook, on by default. To switch it off, set
+`"CLAUDE_KIT_LEAN_CONTEXT": "0"` under `env` in `~/.claude/settings.json` and deny
+`Skill(claude-kit:lean-context)` (ADR 0014). Details:
+[conventions/session-hygiene.md](conventions/session-hygiene.md).
 
 ## Open files and folders for me
 
