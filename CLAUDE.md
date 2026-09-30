@@ -32,9 +32,10 @@ Do not let significant choices pass silently.
 ## Specs and plans
 
 Specs and plans are Markdown under `docs/superpowers/specs/` and
-`docs/superpowers/plans/`; the `.md` is the only source of truth. **Do not render
-or open an HTML view unless I ask**; after writing or updating one, tell me the
-`.md` path only. `/spec-html [path]` renders and opens a view on demand (latest
+`docs/superpowers/plans/`; the `.md` is the only source of truth. **Never open a
+spec or plan (neither the `.md` nor an HTML view) and never render one unless I
+ask**, even when asking me to review it; after writing or updating one, tell me
+the `.md` path only. `/spec-html [path]` renders and opens a view on demand (latest
 spec/plan when no path is given). Bulk render from inside a repo:
 `python ../plugin/scripts/render-spec.py [spec.md]` (needs `pip install markdown`);
 never copy the renderer into a repo.
@@ -53,7 +54,8 @@ Details: [conventions/session-hygiene.md](conventions/session-hygiene.md).
 
 Whenever you want me to update a file or look at a specific folder structure,
 open the file / folder for me (`Invoke-Item <path>` for a file, `explorer <path>`
-for a folder) rather than only telling me the path.
+for a folder) rather than only telling me the path. Exception: specs and plans
+are never opened unless I ask (see "Specs and plans").
 
 ## Building a new feature: pre-flight, worktree, clean up
 
