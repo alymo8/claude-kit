@@ -107,12 +107,16 @@ The linter requires, outside code blocks:
 - `**Goal:**` and `**Spec:**` lines before the first task; `**Spec:**` holds
   one backticked path to a spec with a passing spec gate record.
 - `### Task N:` headings numbered 1, 2, 3 in order.
-- In each task: a `**Files:**` line, a step with `Run:` (or a command fence)
-  followed by `Expected:`, and a step whose label contains "commit".
+- In each task: a `**Files:**` line; a step that runs a command (`Run:` with
+  a backticked command, or a command fence) and states its output (a later
+  `Expected:`, or `→ result` on the `Run:` line); and a commit (a step whose
+  bullet line says "commit", or a `git commit` command). A task whose Files
+  line says `none` needs no commit.
 - No TBD, TODO or FIXME (upper case) or "as discussed" placeholders, and no
   empty sections.
 - Every `- Modify:` path exists, or a `- Create:` or `- Test:` bullet of the
-  same or an earlier task names it.
+  same or an earlier task names it. Paths inside parentheses are notes and
+  are not checked.
 
 There are three verdicts. `pass`: the plan goes straight to execution and
 the user sees one line. `pass-with-decisions`: the plan makes choices the

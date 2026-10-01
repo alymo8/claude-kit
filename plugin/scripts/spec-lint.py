@@ -31,9 +31,13 @@ Plans (files whose folder is named ``plans``) get the plan rules instead:
 P1-status, P2-date (as L1, L2); P3-header (``**Goal:**`` and one-path
 ``**Spec:**`` lines before the first task); P4-spec-gated (that spec has a valid
 gate record); P5-tasks (``### Task N:`` numbered 1..N); P6-task-parts (each task
-has a Files line, a Run:/command fence then Expected: in one step, and a commit
-step); P7-placeholder (as L5, without "etc."); P8-empty (as L6); P9-path
-(``- Modify:`` paths exist or were created by this or an earlier task).
+has a Files line; a step that runs a command - ``Run`` then a backticked
+command, or a command fence - and states its output - a later ``Expected:``,
+or ``Expected:`` or an arrow after the command; and "commit" in a step's bullet
+line or a ``git commit`` in a fence, unless its Files line says none);
+P7-placeholder (as L5, without "etc."); P8-empty (as L6); P9-path
+(``- Modify:`` paths outside parentheses exist, or a Create or Test bullet of
+this or an earlier task names them).
 
 --hash prints the SHA-256 of the spec with line endings normalised and its
 first Status bullet removed, so approving a spec keeps the same hash.
@@ -430,23 +434,34 @@ def steps(body: list[Line]) -> list[list[Line]]:
 
 
 def runs_then_expects(step: list[Line], openers: dict[int, str]) -> bool:
-    """Whether a run (a ``Run`` line or a command fence) comes before its output.
+    """Whether a command is run before its output is stated.
 
-    The output is an ``Expected:`` line, or an arrow on the ``Run`` line itself.
+    A run is a command fence, or ``Run`` followed by a backticked command on the
+    same line or on the next non-blank line. The output is a later
+    ``Expected:``, or ``Expected:`` or an arrow after the command on its line.
     """
-    seen_run = False
+    seen_run = pending = False
     for number, line, code in step:
         if code:
             tag = openers.get(number)
             if tag is not None and (tag.split() or [""])[0].lower() in COMMAND_TAGS:
                 seen_run = True
+            pending = False
             continue
         if seen_run and "Expected:" in line:
             return True
-        if RUN_RE.search(line):
-            if ARROW_RE.search(line):
+        if pending and line.strip():
+            seen_run = seen_run or line.lstrip().startswith("`")
+            pending = False
+        match = RUN_RE.search(line)
+        if match:
+            rest = line[match.end() :]
+            if not SPAN_RE.search(rest):
+                pending = True  # the command may be on the next line
+            elif ARROW_RE.search(rest) or "Expected:" in rest:
                 return True
-            seen_run = True
+            else:
+                seen_run = True
     return False
 
 

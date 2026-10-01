@@ -669,3 +669,21 @@ def test_p6_no_commit_needed_when_files_are_none(root):
     )
     text = text.replace("- [ ] **Step 2: Commit**", "- [ ] **Step 2: Report**")
     assert sl.lint_plan(text, root) == []
+
+
+def test_p6_expected_on_the_run_line(root):
+    plan_root(root)
+    text = PLAN.replace(
+        "Run: `pytest tests/test_new.py -q`\nExpected: FAIL",
+        "Run: `pytest tests/test_new.py -q`, Expected: FAIL",
+    )
+    assert sl.lint_plan(text, root) == []
+
+
+def test_p6_run_without_a_command_does_not_count(root):
+    plan_root(root)
+    text = PLAN.replace(
+        "Run: `pytest tests/test_new.py -q`\nExpected: FAIL",
+        "Run the tests.\nExpected: FAIL",
+    )
+    assert plan_rules(text, root) == [(10, "P6-task-parts")]
