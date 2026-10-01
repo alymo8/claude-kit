@@ -6,7 +6,7 @@
 
 | Date | Spec | Status |
 |---|---|---|
-| 2026-09-30 | [Spec gate: linter and independent reviewer](specs/2026-09-30-spec-gate-design.md) | approved |
+| 2026-09-30 | [Spec gate: linter and independent reviewer](specs/2026-09-30-spec-gate-design.md) | implemented |
 | 2026-09-29 | [Repo audit skills: `audit` (basic) and `audit-deep`](specs/2026-09-29-repo-audit-skills-design.md) | implemented |
 | 2026-09-18 | [Session hygiene: handoff, context meter, lean exploration](specs/2026-09-18-session-hygiene-design.md) | implemented |
 | 2026-09-15 | [Project scaffolder and spec lifecycle](specs/2026-09-15-project-scaffolder-design.md) | implemented |
@@ -16,7 +16,7 @@
 
 | Date | Plan | Status |
 |---|---|---|
-| 2026-09-30 | [Spec Gate Implementation Plan](plans/2026-09-30-spec-gate.md) | approved |
+| 2026-09-30 | [Spec Gate Implementation Plan](plans/2026-09-30-spec-gate.md) | implemented |
 | 2026-09-29 | [Repo audit skills Implementation Plan](plans/2026-09-29-repo-audit-skills.md) | implemented |
 | 2026-09-18 | [Session Hygiene Implementation Plan](plans/2026-09-18-session-hygiene.md) | implemented |
 | 2026-09-15 | [Project Scaffolder and Spec Lifecycle Implementation Plan](plans/2026-09-15-project-scaffolder.md) | implemented |

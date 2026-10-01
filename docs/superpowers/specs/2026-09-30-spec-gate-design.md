@@ -1,6 +1,6 @@
 # Spec gate: linter and independent reviewer
 
-- **Status:** approved
+- **Status:** implemented
 - **Date:** 2026-09-30
 
 ## Purpose
@@ -114,7 +114,9 @@ fires). The rules:
 | `L8-path` | Every backticked span in the Scope section before its Out label (the files the spec changes) that looks like a repo path exists under `--root`. Paths elsewhere may be relative to another folder or repo, so the reviewer checks those. A missing Scope path still passes when some line of the spec contains both that span and `(new)`, so a new file is marked once, where it is introduced. A span "looks like a repo path" when it contains `/`, has no whitespace, does not contain `<`, `>`, `*`, `$`, `{` or `://`, does not start with `-` or `~`, and either has a file extension or ends with `/`. |
 
 **Hash mode** prints the SHA-256 hex digest of the spec's UTF-8 text, after
-line endings are normalised to `\n` and the Status bullet line is removed. So
+line endings are normalised to `\n` and the Status bullet line is removed
+(the first `- **Status:**` bullet outside code fences; L1 checks the same
+bullet, and takes its first word as the value). So
 approving a spec (draft → approved) does not invalidate its gate record, but
 any other edit does.
 
@@ -122,13 +124,16 @@ any other edit does.
 file name as the spec) under the root. It exits 0 when the record exists, its
 `- **Verdict:** pass` line is present, and its `- **Spec SHA-256:**` value
 equals the spec's current hash. Otherwise it prints the reason (`missing`,
-`not passed`, `stale`) and exits 1.
+`not passed`, `stale`) and exits 1. On success it prints
+`ok: <record path>`. Each line starts with its reason, then `: ` and the
+record path.
 
-Like the other kit scripts, it uses the standard library only.
+It uses the standard library only.
 
 ### `plugin/skills/spec-gate/rubric.md`
 
-The reviewer's instructions. The reviewer gets only the spec path, the repo,
+The reviewer's instructions; `rubric.md` is authoritative and this section
+summarises it. The reviewer gets only the spec path, the repo,
 and this file, never the conversation that produced the spec. It must:
 
 1. **Dry-run plan.** Write the ordered list of implementation tasks it would
@@ -180,7 +185,8 @@ The reviewer flags only; it never edits the spec.
 whose file name sorts last, i.e. the newest date prefix). The procedure:
 
 1. **Lint.** Run `spec-lint.py` on the spec, fix every violation, and re-run
-   until it exits 0.
+   until it exits 0. A violation that only a scope or behaviour choice can
+   fix is a decision finding (step 3).
 2. **Review round.** Dispatch a new general-purpose subagent with the spec
    path and `rubric.md`. Each round uses a new subagent, never a reused one,
    so the reviewer is never anchored on its earlier findings.
@@ -229,7 +235,9 @@ whose file name sorts last, i.e. the newest date prefix). The procedure:
 - **New step 0, Gate.** Run `spec-lint.py --verify-record <spec>`. On exit 0,
   continue. Otherwise run the `claude-kit:spec-gate` procedure (steps 1–6;
   step 7's question is skipped, since invoking `/ship` is the approval). On a
-  pass, continue; this also covers specs never gated before.
+  pass, set the spec's Status to `approved` (the hash ignores that line, so
+  the record stays valid) and continue; this also covers specs never gated
+  before.
 - **New stop rule.** The gate fails in step 0. Stop and report the gate
   record's Open items.
 - **Step 2.** The gate record is copied into the worktree and committed
