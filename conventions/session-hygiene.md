@@ -43,8 +43,10 @@ at 150k, by 65%.
 by `/handoff`; its State section is refreshed automatically at session end; it is
 injected automatically on the next `startup` or `clear` on the same branch while
 younger than seven days. Sections: Task, State (generated), Done this session,
-Next, Files that matter, Commands that work, Open questions, Moved to durable
-homes.
+Next, Files that matter, Commands that work, Suggested skills, Open questions,
+Moved to durable homes. `/handoff <focus>` tailors it to what the next session
+will do. It never holds secrets or personal data, since every later session on
+the branch loads it.
 
 What does **not** belong in it: findings (go to `knowledge/`), decisions (go to
 an ADR), changes of plan (go to the plan). The `/handoff` command asks about

@@ -126,3 +126,32 @@ def test_side_effecting_commands_are_user_only():
         frontmatter = text.split("---", 2)[1]
         flagged = "disable-model-invocation: true" in frontmatter
         assert flagged == (name in user_only), name
+
+
+def test_teach_skill_copied_with_license():
+    teach = PLUGIN / "skills" / "teach"
+    for name in (
+        "SKILL.md",
+        "GLOSSARY-FORMAT.md",
+        "LEARNING-RECORD-FORMAT.md",
+        "MISSION-FORMAT.md",
+        "RESOURCES-FORMAT.md",
+    ):
+        assert (teach / name).exists(), name
+    front = (teach / "SKILL.md").read_text(encoding="utf-8").split("---", 2)[1]
+    assert "name: teach" in front
+    assert "disable-model-invocation: true" in front
+    license_text = (teach / "LICENSE").read_text(encoding="utf-8")
+    assert "MIT License" in license_text
+    assert "Matt Pocock" in license_text
+
+
+def test_handoff_command_has_focus_skills_and_redaction():
+    text = (PLUGIN / "commands" / "handoff.md").read_text(encoding="utf-8")
+    assert "argument-hint:" in text.split("---", 2)[1]
+    assert "$ARGUMENTS" in text
+    assert "## Suggested skills" in text
+    assert text.index("## Commands that work") < text.index("## Suggested skills")
+    assert text.index("## Suggested skills") < text.index("## Open questions")
+    assert "Never write secrets" in text
+    assert "commit or" in text and "diff" in text
