@@ -392,6 +392,8 @@ def test_valid_plan_is_clean(root):
         ("Build the thing.", "TBD", True, 6, "P7-placeholder"),
         ("Done.", "## Notes", True, 49, "P8-empty"),
         ("Expected: PASS", "It passes.", True, 35, "P6-task-parts"),
+        ("", "", False, 8, "P4-spec-gated"),
+        ("- Modify: `src/new.py`", "- Modify: `src/other.py`", True, 38, "P9-path"),
     ],
 )
 def test_each_plan_rule_alone(root, old, new, record, line, rule):
@@ -422,7 +424,7 @@ def test_p3_missing_spec_line(root):
 
 
 def test_p3_spec_line_with_two_paths(root):
-    plan_root(root)
+    plan_root(root, record=False)
     text = PLAN.replace("x-design.md`", "x-design.md` and `docs/a/b.md`")
     assert plan_rules(text, root) == [(8, "P3-header")]
 
@@ -493,3 +495,37 @@ def test_p6_ticked_steps_and_lowercase_commit_count(root):
     plan_root(root)
     text = PLAN.replace("- [ ] **Step 3: Commit**", "- [x] **Step 3: Lint and commit**")
     assert sl.lint_plan(text, root) == []
+
+
+def test_p4_names_the_spec_reason(root):
+    plan_root(root, record=False)
+    found = sl.lint_plan(PLAN, root)
+    assert [(n, r) for n, r, _ in found] == [(8, "P4-spec-gated")]
+    assert "missing" in found[0][2]
+
+
+def test_p4_spec_not_found(root):
+    plan_root(root)
+    found = sl.lint_plan(PLAN.replace("x-design.md", "y-design.md"), root)
+    assert [(n, r) for n, r, _ in found] == [(8, "P4-spec-gated")]
+    assert "spec not found" in found[0][2]
+
+
+def test_p9_test_paths_are_not_checked_and_line_suffix_is_stripped(root):
+    plan_root(root)
+    text = PLAN.replace("- Modify: `src/app.py`", "- Modify: `src/app.py:1-3`")
+    text = text.replace("- Test: `tests/test_new.py`", "- Test: `tests/missing.py`")
+    assert sl.lint_plan(text, root) == []
+
+
+def test_p9_test_path_counts_as_new_for_a_later_modify(root):
+    plan_root(root)
+    text = PLAN.replace("- Modify: `src/new.py`", "- Modify: `tests/test_new.py`")
+    assert sl.lint_plan(text, root) == []
+
+
+def test_p9_create_in_a_later_task_does_not_count(root):
+    plan_root(root)
+    text = PLAN.replace("- Modify: `src/app.py`", "- Modify: `src/late.py`")
+    text = text.replace("- Modify: `src/new.py`", "- Create: `src/late.py`")
+    assert plan_rules(text, root) == [(14, "P9-path")]

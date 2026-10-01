@@ -88,6 +88,7 @@ FILES_RE = re.compile(r"^\*\*Files:\*\*")
 STEP_RE = re.compile(r"^\s*- \[[ xX]\] \*\*(Step \d+[^*]*)\*\*")
 COMMIT_RE = re.compile(r"\bcommit", re.I)
 COMMAND_TAGS = ("", "bash", "sh", "shell", "powershell", "pwsh", "console")
+FILE_ITEM_RE = re.compile(r"^- (Create|Modify|Test):(.*)$")
 
 Line = tuple[int, str, bool]  # (line number, text, inside a code fence)
 
@@ -437,18 +438,78 @@ def check_task_parts(
     return out
 
 
+def check_spec_gated(
+    ref: tuple[int, str] | None, root: Path
+) -> list[tuple[int, str, str]]:
+    """P4: the plan's spec exists and has a valid gate record."""
+    if ref is None:
+        return []  # P3 already reported the Spec line
+    number, path = ref
+    spec = root / path
+    if not spec.is_file():
+        return [(number, "P4-spec-gated", f"spec not found: {path}")]
+    valid, message = verify_record(spec, root)
+    if valid:
+        return []
+    reason = message.split(":", 1)[0]
+    return [(number, "P4-spec-gated", f"spec gate record {reason}: {path}")]
+
+
+def file_items(body: list[Line]) -> list[tuple[int, str, list[str]]]:
+    """(line, kind, paths) for each Create/Modify/Test bullet under a Files line."""
+    out = []
+    in_files = False
+    for number, line, code in body:
+        if code:
+            in_files = False
+            continue
+        if FILES_RE.match(line):
+            in_files = True
+            continue
+        match = FILE_ITEM_RE.match(line) if in_files else None
+        if match:
+            spans = [LINE_SUFFIX_RE.sub("", s) for s in SPAN_RE.findall(match.group(2))]
+            out.append(
+                (number, match.group(1), [s for s in spans if looks_like_path(s)])
+            )
+        elif line.strip() and not line.startswith((" ", "\t")):
+            in_files = False
+    return out
+
+
+def check_plan_paths(
+    tasks: list[tuple[int, int, list[Line]]], root: Path
+) -> list[tuple[int, str, str]]:
+    """P9: each Modify path exists, or a Create or Test bullet names it.
+
+    That bullet must be in the same task or an earlier one.
+    """
+    out = []
+    known: set[str] = set()
+    for _, _, body in tasks:
+        items = file_items(body)
+        known.update(p for _, kind, paths in items if kind != "Modify" for p in paths)
+        for number, kind, paths in items:
+            for path in paths if kind == "Modify" else []:
+                if path not in known and not (root / path).exists():
+                    out.append((number, "P9-path", f"path not found: {path}"))
+    return out
+
+
 def lint_plan(text: str, root: Path) -> list[tuple[int, str, str]]:
     """All violations in a plan, as (line, rule, message), sorted by line."""
     lines = parse(text)
     tasks = task_spans(lines)
-    header, _ = plan_spec(lines, tasks)
+    header, ref = plan_spec(lines, tasks)
     shared = check_status_date(lines) + check_placeholders(lines, {})
     shared += check_empty(lines)
     found = (
         [(n, PLAN_RULES[rule], m) for n, rule, m in shared]
         + header
         + check_tasks(tasks)
+        + check_spec_gated(ref, root)
         + check_task_parts(tasks, fence_openers(text))
+        + check_plan_paths(tasks, root)
     )
     return sorted(found, key=lambda v: (v[0], v[1]))
 
