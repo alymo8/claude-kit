@@ -28,6 +28,15 @@ These are the only reasons to stop. When one fires: write the handoff with the
   step 9 says how to tell them apart.
 - `git fetch origin` fails in step 1.
 - The spec gate fails in step 0. Report the gate record's Open items.
+- The plan gate in step 3 returns `pass-with-decisions` or `fail`, or a
+  resumed run finds the plan record at `decisions not approved`. Report the
+  record's Plan-introduced decisions and Open items as questions (if the gate
+  stopped at `P4-spec-gated` and wrote no record, report that reason and that
+  the spec must pass `claude-kit:spec-gate`). `/ship` approves the spec, not
+  decisions a plan adds later. When the user answers: on approval, add
+  `- **Decisions approved:** <today>` to the record and set the plan's Status
+  to `approved`; otherwise update the plan (or the spec, which is gated again)
+  and rerun the plan gate. Commit, and continue `/ship` from step 4.
 
 ## Steps
 
@@ -59,11 +68,28 @@ These are the only reasons to stop. When one fires: write the handoff with the
    overwritten" error; otherwise leave it and mention it in the report. Run the
    full test suite from the repo's `CLAUDE.md` and confirm it is green before
    changing anything.
-3. **Plan.** Use `superpowers:writing-plans` to write
-   `docs/superpowers/plans/<YYYY-MM-DD>-<slug>.md` from the spec. Commit it. Do
-   not offer an execution choice; continue.
-4. **Implement.** Use `superpowers:executing-plans` with
-   `superpowers:test-driven-development`, in this session. The plan's review
+3. **Plan.** First look for an existing plan: a `*.md` under
+   `docs/superpowers/plans/` on this branch whose `**Spec:**` line names this
+   spec (the newest by file name if several match). If there is one, run
+   `python "${CLAUDE_PLUGIN_ROOT}/scripts/spec-lint.py" --verify-record <plan>`.
+   On `ok:`, go to step 4. On `decisions not approved`, do not rerun the gate:
+   the plan-gate stop rule fires (rerunning `/ship` is never approval; only
+   the user's answer is). On any other reason, run the plan gate (below) on
+   the existing plan. If there is no plan, use `superpowers:writing-plans` to
+   write `docs/superpowers/plans/<YYYY-MM-DD>-<slug>.md` from the spec. Where
+   the spec leaves a choice open, prefer one the spec, its ADRs or the
+   existing code already imply, so a routine plan passes without stopping. Do
+   not offer an execution choice. **Plan gate:** run the `claude-kit:plan-gate`
+   skill on the plan, steps 1–6 (step 7 is not shown). On `pass`, set the
+   plan's Status to `approved`, commit the plan and its record
+   (`docs/superpowers/gates/plans/<plan file name>`), and continue. On
+   `pass-with-decisions` or `fail`, commit the plan and its record (the plan
+   only, if the gate stopped at `P4-spec-gated`), then the plan-gate stop rule
+   fires.
+4. **Implement.** Before implementing, `spec-lint.py --verify-record <plan>`
+   on the plan from step 3 must print `ok:`; otherwise return to step 3. Use
+   `superpowers:executing-plans` with `superpowers:test-driven-development`,
+   in this session. The plan's review
    checkpoints are progress notes, not pauses. A failing test or an unclear
    instruction is debugged with `superpowers:systematic-debugging`, not
    escalated. Before every commit run the full test suite and lint from
@@ -77,8 +103,9 @@ These are the only reasons to stop. When one fires: write the handoff with the
    then `superpowers:receiving-code-review`. Fix every finding you can verify;
    commit, re-run tests, push. A finding that needs a decision is a stop rule.
 7. **PR.** `gh pr create --title "<spec title>" --body-file <file>` where the body
-   has: Summary, links to the spec and plan, Verification (the exact commands and
-   their results), and the attribution line the session requires.
+   has: Summary, links to the spec, the plan and the plan gate record
+   (`docs/superpowers/gates/plans/<plan file name>`), Verification (the exact
+   commands and their results), and the attribution line the session requires.
 8. **Green CI.** `gh pr checks --watch --fail-fast`. On red, repeat the step-5 fix
    loop.
 9. **Merge.** `gh pr view --json mergeStateStatus`. If `BEHIND` or `DIRTY`:

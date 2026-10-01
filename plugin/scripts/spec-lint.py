@@ -27,11 +27,30 @@ Rules (text in fenced code blocks is ignored by all of them):
   that path and "(new)". Paths elsewhere may belong to another folder or repo;
   the reviewer checks those.
 
+Plans (files whose folder is named ``plans``) get the plan rules instead:
+P1-status, P2-date (as L1, L2); P3-header (``**Goal:**`` and one-path
+``**Spec:**`` lines before the first task); P4-spec-gated (that spec has a valid
+gate record); P5-tasks (``### Task N:`` numbered 1..N); P6-task-parts (each task
+has a Files line; a step that runs a command - ``Run`` then a backticked
+command, or a command fence - and states its output - a later ``Expected:``,
+or ``Expected:`` or an arrow after the command; and "commit" in a step's bullet
+line or a ``git commit`` in a fence, unless its Files line says none);
+P7-placeholder (as L5, without "etc."); P8-empty (as L6); P9-path
+(``- Modify:`` paths outside parentheses exist, or a Create or Test bullet of
+this or an earlier task names them).
+
 --hash prints the SHA-256 of the spec with line endings normalised and its
 first Status bullet removed, so approving a spec keeps the same hash.
 --verify-record checks docs/superpowers/gates/<spec file name> under the root:
 it must exist, say ``- **Verdict:** pass`` and carry the current hash in
 ``- **Spec SHA-256:**``. Prints ok/missing/not passed/stale; exits 0 only for ok.
+
+For a plan, --hash also unticks ``- [x]`` boxes outside fences, and
+--verify-record checks docs/superpowers/gates/plans/<plan file name>: Verdict
+pass, or pass-with-decisions with ``- **Decisions approved:** YYYY-MM-DD``, and
+``- **Plan SHA-256:**`` / ``- **Spec SHA-256:**`` equal to the current hashes of
+the plan and of the spec its ``**Spec:**`` line names. Prints ok, missing, not
+passed, stale or decisions not approved.
 
 The root defaults to ``git rev-parse --show-toplevel`` from the spec's folder,
 else the folder three levels above it (the parent of ``docs/``). Exits 0 when
@@ -75,6 +94,30 @@ NOT_A_PATH = ("<", ">", "*", "$", "{", "://")
 GATES = Path("docs") / "superpowers" / "gates"
 VERDICT_PASS_RE = re.compile(r"^- \*\*Verdict:\*\*\s*pass\s*$", re.M)
 RECORD_HASH_RE = re.compile(r"^- \*\*Spec SHA-256:\*\*\s*([0-9a-f]{64})\s*$", re.M)
+PLAN_RULES = {
+    "L1-status": "P1-status",
+    "L2-date": "P2-date",
+    "L5-placeholder": "P7-placeholder",
+    "L6-empty": "P8-empty",
+}
+TASK_TITLE_RE = re.compile(r"^Task\s+(\d+)\s*:")
+GOAL_RE = re.compile(r"^\*\*Goal:\*\*")
+SPEC_LINE_RE = re.compile(r"^\*\*Spec:\*\*")
+FILES_RE = re.compile(r"^\*\*Files:\*\*")
+STEP_RE = re.compile(r"^\s*- \[[ xX]\] \*\*(Step \d+[^*]*)\*\*")
+COMMIT_RE = re.compile(r"\bcommit", re.I)
+RUN_RE = re.compile(r"\bRun\b")
+ARROW_RE = re.compile(r"→\s*\S")  # "Run: `cmd` → result" states the output
+NO_FILES_RE = re.compile(r"^\*\*Files:\*\*\s*none\b", re.I)
+PARENS_RE = re.compile(r"\([^)]*\)")
+COMMAND_TAGS = ("", "bash", "sh", "shell", "powershell", "pwsh", "console")
+FILE_ITEM_RE = re.compile(r"^- (Create|Modify|Test):(.*)$")
+CHECKED_RE = re.compile(r"^(\s*)- \[[xX]\]")
+VERDICT_RE = re.compile(r"^- \*\*Verdict:\*\*\s*(\S+)\s*$", re.M)
+PLAN_HASH_RE = re.compile(r"^- \*\*Plan SHA-256:\*\*\s*([0-9a-f]{64})\s*$", re.M)
+APPROVED_RE = re.compile(
+    r"^- \*\*Decisions approved:\*\*\s*\d{4}-\d{2}-\d{2}\s*$", re.M
+)
 
 Line = tuple[int, str, bool]  # (line number, text, inside a code fence)
 
@@ -300,6 +343,226 @@ def lint(text: str, root: Path) -> list[tuple[int, str, str]]:
     return sorted(found, key=lambda v: (v[0], v[1]))
 
 
+def is_plan(path: Path) -> bool:
+    """Whether a file is a plan: its parent folder is named ``plans``."""
+    return path.resolve().parent.name == "plans"
+
+
+def task_spans(lines: list[Line]) -> list[tuple[int, int, list[Line]]]:
+    """(heading line, task number, body) for each ``### Task N:`` heading.
+
+    A task's body runs to the next heading of level 3 or higher.
+    """
+    heads = headings(lines)
+    out = []
+    for number, level, title in heads:
+        match = TASK_TITLE_RE.match(title) if level == 3 else None
+        if not match:
+            continue
+        end = next((n for n, lv, _ in heads if n > number and lv <= 3), None)
+        end = end or len(lines) + 1
+        body = [entry for entry in lines if number < entry[0] < end]
+        out.append((number, int(match.group(1)), body))
+    return out
+
+
+def plan_spec(
+    lines: list[Line], tasks: list[tuple[int, int, list[Line]]]
+) -> tuple[list[tuple[int, str, str]], tuple[int, str] | None]:
+    """P3 violations, and (line, path) of the ``**Spec:**`` line when valid."""
+    first = tasks[0][0] if tasks else len(lines) + 1
+    head = [(n, t) for n, t, c in lines if not c and n < first]
+    out = []
+    if not any(GOAL_RE.match(t) for _, t in head):
+        out.append((1, "P3-header", "missing '**Goal:**' line before the first task"))
+    specs = [(n, t) for n, t in head if SPEC_LINE_RE.match(t)]
+    if not specs:
+        out.append((1, "P3-header", "missing '**Spec:**' line before the first task"))
+        return out, None
+    number, line = specs[0]
+    paths = [s for s in SPAN_RE.findall(line) if looks_like_path(s)]
+    if len(paths) != 1:
+        message = "'**Spec:**' line needs exactly one backticked path"
+        out.append((number, "P3-header", message))
+        return out, None
+    return out, (number, paths[0])
+
+
+def check_tasks(tasks: list[tuple[int, int, list[Line]]]) -> list[tuple[int, str, str]]:
+    """P5: task numbers run 1..N, each compared with the previous one + 1."""
+    if not tasks:
+        return [(1, "P5-tasks", "no '### Task N:' headings")]
+    out, expected = [], 1
+    for number, task, _ in tasks:
+        if task != expected:
+            message = f"Task {task} where Task {expected} was expected"
+            out.append((number, "P5-tasks", message))
+        expected = task + 1
+    return out
+
+
+def fence_openers(text: str) -> dict[int, str]:
+    """Line number -> info string of each line that opens a code fence.
+
+    Uses the same fence rules as ``parse``.
+    """
+    out: dict[int, str] = {}
+    fence = None
+    for number, line in enumerate(text.splitlines(), 1):
+        match = FENCE_RE.match(line)
+        if not match:
+            continue
+        run, rest = match.groups()
+        if fence is None and not (run[0] == "`" and "`" in rest):
+            fence = run
+            out[number] = rest.strip()
+        elif fence and run[0] == fence[0] and len(run) >= len(fence):
+            if not rest.strip():
+                fence = None
+    return out
+
+
+def steps(body: list[Line]) -> list[list[Line]]:
+    """Split a task body into steps; each starts at a ``- [ ] **Step N`` bullet."""
+    out: list[list[Line]] = []
+    for entry in body:
+        if not entry[2] and STEP_RE.match(entry[1]):
+            out.append([entry])
+        elif out:
+            out[-1].append(entry)
+    return out
+
+
+def runs_then_expects(step: list[Line], openers: dict[int, str]) -> bool:
+    """Whether a command is run before its output is stated.
+
+    A run is a command fence, or ``Run`` followed by a backticked command on the
+    same line or on the next non-blank line. The output is a later
+    ``Expected:``, or ``Expected:`` or an arrow after the command on its line.
+    """
+    seen_run = pending = False
+    for number, line, code in step:
+        if code:
+            tag = openers.get(number)
+            if tag is not None and (tag.split() or [""])[0].lower() in COMMAND_TAGS:
+                seen_run = True
+            pending = False
+            continue
+        if seen_run and "Expected:" in line:
+            return True
+        if pending and line.strip():
+            seen_run = seen_run or line.lstrip().startswith("`")
+            pending = False
+        match = RUN_RE.search(line)
+        if match:
+            rest = line[match.end() :]
+            if not SPAN_RE.search(rest):
+                pending = True  # the command may be on the next line
+            elif ARROW_RE.search(rest) or "Expected:" in rest:
+                return True
+            else:
+                seen_run = True
+    return False
+
+
+def check_task_parts(
+    tasks: list[tuple[int, int, list[Line]]], openers: dict[int, str]
+) -> list[tuple[int, str, str]]:
+    """P6: each task has a Files line, a Run/Expected step and a commit step."""
+    out = []
+    for number, task, body in tasks:
+        if not any(FILES_RE.match(t) for _, t, c in body if not c):
+            out.append((number, "P6-task-parts", f"Task {task}: no '**Files:**' line"))
+        parts = steps(body)
+        if not any(runs_then_expects(step, openers) for step in parts):
+            message = f"Task {task}: no step with 'Run:' then 'Expected:'"
+            out.append((number, "P6-task-parts", message))
+        no_files = any(NO_FILES_RE.match(t) for _, t, c in body if not c)
+        committed = any(COMMIT_RE.search(step[0][1]) for step in parts) or any(
+            c and "git commit" in t for _, t, c in body
+        )
+        if not committed and not no_files:
+            out.append((number, "P6-task-parts", f"Task {task}: no commit step"))
+    return out
+
+
+def check_spec_gated(
+    ref: tuple[int, str] | None, root: Path
+) -> list[tuple[int, str, str]]:
+    """P4: the plan's spec exists and has a valid gate record."""
+    if ref is None:
+        return []  # P3 already reported the Spec line
+    number, path = ref
+    spec = root / path
+    if not spec.is_file():
+        return [(number, "P4-spec-gated", f"spec not found: {path}")]
+    valid, message = verify_record(spec, root)
+    if valid:
+        return []
+    reason = message.split(":", 1)[0]
+    return [(number, "P4-spec-gated", f"spec gate record {reason}: {path}")]
+
+
+def file_items(body: list[Line]) -> list[tuple[int, str, list[str]]]:
+    """(line, kind, paths) for each Create/Modify/Test bullet under a Files line."""
+    out = []
+    in_files = False
+    for number, line, code in body:
+        if code:
+            in_files = False
+            continue
+        if FILES_RE.match(line):
+            in_files = True
+            continue
+        match = FILE_ITEM_RE.match(line) if in_files else None
+        if match:
+            rest = PARENS_RE.sub("", match.group(2))  # asides are not file names
+            spans = [LINE_SUFFIX_RE.sub("", s) for s in SPAN_RE.findall(rest)]
+            out.append(
+                (number, match.group(1), [s for s in spans if looks_like_path(s)])
+            )
+        elif line.strip() and not line.startswith((" ", "\t")):
+            in_files = False
+    return out
+
+
+def check_plan_paths(
+    tasks: list[tuple[int, int, list[Line]]], root: Path
+) -> list[tuple[int, str, str]]:
+    """P9: each Modify path exists, or a Create or Test bullet names it.
+
+    That bullet must be in the same task or an earlier one.
+    """
+    out = []
+    known: set[str] = set()
+    for _, _, body in tasks:
+        items = file_items(body)
+        known.update(p for _, kind, paths in items if kind != "Modify" for p in paths)
+        for number, kind, paths in items:
+            for path in paths if kind == "Modify" else []:
+                if path not in known and not (root / path).exists():
+                    out.append((number, "P9-path", f"path not found: {path}"))
+    return out
+
+
+def lint_plan(text: str, root: Path) -> list[tuple[int, str, str]]:
+    """All violations in a plan, as (line, rule, message), sorted by line."""
+    lines = parse(text)
+    tasks = task_spans(lines)
+    header, ref = plan_spec(lines, tasks)
+    shared = check_status_date(lines) + check_placeholders(lines, {})
+    shared += check_empty(lines)
+    found = (
+        [(n, PLAN_RULES[rule], m) for n, rule, m in shared]
+        + header
+        + check_tasks(tasks)
+        + check_spec_gated(ref, root)
+        + check_task_parts(tasks, fence_openers(text))
+        + check_plan_paths(tasks, root)
+    )
+    return sorted(found, key=lambda v: (v[0], v[1]))
+
+
 def spec_hash(text: str) -> str:
     """SHA-256 of the spec without its Status line, line endings normalised."""
     text = text.replace("\r\n", "\n").replace("\r", "\n")
@@ -312,8 +575,17 @@ def spec_hash(text: str) -> str:
     return hashlib.sha256("\n".join(kept).encode("utf-8")).hexdigest()
 
 
+def plan_hash(text: str) -> str:
+    """As spec_hash, with every ticked box outside code fences unticked first."""
+    text = text.replace("\r\n", "\n").replace("\r", "\n")
+    lines = [t if c else CHECKED_RE.sub(r"\1- [ ]", t) for _, t, c in parse(text)]
+    return spec_hash("\n".join(lines))
+
+
 def verify_record(spec: Path, root: Path) -> tuple[bool, str]:
     """Whether the spec's gate record exists, passed, and matches its hash."""
+    if is_plan(spec):
+        return verify_plan_record(spec, root)
     record = root / GATES / spec.name
     if not record.is_file():
         return False, f"missing: {record}"
@@ -324,6 +596,44 @@ def verify_record(spec: Path, root: Path) -> tuple[bool, str]:
     text = read(spec)
     if not match or text is None or match.group(1) != spec_hash(text):
         return False, f"stale: {record}"
+    return True, f"ok: {record}"
+
+
+def plan_current(plan: Path, root: Path, body: str) -> bool:
+    """Whether a plan record's hashes match the plan and the spec it names now."""
+    text = read(plan)
+    plan_digest = PLAN_HASH_RE.search(body)
+    spec_digest = RECORD_HASH_RE.search(body)
+    if text is None or not plan_digest or not spec_digest:
+        return False
+    if plan_digest.group(1) != plan_hash(text):
+        return False
+    lines = parse(text)
+    _, ref = plan_spec(lines, task_spans(lines))
+    spec = root / ref[1] if ref else None
+    if spec is None or not spec.is_file():
+        return False
+    spec_text = read(spec)
+    return spec_text is not None and spec_digest.group(1) == spec_hash(spec_text)
+
+
+def verify_plan_record(plan: Path, root: Path) -> tuple[bool, str]:
+    """Check docs/superpowers/gates/plans/<plan file name>.
+
+    Reasons, first that applies: missing, not passed, stale, decisions not approved.
+    """
+    record = root / GATES / "plans" / plan.name
+    if not record.is_file():
+        return False, f"missing: {record}"
+    body = record.read_text(encoding="utf-8-sig")
+    verdict = VERDICT_RE.search(body)
+    kind = verdict.group(1) if verdict else ""
+    if kind not in ("pass", "pass-with-decisions"):
+        return False, f"not passed: {record}"
+    if not plan_current(plan, root, body):
+        return False, f"stale: {record}"
+    if kind == "pass-with-decisions" and not APPROVED_RE.search(body):
+        return False, f"decisions not approved: {record}"
     return True, f"ok: {record}"
 
 
@@ -368,14 +678,14 @@ def main(argv: list[str]) -> int:
     if text is None:
         return 2
     if args.hash:
-        print(spec_hash(text))
+        print(plan_hash(text) if is_plan(spec) else spec_hash(text))
         return 0
     root = Path(args.root) if args.root else default_root(spec)
     if args.verify_record:
         valid, message = verify_record(spec, root)
         print(message)
         return 0 if valid else 1
-    found = lint(text, root)
+    found = (lint_plan if is_plan(spec) else lint)(text, root)
     for number, rule, message in found:
         print(f"{args.spec}:{number}: {rule} {message}")
     print(f"{len(found)} violation(s)" if found else "clean")
