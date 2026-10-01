@@ -37,7 +37,8 @@ env-switch pattern of ADR 0014. The spec gate stays as the backstop.
   source of the area names that the linter reads.
 - `plugin/hooks/grill_inject.py` (new): SessionStart hook that injects the
   grill rule when `CLAUDE_KIT_GRILL=1`.
-- `plugin/hooks/hooks.json`: register `grill_inject.py` under SessionStart.
+- `plugin/hooks/hooks.json`: register `grill_inject.py` under SessionStart,
+  in its own group with no matcher, like `lean_context_inject.py`.
 - `plugin/scripts/spec-lint.py`: new rule `L9-coverage`, plus its docstring
   entry.
 - `CLAUDE.md` (workspace): one sentence appended to "Designing a spec":
@@ -50,11 +51,11 @@ env-switch pattern of ADR 0014. The spec gate stays as the backstop.
   and Spec, and the `## Coverage` section format.
 - `README.md`: the grill in the feature list, and in the workflow diagram's
   `decide` subgraph a new node `grill["Grill (opt-in)<br/>decisions +
-  coverage"]:::gate` with the edge `brain --> dec --> spec` becoming
-  `brain --> dec --> grill --> spec`.
+  coverage"]:::gate` with the edge chain `brain --> dec --> spec --> sgate --> sok`
+  becoming `brain --> dec --> grill --> spec --> sgate --> sok`.
 - `knowledge/decisions/0019-spec-grill-opt-in.md` (new) and a row for it in
   `knowledge/decisions/README.md`.
-- `plugin/.claude-plugin/plugin.json`: version 0.9.0 → 0.10.0 and "grill" in
+- `plugin/.claude-plugin/plugin.json`: version 0.10.0 → 0.11.0 and "grill" in
   the description.
 - Tests: `tests/test_grill_inject.py` (new), `tests/test_grill_skill.py` (new),
   additions to `tests/test_spec_lint.py` and `tests/test_plugin_manifest.py`.
@@ -192,7 +193,8 @@ Violations:
 - an area from `coverage.md` with no `- **<Name>:**` bullet in that section
   (one violation per area, at the section heading);
 - an area bullet with no text after the label, or whose text is `N/A` with no
-  reason after it (stripping `:`, `-`, `–`, `—` and spaces);
+  reason after it (`N/A` matched case-insensitively; stripping `:`, `-`,
+  `–`, `—` and spaces), reported at the bullet's line;
 - `coverage.md` cannot be read: one violation naming the expected path, so a
   broken install is never silent.
 

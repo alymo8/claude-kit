@@ -1,10 +1,10 @@
 # Gate: Spec grill: an opt-in interview before the spec is written
 
 - **Spec:** docs/superpowers/specs/2026-10-01-spec-grill-design.md
-- **Spec SHA-256:** 385a1d619e8e4b8ea25d15d471bd6bd02680edab4c7da07e640d4504b93ce694
+- **Spec SHA-256:** 17033370644b007ecf48feaef45c942b2ec9ee868ad376b08fcf45307699449e
 - **Verdict:** pass
 - **Date:** 2026-10-01
-- **Rounds:** 1
+- **Rounds:** 2
 
 ## Key decisions
 
@@ -18,7 +18,7 @@
 - `coverage.md` is the single source of area names, read by the linter relative to the script (Decisions; Design)
 - The grill never answers its own decision questions; N/A without asking only when a fact settles it (Design, SKILL.md)
 - Spec-gate rubric does not judge Coverage quality; plans not grilled (Scope Out)
-- New ADR 0019; plugin version 0.9.0 → 0.10.0 (Scope In)
+- New ADR 0019; plugin version 0.10.0 → 0.11.0 (main reached 0.10.0 in #25) (Scope In)
 
 ## Findings fixed
 
@@ -27,6 +27,12 @@
 - round 1 [minor] Area bullet parsing edge cases: continuation lines count; unknown areas ignored; first duplicate checked
 - round 1 [minor] README diagram node: named by Mermaid ids (`dec --> grill --> spec`, class `gate`)
 - round 1 [minor] L9 tests depend on developer env: tests set or delete `CLAUDE_KIT_GRILL` themselves
+
+- round 2 (after rebase onto #25) plugin version bump updated to 0.10.0 → 0.11.0
+- round 2 [minor] README edge quote: full chain `brain --> dec --> spec --> sgate --> sok`
+- round 2 [minor] hooks.json matcher: own group, no matcher, like lean_context_inject.py
+- round 2 [minor] L9 report line for empty / bare N/A: the bullet's line
+- round 2 [minor] N/A case: matched case-insensitively
 
 ## Open
 
