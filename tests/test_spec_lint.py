@@ -304,3 +304,156 @@ def test_lowercase_todo_in_prose_is_fine(root):
 def test_crlf_spec_lints_like_lf(root):
     text = VALID.replace("Why.", "TODO")
     assert sl.lint(text.replace("\n", "\r\n"), root) == sl.lint(text, root)
+
+
+PLAN = """\
+# X Implementation Plan
+
+- **Status:** draft
+- **Date:** 2026-09-30
+
+**Goal:** Build the thing.
+
+**Spec:** `docs/superpowers/specs/2026-09-30-x-design.md`
+
+### Task 1: First
+
+**Files:**
+- Create: `src/new.py`
+- Modify: `src/app.py`
+- Test: `tests/test_new.py`
+
+- [ ] **Step 1: Write the failing test**
+
+```python
+def test_x():
+    assert True
+```
+
+- [ ] **Step 2: Run it**
+
+Run: `pytest tests/test_new.py -q`
+Expected: FAIL
+
+- [ ] **Step 3: Commit**
+
+```bash
+git commit -m "x"
+```
+
+### Task 2: Second
+
+**Files:**
+- Modify: `src/new.py`
+
+- [ ] **Step 1: Check it**
+
+```bash
+pytest -q
+```
+Expected: PASS
+
+- [ ] **Step 2: Commit**
+
+Done.
+"""
+
+PLAN_SPEC = "docs/superpowers/specs/2026-09-30-x-design.md"
+
+
+def plan_root(root, record=True):
+    """Gate a spec at PLAN_SPEC (record optional); return the plan's path."""
+    gated(root, "pass" if record else None)
+    plans = root / "docs" / "superpowers" / "plans"
+    plans.mkdir(parents=True, exist_ok=True)
+    return plans / "2026-09-30-x.md"
+
+
+def plan_rules(text, root):
+    return [(line, rule) for line, rule, _ in sl.lint_plan(text, root)]
+
+
+def test_plan_has_49_lines():
+    assert len(PLAN.splitlines()) == 49
+
+
+def test_valid_plan_is_clean(root):
+    plan_root(root)
+    assert sl.lint_plan(PLAN, root) == []
+
+
+@pytest.mark.parametrize(
+    ("old", "new", "record", "line", "rule"),
+    [
+        ("- **Status:** draft\n", "", True, 1, "P1-status"),
+        ("- **Date:** 2026-09-30", "- **Date:** 30/09/2026", True, 4, "P2-date"),
+        ("**Goal:** Build the thing.\n\n", "", True, 1, "P3-header"),
+        ("### Task 2: Second", "### Task 3: Second", True, 35, "P5-tasks"),
+        ("Build the thing.", "TBD", True, 6, "P7-placeholder"),
+        ("Done.", "## Notes", True, 49, "P8-empty"),
+    ],
+)
+def test_each_plan_rule_alone(root, old, new, record, line, rule):
+    plan = plan_root(root, record)
+    plan.write_text(PLAN.replace(old, new) if old else PLAN, encoding="utf-8")
+    result = run_script(SCRIPT, str(plan), "--root", str(root))
+    out = result.stdout.splitlines()
+    assert result.returncode == 1
+    assert out[-1] == "1 violation(s)"
+    assert out[0].startswith(f"{plan}:{line}: {rule} ")
+
+
+def test_plan_rules_apply_only_in_a_plans_folder(root):
+    plan = plan_root(root)
+    plan.write_text(PLAN, encoding="utf-8")
+    assert run_script(SCRIPT, str(plan), "--root", str(root)).returncode == 0
+    other = root / "docs" / "superpowers" / "specs" / "plan-shaped.md"
+    other.write_text(PLAN, encoding="utf-8")
+    result = run_script(SCRIPT, str(other), "--root", str(root))
+    assert "L3-section" in result.stdout
+    assert "P5-tasks" not in result.stdout
+
+
+def test_p3_missing_spec_line(root):
+    plan_root(root)
+    text = PLAN.replace("**Spec:**", "**Source:**")
+    assert plan_rules(text, root) == [(1, "P3-header")]
+
+
+def test_p3_spec_line_with_two_paths(root):
+    plan_root(root)
+    text = PLAN.replace("x-design.md`", "x-design.md` and `docs/a/b.md`")
+    assert plan_rules(text, root) == [(8, "P3-header")]
+
+
+def test_p5_no_tasks(root):
+    plan_root(root)
+    text = PLAN[: PLAN.index("### Task 1")]
+    assert plan_rules(text, root) == [(1, "P5-tasks")]
+
+
+def test_p5_compares_with_the_previous_heading(root):
+    plan_root(root)
+    task2 = PLAN[PLAN.index("### Task 2") :]
+    text = PLAN.replace("### Task 2: Second", "### Task 3: Second")
+    text += "\n" + task2.replace("### Task 2: Second", "### Task 4: Fourth")
+    found = [v for v in plan_rules(text, root) if v[1] == "P5-tasks"]
+    assert found == [(35, "P5-tasks")]
+
+
+def test_p5_task_heading_inside_a_fence_is_ignored(root):
+    plan_root(root)
+    text = PLAN.replace("Done.", "````markdown\n### Task 9: Not a task\n````")
+    assert sl.lint_plan(text, root) == []
+
+
+def test_p7_has_no_etc_rule(root):
+    plan_root(root)
+    text = PLAN.replace("Build the thing.", "Build the thing, etc.")
+    assert sl.lint_plan(text, root) == []
+
+
+def test_crlf_plan_lints_like_lf(root):
+    plan = plan_root(root)
+    plan.write_bytes(PLAN.replace("\n", "\r\n").encode("utf-8"))
+    assert run_script(SCRIPT, str(plan), "--root", str(root)).returncode == 0

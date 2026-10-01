@@ -75,6 +75,15 @@ NOT_A_PATH = ("<", ">", "*", "$", "{", "://")
 GATES = Path("docs") / "superpowers" / "gates"
 VERDICT_PASS_RE = re.compile(r"^- \*\*Verdict:\*\*\s*pass\s*$", re.M)
 RECORD_HASH_RE = re.compile(r"^- \*\*Spec SHA-256:\*\*\s*([0-9a-f]{64})\s*$", re.M)
+PLAN_RULES = {
+    "L1-status": "P1-status",
+    "L2-date": "P2-date",
+    "L5-placeholder": "P7-placeholder",
+    "L6-empty": "P8-empty",
+}
+TASK_TITLE_RE = re.compile(r"^Task\s+(\d+)\s*:")
+GOAL_RE = re.compile(r"^\*\*Goal:\*\*")
+SPEC_LINE_RE = re.compile(r"^\*\*Spec:\*\*")
 
 Line = tuple[int, str, bool]  # (line number, text, inside a code fence)
 
@@ -300,6 +309,79 @@ def lint(text: str, root: Path) -> list[tuple[int, str, str]]:
     return sorted(found, key=lambda v: (v[0], v[1]))
 
 
+def is_plan(path: Path) -> bool:
+    """Whether a file is a plan: its parent folder is named ``plans``."""
+    return path.resolve().parent.name == "plans"
+
+
+def task_spans(lines: list[Line]) -> list[tuple[int, int, list[Line]]]:
+    """(heading line, task number, body) for each ``### Task N:`` heading.
+
+    A task's body runs to the next heading of level 3 or higher.
+    """
+    heads = headings(lines)
+    out = []
+    for number, level, title in heads:
+        match = TASK_TITLE_RE.match(title) if level == 3 else None
+        if not match:
+            continue
+        end = next((n for n, lv, _ in heads if n > number and lv <= 3), None)
+        end = end or len(lines) + 1
+        body = [entry for entry in lines if number < entry[0] < end]
+        out.append((number, int(match.group(1)), body))
+    return out
+
+
+def plan_spec(
+    lines: list[Line], tasks: list[tuple[int, int, list[Line]]]
+) -> tuple[list[tuple[int, str, str]], tuple[int, str] | None]:
+    """P3 violations, and (line, path) of the ``**Spec:**`` line when valid."""
+    first = tasks[0][0] if tasks else len(lines) + 1
+    head = [(n, t) for n, t, c in lines if not c and n < first]
+    out = []
+    if not any(GOAL_RE.match(t) for _, t in head):
+        out.append((1, "P3-header", "missing '**Goal:**' line before the first task"))
+    specs = [(n, t) for n, t in head if SPEC_LINE_RE.match(t)]
+    if not specs:
+        out.append((1, "P3-header", "missing '**Spec:**' line before the first task"))
+        return out, None
+    number, line = specs[0]
+    paths = [s for s in SPAN_RE.findall(line) if looks_like_path(s)]
+    if len(paths) != 1:
+        message = "'**Spec:**' line needs exactly one backticked path"
+        out.append((number, "P3-header", message))
+        return out, None
+    return out, (number, paths[0])
+
+
+def check_tasks(tasks: list[tuple[int, int, list[Line]]]) -> list[tuple[int, str, str]]:
+    """P5: task numbers run 1..N, each compared with the previous one + 1."""
+    if not tasks:
+        return [(1, "P5-tasks", "no '### Task N:' headings")]
+    out, expected = [], 1
+    for number, task, _ in tasks:
+        if task != expected:
+            message = f"Task {task} where Task {expected} was expected"
+            out.append((number, "P5-tasks", message))
+        expected = task + 1
+    return out
+
+
+def lint_plan(text: str, root: Path) -> list[tuple[int, str, str]]:
+    """All violations in a plan, as (line, rule, message), sorted by line."""
+    lines = parse(text)
+    tasks = task_spans(lines)
+    header, _ = plan_spec(lines, tasks)
+    shared = check_status_date(lines) + check_placeholders(lines, {})
+    shared += check_empty(lines)
+    found = (
+        [(n, PLAN_RULES[rule], m) for n, rule, m in shared]
+        + header
+        + check_tasks(tasks)
+    )
+    return sorted(found, key=lambda v: (v[0], v[1]))
+
+
 def spec_hash(text: str) -> str:
     """SHA-256 of the spec without its Status line, line endings normalised."""
     text = text.replace("\r\n", "\n").replace("\r", "\n")
@@ -375,7 +457,7 @@ def main(argv: list[str]) -> int:
         valid, message = verify_record(spec, root)
         print(message)
         return 0 if valid else 1
-    found = lint(text, root)
+    found = (lint_plan if is_plan(spec) else lint)(text, root)
     for number, rule, message in found:
         print(f"{args.spec}:{number}: {rule} {message}")
     print(f"{len(found)} violation(s)" if found else "clean")
