@@ -16,6 +16,7 @@
 
 | Date | Plan | Status |
 |---|---|---|
+| 2026-09-30 | [Spec Gate Implementation Plan](plans/2026-09-30-spec-gate.md) | approved |
 | 2026-09-29 | [Repo audit skills Implementation Plan](plans/2026-09-29-repo-audit-skills.md) | implemented |
 | 2026-09-18 | [Session Hygiene Implementation Plan](plans/2026-09-18-session-hygiene.md) | implemented |
 | 2026-09-15 | [Project Scaffolder and Spec Lifecycle Implementation Plan](plans/2026-09-15-project-scaffolder.md) | implemented |
