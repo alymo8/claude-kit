@@ -391,6 +391,7 @@ def test_valid_plan_is_clean(root):
         ("### Task 2: Second", "### Task 3: Second", True, 35, "P5-tasks"),
         ("Build the thing.", "TBD", True, 6, "P7-placeholder"),
         ("Done.", "## Notes", True, 49, "P8-empty"),
+        ("Expected: PASS", "It passes.", True, 35, "P6-task-parts"),
     ],
 )
 def test_each_plan_rule_alone(root, old, new, record, line, rule):
@@ -457,3 +458,38 @@ def test_crlf_plan_lints_like_lf(root):
     plan = plan_root(root)
     plan.write_bytes(PLAN.replace("\n", "\r\n").encode("utf-8"))
     assert run_script(SCRIPT, str(plan), "--root", str(root)).returncode == 0
+
+
+def test_p6_missing_files_line(root):
+    plan_root(root)
+    text = PLAN.replace("**Files:**\n- Modify: `src/new.py`", "Files below.")
+    assert plan_rules(text, root) == [(35, "P6-task-parts")]
+
+
+def test_p6_missing_commit_step(root):
+    plan_root(root)
+    text = PLAN.replace("- [ ] **Step 2: Commit**", "- [ ] **Step 2: Push**")
+    assert plan_rules(text, root) == [(35, "P6-task-parts")]
+
+
+def test_p6_file_content_fence_is_not_a_command(root):
+    plan_root(root)
+    text = PLAN.replace(
+        "```bash\npytest -q\n```", "```python file=x.py\npytest -q\n```"
+    )
+    assert plan_rules(text, root) == [(35, "P6-task-parts")]
+
+
+def test_p6_run_and_expected_inside_a_fence_do_not_count(root):
+    plan_root(root)
+    text = PLAN.replace(
+        "Run: `pytest tests/test_new.py -q`\nExpected: FAIL",
+        "```text\nRun: x\nExpected: FAIL\n```",
+    )
+    assert plan_rules(text, root) == [(10, "P6-task-parts")]
+
+
+def test_p6_ticked_steps_and_lowercase_commit_count(root):
+    plan_root(root)
+    text = PLAN.replace("- [ ] **Step 3: Commit**", "- [x] **Step 3: Lint and commit**")
+    assert sl.lint_plan(text, root) == []

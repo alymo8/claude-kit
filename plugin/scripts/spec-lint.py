@@ -84,6 +84,10 @@ PLAN_RULES = {
 TASK_TITLE_RE = re.compile(r"^Task\s+(\d+)\s*:")
 GOAL_RE = re.compile(r"^\*\*Goal:\*\*")
 SPEC_LINE_RE = re.compile(r"^\*\*Spec:\*\*")
+FILES_RE = re.compile(r"^\*\*Files:\*\*")
+STEP_RE = re.compile(r"^\s*- \[[ xX]\] \*\*(Step \d+[^*]*)\*\*")
+COMMIT_RE = re.compile(r"\bcommit", re.I)
+COMMAND_TAGS = ("", "bash", "sh", "shell", "powershell", "pwsh", "console")
 
 Line = tuple[int, str, bool]  # (line number, text, inside a code fence)
 
@@ -367,6 +371,72 @@ def check_tasks(tasks: list[tuple[int, int, list[Line]]]) -> list[tuple[int, str
     return out
 
 
+def fence_openers(text: str) -> dict[int, str]:
+    """Line number -> info string of each line that opens a code fence.
+
+    Uses the same fence rules as ``parse``.
+    """
+    out: dict[int, str] = {}
+    fence = None
+    for number, line in enumerate(text.splitlines(), 1):
+        match = FENCE_RE.match(line)
+        if not match:
+            continue
+        run, rest = match.groups()
+        if fence is None and not (run[0] == "`" and "`" in rest):
+            fence = run
+            out[number] = rest.strip()
+        elif fence and run[0] == fence[0] and len(run) >= len(fence):
+            if not rest.strip():
+                fence = None
+    return out
+
+
+def steps(body: list[Line]) -> list[list[Line]]:
+    """Split a task body into steps; each starts at a ``- [ ] **Step N`` bullet."""
+    out: list[list[Line]] = []
+    for entry in body:
+        if not entry[2] and STEP_RE.match(entry[1]):
+            out.append([entry])
+        elif out:
+            out[-1].append(entry)
+    return out
+
+
+def runs_then_expects(step: list[Line], openers: dict[int, str]) -> bool:
+    """Whether a ``Run:`` line or command fence comes before an ``Expected:`` line."""
+    seen_run = False
+    for number, line, code in step:
+        if code:
+            tag = openers.get(number)
+            if tag is not None and (tag.split() or [""])[0].lower() in COMMAND_TAGS:
+                seen_run = True
+            continue
+        if seen_run and "Expected:" in line:
+            return True
+        if "Run:" in line:
+            seen_run = True
+    return False
+
+
+def check_task_parts(
+    tasks: list[tuple[int, int, list[Line]]], openers: dict[int, str]
+) -> list[tuple[int, str, str]]:
+    """P6: each task has a Files line, a Run/Expected step and a commit step."""
+    out = []
+    for number, task, body in tasks:
+        if not any(FILES_RE.match(t) for _, t, c in body if not c):
+            out.append((number, "P6-task-parts", f"Task {task}: no '**Files:**' line"))
+        parts = steps(body)
+        if not any(runs_then_expects(step, openers) for step in parts):
+            message = f"Task {task}: no step with 'Run:' then 'Expected:'"
+            out.append((number, "P6-task-parts", message))
+        labels = [STEP_RE.match(step[0][1]).group(1) for step in parts]
+        if not any(COMMIT_RE.search(label) for label in labels):
+            out.append((number, "P6-task-parts", f"Task {task}: no commit step"))
+    return out
+
+
 def lint_plan(text: str, root: Path) -> list[tuple[int, str, str]]:
     """All violations in a plan, as (line, rule, message), sorted by line."""
     lines = parse(text)
@@ -378,6 +448,7 @@ def lint_plan(text: str, root: Path) -> list[tuple[int, str, str]]:
         [(n, PLAN_RULES[rule], m) for n, rule, m in shared]
         + header
         + check_tasks(tasks)
+        + check_task_parts(tasks, fence_openers(text))
     )
     return sorted(found, key=lambda v: (v[0], v[1]))
 
