@@ -31,7 +31,10 @@ about. Flag problems only; never edit the plan or the spec.
    spec does not settle and that concern scope, architecture, product
    boundary, data or irreversible actions, or the interpretation of the spec.
    File names, helper structure and test layout are not decisions. These are
-   not findings: the user signs off on them.
+   not findings: the user signs off on them. A decision is a choice about
+   *how* to deliver what the spec asks for; work that no spec item asks for
+   is scope creep (check 1), not a decision. List a decision only here, not
+   also under Findings, unless it contradicts something the spec does settle.
 
 ## Severity
 
