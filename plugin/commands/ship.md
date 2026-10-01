@@ -38,6 +38,14 @@ These are the only reasons to stop. When one fires: write the handoff with the
   to `approved`; otherwise update the plan (or the spec, which is gated again)
   and rerun the plan gate. Commit, and continue `/ship` from step 4.
 
+## Git lock retry
+
+Any git command in this repository, in the main checkout or any worktree,
+that fails with `Unable to create '...lock': File exists` or
+`cannot lock ref` is retried after 5 seconds, up to 5 times. All worktrees
+share one `.git` directory, so concurrent worktrees can collide on its locks.
+A command still failing after that is handled like any other failed command.
+
 ## Steps
 
 0. **Gate.** Run
@@ -79,7 +87,11 @@ These are the only reasons to stop. When one fires: write the handoff with the
    write `docs/superpowers/plans/<YYYY-MM-DD>-<slug>.md` from the spec. Where
    the spec leaves a choice open, prefer one the spec, its ADRs or the
    existing code already imply, so a routine plan passes without stopping. Do
-   not offer an execution choice. **Plan gate:** run the `claude-kit:plan-gate`
+   not offer an execution choice. Then add a `**Depends on:**` line under each
+   task's `**Files:**` block: `none`, or the earlier tasks whose results it
+   uses (`Task 1, Task 3`). Shared files need not be listed
+   (`parallel-plan.py` orders them anyway), so a task whose only link to
+   earlier tasks is shared files gets `**Depends on:** none`. **Plan gate:** run the `claude-kit:plan-gate`
    skill on the plan, steps 1–6 (step 7 is not shown). On `pass`, set the
    plan's Status to `approved`, commit the plan and its record
    (`docs/superpowers/gates/plans/<plan file name>`), and continue. On
@@ -87,9 +99,16 @@ These are the only reasons to stop. When one fires: write the handoff with the
    only, if the gate stopped at `P4-spec-gated`), then the plan-gate stop rule
    fires.
 4. **Implement.** Before implementing, `spec-lint.py --verify-record <plan>`
-   on the plan from step 3 must print `ok:`; otherwise return to step 3. Use
+   on the plan from step 3 must print `ok:`; otherwise return to step 3. Then
+   run `python "${CLAUDE_PLUGIN_ROOT}/scripts/parallel-plan.py" waves <plan>`
+   (fallback if the variable is not expanded:
+   `~/.claude/skills/claude-kit/scripts/parallel-plan.py`). If the script
+   exits non-zero, write a `Ruling:` ledger line with its messages and use
    `superpowers:executing-plans` with `superpowers:test-driven-development`,
-   in this session. The plan's review
+   in this session: this is not a stop rule, because the plan is still
+   executable one task at a time. Else, if every wave has one task, use
+   `executing-plans` the same way. Otherwise use `claude-kit:parallel-tasks`
+   with `<plan>` as its argument. The plan's review
    checkpoints are progress notes, not pauses. A failing test or an unclear
    instruction is debugged with `superpowers:systematic-debugging`, not
    escalated. Before every commit run the full test suite and lint from

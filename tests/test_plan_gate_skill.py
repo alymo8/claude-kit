@@ -74,5 +74,6 @@ def test_docs_and_manifest_wire_the_gate():
     assert (REPO / "knowledge" / "decisions" / adr).is_file()
     assert f"]({adr})" in text("knowledge/decisions/README.md")
     manifest = json.loads(text("plugin/.claude-plugin/plugin.json"))
-    assert manifest["version"] == "0.7.0"
+    version = tuple(int(part) for part in manifest["version"].split("."))
+    assert version >= (0, 7, 0)
     assert "spec and plan gates" in manifest["description"]

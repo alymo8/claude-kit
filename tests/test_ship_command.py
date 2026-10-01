@@ -92,3 +92,20 @@ def test_plan_gate_is_a_stop_rule():
 
 def test_pr_links_the_plan_gate_record():
     assert "docs/superpowers/gates/plans/" in _step(7)
+
+
+def test_step_3_adds_depends_on_lines():
+    assert "**Depends on:**" in _step(3)
+
+
+def test_step_4_picks_waves_and_falls_back():
+    step = _step(4)
+    assert "parallel-plan.py" in step and "waves" in step
+    assert "claude-kit:parallel-tasks" in step
+    assert "non-zero" in step and "not a stop rule" in step
+
+
+def test_git_lock_retry_rule():
+    rule = SHIP.split("## Git lock retry", 1)[1].split("## Steps", 1)[0]
+    assert "Unable to create '...lock': File exists" in rule
+    assert "cannot lock ref" in rule
