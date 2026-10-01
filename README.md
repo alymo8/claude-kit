@@ -5,6 +5,63 @@ with [Claude Code](https://claude.com/claude-code). This repo is the workspace-l
 setup that sits above my individual project repos — it defines *how* I work, not
 *what* any one project does.
 
+## How I build and ship
+
+Every change goes from idea to `main` in three phases. Thinking is written
+down before any code. Independent checks review each document and change, and a
+human makes the key calls.
+
+```mermaid
+%%{init: {"flowchart": {"nodeSpacing": 8}}}%%
+flowchart LR
+  classDef you fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1c1917
+  classDef gate fill:#bfdbfe,stroke:#1d4ed8,stroke-width:2px,color:#1c1917
+  classDef rec fill:#e5e7eb,stroke:#6b7280,stroke-dasharray:4 3,color:#1c1917
+
+  idea([Idea])
+
+  subgraph decide["1 · Decide"]
+    direction TB
+    brain["Brainstorm<br/>options + trade-offs"]
+    dec{{"Human confirms<br/>key decisions + criteria"}}:::you
+    spec["Write the spec<br/>what, why, scope"]
+    sgate["Spec gate<br/>independent review"]:::gate
+    sok{{"Human signs off<br/>the spec"}}:::you
+    brain --> dec --> spec --> sgate --> sok
+  end
+
+  subgraph ship["3 · Ship"]
+    direction TB
+    ci["CI<br/>lint · tests · secret scan"]:::gate
+    rev["AI code review<br/>fix verified findings"]:::gate
+    hum{{"Human approves<br/>the PR"}}:::you
+    clean(["Merge, verify main<br/>clean up"])
+    ci --> rev --> hum --> clean
+  end
+
+  %% col2 and twin are invisible: they keep box 2 centred with the docs below it
+  subgraph col2[" "]
+    direction TB
+    twin[("Persisted in the repo<br/>specs · plans · ADRs")]
+    subgraph build["2 · Build"]
+      direction TB
+      plan["Write the plan<br/>ordered, testable tasks"]
+      pgate["Plan gate<br/>independent review"]:::gate
+      tdd["Build test-first<br/>in an isolated worktree"]
+      plan --> pgate --> tdd
+    end
+    docs[("Persisted in the repo<br/>specs · plans · ADRs")]:::rec
+    twin ~~~ build -.-> docs
+  end
+  style col2 fill:none,stroke:none
+  style twin fill:none,stroke:none,color:transparent
+  idea --> decide --> col2 --> ship
+```
+
+Amber: a human decision. Blue: an independent check. The playbooks behind
+each step are in [`conventions/`](conventions/); the tooling that automates them
+is in [`plugin/`](plugin/).
+
 ## What's here
 
 - **[`CLAUDE.md`](CLAUDE.md)** — the workspace instructions Claude Code reads: how we
