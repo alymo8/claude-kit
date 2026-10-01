@@ -37,7 +37,9 @@ or ``Expected:`` or an arrow after the command; and "commit" in a step's bullet
 line or a ``git commit`` in a fence, unless its Files line says none);
 P7-placeholder (as L5, without "etc."); P8-empty (as L6); P9-path
 (``- Modify:`` paths outside parentheses exist, or a Create or Test bullet of
-this or an earlier task names them).
+this or an earlier task names them);
+P10-depends (each task has at most one ``**Depends on:**`` line, valued
+``none`` or ``Task N`` items, comma-separated, naming distinct earlier tasks).
 
 --hash prints the SHA-256 of the spec with line endings normalised and its
 first Status bullet removed, so approving a spec keeps the same hash.
@@ -118,6 +120,8 @@ PLAN_HASH_RE = re.compile(r"^- \*\*Plan SHA-256:\*\*\s*([0-9a-f]{64})\s*$", re.M
 APPROVED_RE = re.compile(
     r"^- \*\*Decisions approved:\*\*\s*\d{4}-\d{2}-\d{2}\s*$", re.M
 )
+DEPENDS_RE = re.compile(r"^\s*(?:- )?\*\*Depends on:\*\*\s*(.*?)\s*$")
+DEPENDS_ITEM_RE = re.compile(r"^Task (\d+)$")
 
 Line = tuple[int, str, bool]  # (line number, text, inside a code fence)
 
@@ -545,6 +549,54 @@ def check_plan_paths(
     return out
 
 
+def depends_value(value: str) -> list[int] | None:
+    """Task numbers in a Depends-on value: [] for ``none``, None if malformed."""
+    if value == "none":
+        return []
+    numbers = []
+    for item in value.split(","):
+        match = DEPENDS_ITEM_RE.match(item.strip())
+        if not match:
+            return None
+        numbers.append(int(match.group(1)))
+    return numbers
+
+
+def task_depends(body: list[Line]) -> list[tuple[int, str]]:
+    """(line, value) of each ``**Depends on:**`` line in a task, outside fences."""
+    out = []
+    for number, line, code in body:
+        match = None if code else DEPENDS_RE.match(line)
+        if match:
+            out.append((number, match.group(1)))
+    return out
+
+
+def depends_problems(
+    tasks: list[tuple[int, int, list[Line]]],
+) -> list[tuple[int, int, str]]:
+    """(line, task, message) for each invalid ``**Depends on:**`` line."""
+    numbers = {task for _, task, _ in tasks}
+    out = []
+    for _, task, body in tasks:
+        for index, (number, value) in enumerate(task_depends(body)):
+            if index:
+                out.append((number, task, f"Task {task}: second Depends line"))
+                continue
+            deps = depends_value(value)
+            if deps is None:
+                message = f"Task {task}: malformed Depends value {value!r}"
+            elif len(set(deps)) != len(deps):
+                message = f"Task {task}: Depends repeats a task"
+            elif any(d >= task or d not in numbers for d in deps):
+                bad = next(d for d in deps if d >= task or d not in numbers)
+                message = f"Task {task}: Task {bad} is not an earlier task"
+            else:
+                continue
+            out.append((number, task, message))
+    return out
+
+
 def lint_plan(text: str, root: Path) -> list[tuple[int, str, str]]:
     """All violations in a plan, as (line, rule, message), sorted by line."""
     lines = parse(text)
@@ -559,6 +611,7 @@ def lint_plan(text: str, root: Path) -> list[tuple[int, str, str]]:
         + check_spec_gated(ref, root)
         + check_task_parts(tasks, fence_openers(text))
         + check_plan_paths(tasks, root)
+        + [(n, "P10-depends", m) for n, _, m in depends_problems(tasks)]
     )
     return sorted(found, key=lambda v: (v[0], v[1]))
 

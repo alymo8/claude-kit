@@ -687,3 +687,92 @@ def test_p6_run_without_a_command_does_not_count(root):
         "Run the tests.\nExpected: FAIL",
     )
     assert plan_rules(text, root) == [(10, "P6-task-parts")]
+
+
+def with_depends(value, before="- [ ] **Step 1: Check it**"):
+    """PLAN with a Depends line inserted before a step (default: Task 2's)."""
+    return PLAN.replace(before, f"**Depends on:** {value}\n\n{before}", 1)
+
+
+TASK3 = """
+
+### Task 3: Third
+
+**Files:**
+- Modify: `src/new.py`
+
+**Depends on:** {value}
+
+- [ ] **Step 1: Check it again**
+
+Run: `pytest -q`
+Expected: PASS
+
+- [ ] **Step 2: Commit**
+"""
+
+
+def three(value):
+    """PLAN plus a Task 3 whose Depends line (line 56) holds ``value``."""
+    return PLAN.rstrip("\n") + TASK3.format(value=value)
+
+
+def p10(text, root):
+    return [(n, r) for n, r in plan_rules(text, root) if r == "P10-depends"]
+
+
+def test_p10_none_and_earlier_tasks_pass(root):
+    plan_root(root)
+    assert sl.lint_plan(with_depends("none"), root) == []
+    assert sl.lint_plan(with_depends("Task 1"), root) == []
+    assert sl.lint_plan(three("Task 1, Task 2"), root) == []
+    assert sl.lint_plan(three("Task 1,Task 2"), root) == []
+
+
+def test_p10_bulleted_line_is_read(root):
+    plan_root(root)
+    text = PLAN.replace(
+        "- [ ] **Step 1: Check it**",
+        "- **Depends on:** Task 2\n\n- [ ] **Step 1: Check it**",
+    )
+    assert p10(text, root) == [(40, "P10-depends")]
+
+
+def test_p10_forward_unknown_and_self_fail(root):
+    plan_root(root)
+    assert p10(
+        three("none").replace(
+            "- [ ] **Step 1: Check it**",
+            "**Depends on:** Task 3\n\n- [ ] **Step 1: Check it**",
+            1,
+        ),
+        root,
+    ) == [(40, "P10-depends")]
+    assert p10(three("Task 9"), root) == [(56, "P10-depends")]
+    assert p10(with_depends("Task 2"), root) == [(40, "P10-depends")]
+
+
+def test_p10_malformed_values_fail(root):
+    plan_root(root)
+    for value in ("Task 1, Task 1", "Task 1 and Task 2", "none.", "task 1", ""):
+        assert p10(three(value), root) == [(56, "P10-depends")], value
+
+
+def test_p10_second_line_fails(root):
+    plan_root(root)
+    text = with_depends("none").replace(
+        "**Depends on:** none\n", "**Depends on:** none\n**Depends on:** Task 1\n"
+    )
+    assert p10(text, root) == [(41, "P10-depends")]
+
+
+def test_p10_line_inside_a_fence_is_ignored(root):
+    plan_root(root)
+    text = PLAN.replace("Done.", "```text\n**Depends on:** Task 9\n```")
+    assert p10(text, root) == []
+
+
+def test_depends_value_parses():
+    assert sl.depends_value("none") == []
+    assert sl.depends_value("Task 1, Task 3") == [1, 3]
+    assert sl.depends_value("Task 1 and Task 2") is None
