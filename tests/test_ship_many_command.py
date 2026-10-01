@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from helpers import PLUGIN
+from helpers import PLUGIN, REPO
 
 SHIP_MANY = (PLUGIN / "commands" / "ship-many.md").read_text(encoding="utf-8")
 
@@ -77,3 +77,11 @@ def test_five_stop_rules():
 
 def test_exact_title_match():
     assert "equals the recorded title exactly" in SHIP_MANY
+
+
+def test_docs_wire_ship_many():
+    assert "/ship-many" in (REPO / "CLAUDE.md").read_text(encoding="utf-8")
+    adr = "0018-ship-many-headless-children.md"
+    assert (REPO / "knowledge" / "decisions" / adr).is_file()
+    index = (REPO / "knowledge" / "decisions" / "README.md").read_text(encoding="utf-8")
+    assert f"]({adr})" in index
