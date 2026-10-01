@@ -35,6 +35,7 @@ and a short spec may be enough — but the *order* holds: decide before you buil
     superpowers/
       specs/   # design specs (the "what & why")
       plans/   # implementation plans (the "how & in what order")
+      gates/   # spec gate records (verdict + spec hash)
 ```
 
 The `docs/superpowers/` prefix is where the `superpowers:brainstorming` and
@@ -63,6 +64,30 @@ A good spec answers, in roughly this order:
 - **Structure / design** — the shape of the solution.
 - **Decisions** — the choices made and the alternatives rejected, with reasons.
 - **Success criteria** — how we will know it is done and correct.
+
+## Spec gate
+
+Every spec passes the kit's spec gate (`claude-kit:spec-gate`) before review.
+The gate lints the spec with `plugin/scripts/spec-lint.py`, then runs up to
+three rounds of a fresh-context reviewer that tries to plan the work from the
+spec alone and reports every question it would have to ask. The user then
+confirms a short verdict and the key decisions rather than reading the whole
+spec ([ADR 0015](../knowledge/decisions/0015-spec-gate-replaces-full-read.md)).
+
+The linter requires, outside code blocks:
+
+- `- **Status:**` and `- **Date:** YYYY-MM-DD` bullets.
+- `## Purpose`, `## Scope`, `## Design` (or `## Structure`), `## Decisions`
+  and `## Success criteria` sections.
+- An `**Out:**` list inside Scope, or an `## Out of scope` section.
+- No TBD, TODO, FIXME or "as discussed" placeholders, and no empty sections.
+- A way to verify each success criterion (a command, test, output or manual
+  check).
+- Every backticked repo path exists, or is marked `(new)` where introduced.
+
+The gate writes `docs/superpowers/gates/<spec file name>` with the verdict and
+the spec's hash (Status line excluded). `/ship` refuses a spec whose record is
+missing, failed or stale, and runs the gate itself.
 
 ## Self-contained plans
 

@@ -40,6 +40,12 @@ spec/plan when no path is given). Bulk render from inside a repo:
 `python ../plugin/scripts/render-spec.py [spec.md]` (needs `pip install markdown`);
 never copy the renderer into a repo.
 
+**Gate every spec.** After writing or revising a spec, run the
+`claude-kit:spec-gate` skill on it before asking me to review it. My review is
+the gate's verdict and key decisions, answered in one line; I do not read the
+spec in full ([ADR 0015](knowledge/decisions/0015-spec-gate-replaces-full-read.md)).
+`/ship` requires a passing gate record under `docs/superpowers/gates/`.
+
 Plans must be self-contained: whoever executes one has none of our conversation
 context. Apply every bullet under "Self-contained plans" in
 [conventions/spec-driven-development.md](conventions/spec-driven-development.md).
