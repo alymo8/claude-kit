@@ -127,3 +127,8 @@ def test_step_9_regenerates_the_spec_index():
     step = _step(9)
     assert "spec-index.py" in step
     assert "git add docs/superpowers/README.md" in step
+
+
+def test_step_7_uses_bash_and_a_utf8_lf_title_file():
+    step = _step(7)
+    assert "Bash tool" in step and "UTF-8" in step and "LF" in step

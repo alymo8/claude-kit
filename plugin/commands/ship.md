@@ -125,7 +125,10 @@ A command still failing after that is handled like any other failed command.
 7. **PR.** The PR title is the spec's **title**: the first line outside code
    fences that starts with `# `, with the `# ` prefix and trailing whitespace
    removed (backticks and punctuation kept). Write it to a file outside the
-   repo and run `gh pr create --title "$(cat <title file>)" --body-file <file>`
+   repo as UTF-8 with an LF line ending, and run, with the Bash tool (not
+   PowerShell, whose native-argument quoting drops `"` and whose `cat`
+   misreads non-ASCII),
+   `gh pr create --title "$(cat <title file>)" --body-file <file>`
    (a command substitution's output is not expanded again, so backticks and
    `$` arrive unchanged), where the body has: Summary, links to the spec, the
    plan and the plan gate record

@@ -227,3 +227,16 @@ def test_cli_specs_bad_input_exits_two(tmp_path):
     missing = run_script(SCRIPT, "specs", str(tmp_path / "no.md"))
     assert missing.returncode == 2
     assert "cannot read" in missing.stderr
+
+
+def test_leading_dot_slash_is_normalised():
+    assert grouped(spec("./CLAUDE.md"), spec("CLAUDE.md"))[0] == [["a"], ["b"]]
+
+
+def test_cli_warns_on_a_spec_without_paths(tmp_path):
+    empty, full = tmp_path / "empty.md", tmp_path / "full.md"
+    empty.write_text("# E\n\nNo scope.\n", encoding="utf-8")
+    full.write_text(spec("x/a.py"), encoding="utf-8")
+    result = run_script(SCRIPT, "specs", str(empty), str(full))
+    assert result.returncode == 0
+    assert "no Scope paths" in result.stderr and str(empty) in result.stderr

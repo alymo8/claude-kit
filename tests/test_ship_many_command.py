@@ -85,3 +85,7 @@ def test_docs_wire_ship_many():
     assert (REPO / "knowledge" / "decisions" / adr).is_file()
     index = (REPO / "knowledge" / "decisions" / "README.md").read_text(encoding="utf-8")
     assert f"]({adr})" in index
+
+
+def test_dry_run_is_read_only_except_fetch():
+    assert "read-only except for `git fetch`" in SHIP_MANY

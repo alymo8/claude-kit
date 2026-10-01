@@ -143,6 +143,8 @@ def spec_paths(text: str) -> set[str]:
     for _, line in sl.in_scope(secs):
         for span in sl.SPAN_RE.findall(line):
             path = as_path(span)
+            while path and path.startswith("./"):
+                path = path[2:]
             if path and path != SPEC_INDEX:
                 out.add(path)
     return out
@@ -212,6 +214,10 @@ def main(argv: list[str]) -> int:
             except (OSError, UnicodeDecodeError) as exc:
                 print(f"parallel-plan: cannot read {name}: {exc}", file=sys.stderr)
                 return 2
+        for name, text in named:
+            if not spec_paths(text):
+                message = "has no Scope paths, so it overlaps nothing"
+                print(f"parallel-plan: warning: {name} {message}", file=sys.stderr)
         waves, found = plan_specs(named, args.max)
         print(json.dumps({"waves": waves, "overlaps": found}))
         return 0

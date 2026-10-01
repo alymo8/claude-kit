@@ -50,7 +50,8 @@ without launching any child.
    and the output of `git worktree list --porcelain`.
 2. **Gate.** For each spec, run `spec-lint.py --verify-record <spec>`.
    - With `--dry-run`: only report each result. Never run the gate, edit a
-     spec, or write a record.
+     spec, or write a record. A dry run is read-only except for `git fetch`
+     (step 1), which updates remote-tracking refs.
    - Otherwise, a spec that does not print `ok:` goes through the
      `claude-kit:spec-gate` skill, steps 1–6, in this session. A spec that
      passes is set to `approved`. A spec that fails is excluded and reported
