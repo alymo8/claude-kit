@@ -1,10 +1,10 @@
 # Gate: `/ship-many`: ship independent specs concurrently
 
 - **Spec:** docs/superpowers/specs/2026-09-30-ship-many-design.md
-- **Spec SHA-256:** 0890bf2f21d2f79d97dbabe44567a9483dfc4b9c37df212d548de3052f082ccb
+- **Spec SHA-256:** 5516a26c704092400198a47dd39fa6a8c84256767309dba77e2352fe4d853991
 - **Verdict:** fail
 - **Date:** 2026-10-01
-- **Rounds:** 3
+- **Rounds:** 4 (round 4 run at the user's request)
 
 ## Key decisions
 
@@ -49,9 +49,16 @@
   after round 3, not re-reviewed)
 - round 3 [minor] spec with no Scope paths overlaps nothing; L8 wording;
   exit code column; excluded specs skip the PR lookup
+- round 4 [blocking] one title rule for `/ship-many` and `/ship` step 7
+  (first `# ` line outside fences, prefix and trailing whitespace removed);
+  the false "as spec-index.py reads it" claim dropped (fixed after round 4,
+  not re-reviewed)
+- round 4 [blocking] step 7 title mismatch: one `gh pr edit` fix, then a new
+  `/ship` stop rule (fixed after round 4, not re-reviewed)
+- round 4 [minor] script invocation paths; duplicate specs excluded; what a
+  stop rule does; status-order wording; fixture names and expected output
 
 ## Open
 
-- Round 3's four blocking findings are fixed in the spec but were found in
-  the last allowed round, so no reviewer has checked the fixes. Blocking
-  findings per round: 2, 4, 4.
+- Round 4's two blocking findings are fixed in the spec but not
+  re-reviewed. Blocking findings per round: 2, 4, 4, 2.

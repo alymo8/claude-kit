@@ -39,8 +39,8 @@ This spec builds on two specs and assumes both have merged:
 - Tests: `tests/test_ship_many_command.py` (new), and additions to
   `tests/test_parallel_plan.py`, `tests/test_ship_command.py` and
   `tests/test_plugin_manifest.py`.
-- `tests/fixtures/parallel/specs/` (new): three small specs for the dry-run
-  check.
+- `tests/fixtures/parallel/specs/` (new): three small specs, `a.md`, `b.md`
+  and `c.md`, for the dry-run check.
 - `plugin/.claude-plugin/plugin.json`: version 0.8.0 → 0.9.0, and
   `/ship-many` appended to its `description`.
 
@@ -108,23 +108,31 @@ subagents at a time.
    with the main checkout's root and does not start with the root of any
    other entry of `git worktree list` (a linked worktree nested under it,
    such as `.claude/worktrees/...`, does not count). A spec that does not
-   exist, or is not inside the main checkout, is reported as `excluded` (with that reason)
-   and the other specs continue. Every remaining spec is then referred to
+   exist, or is not inside the main checkout, is reported as `excluded` (with
+   that reason) and the other specs continue. A spec whose resolved path
+   repeats an earlier argument is excluded with reason `duplicate`. Every
+   remaining spec is then referred to
    by its path relative to the main checkout root, with `/` separators;
    that relative path is what steps 2–4 use. Record the run's start time
    (UTC) and the output of `git worktree list --porcelain`, for steps 4–5.
-2. **Gate.** For each spec, run `spec-lint.py --verify-record`.
+2. **Gate.** For each spec, run
+   `python "${CLAUDE_PLUGIN_ROOT}/scripts/spec-lint.py" --verify-record <spec>`
+   (scripts in this command use the `${CLAUDE_PLUGIN_ROOT}/scripts/` form,
+   with the fallback `~/.claude/skills/claude-kit/scripts/` when the variable
+   is not expanded, as `/ship` does).
    - With `--dry-run`: only report each result. Never run the gate, edit a
      spec, or write a record.
    - Otherwise, a spec that does not print `ok:` goes through the
      `claude-kit:spec-gate` skill, steps 1–6, in this session. A spec that
      passes is set to `approved`. A spec that fails is excluded and reported
      with its record's Open items; the others continue.
-   - Then record each remaining spec's **title**: the text of its first
-     `# ` heading outside code fences (as `spec-index.py` reads it),
-     verbatim. Step 5 uses this recorded title and never re-reads the file,
+   - Then record each remaining spec's **title**: the first line outside code
+     fences that starts with `# `, with the `# ` prefix and trailing
+     whitespace removed (the same rule `/ship` step 7 uses for the PR title).
+     Step 5 uses this recorded title and never re-reads the file,
      because a child `/ship` deletes the main checkout's untracked copy.
-3. **Group.** Run `parallel-plan.py specs <specs> --max N` from the main
+3. **Group.** Run
+   `python "${CLAUDE_PLUGIN_ROOT}/scripts/parallel-plan.py" specs <specs> --max N` from the main
    checkout on the specs not excluded so far (with `--dry-run`, on every spec
    not excluded in step 1). If it exits non-zero, that is a stop rule. With
    `--dry-run`, print the gate results, the waves, the overlaps, and the
@@ -178,16 +186,21 @@ subagents at a time.
 **Stop rules:** `claude` is missing or older than 2.1.259; `git fetch origin`
 fails in step 1; `--max` is below 1; every spec is excluded (in step 1 or
 2); `parallel-plan.py specs` exits non-zero in step 3 (report its stderr).
+When one fires, report the reason and end without launching any child.
 
 ### `/ship` change (`plugin/commands/ship.md`)
 
-In step 7, the PR title is the spec's first `# ` heading text, verbatim
-(backticks and punctuation kept), so `/ship-many` can find the PR by exact
-title. Because backticks, `$` and quotes in a shell argument can be
+In step 7, the PR title is the spec's **title**: the first line outside code
+fences that starts with `# `, with the `# ` prefix and trailing whitespace
+removed (backticks and punctuation kept), so `/ship-many` can find the PR by
+exact title. Because backticks, `$` and quotes in a shell argument can be
 expanded, step 7 writes the title to a file outside the repo and passes it
 as `--title "$(cat <title file>)"`: a command substitution's output is not
-expanded again, so the title arrives unchanged. Step 7 then confirms with
-`gh pr view --json title` that the title matches the heading.
+expanded again, so the title arrives unchanged. Step 7 then checks
+`gh pr view --json title`. On a mismatch it runs
+`gh pr edit --title "$(cat <title file>)"` once and checks again; a title
+that still differs is a new `/ship` stop rule ("the PR title does not match
+the spec's title after one fix").
 
 In step 9, when the rebase onto `origin/main` conflicts in
 `docs/superpowers/README.md`, run
@@ -238,13 +251,15 @@ expected.
    `disable-model-invocation: true`, the exact child flags
    `--permission-mode auto --permission-prompts none --output-format json`,
    `--max` defaulting to 3 and limiting specs only, `--dry-run` never running
-   the gate, the version check `2.1.259`, the status order
-   (`merged`, `timed out`, `stopped`, `excluded`), the exact-title PR match
-   with `createdAt`, a missing spec reported as `excluded`, the timed-out
+   the gate, the version check `2.1.259`, the status order `merged`,
+   `timed out`, `stopped` with excluded specs keeping `excluded`, the
+   exact-title PR match with `createdAt`, missing and duplicate specs
+   reported as `excluded`, the timed-out
    recheck in step 6, the child's spec path relative to the main checkout,
    the `git worktree list --porcelain` leftover check, and the five stop
    rules; `tests/test_ship_command.py` asserts step 7 titles the PR with the
-   spec's `# ` heading verbatim through `--title "$(cat <title file>)"`, and
+   spec's title through `--title "$(cat <title file>)"`, fixes a mismatch
+   once with `gh pr edit`, and lists the title-mismatch stop rule, and
    step 9 regenerates
    `docs/superpowers/README.md` with `spec-index.py` and stages it with
    `git add`;
@@ -259,7 +274,7 @@ expected.
    `gh pr list --state all --limit 50 --json number`. The executing session
    then follows `/ship-many` steps 1–3 with `--dry-run` itself, using the
    feature worktree's scripts, on the three copies. It passes when it prints
-   waves `[[a, b], [c]]` (as relative paths under `.ship-many-dryrun/`), one
+   waves `[[".ship-many-dryrun/a.md", ".ship-many-dryrun/b.md"], [".ship-many-dryrun/c.md"]]`, one
    overlap, and three child commands, and each captured output is identical
    before and after. Then delete `.ship-many-dryrun/`. The output is in the
    PR.
