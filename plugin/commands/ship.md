@@ -154,7 +154,10 @@ A command still failing after that is handled like any other failed command.
     `--delete-branch` aborts before the remote step when run from a worktree),
     `fetch --prune`. Delete `.claude/handoffs/feat_<slug>.md` (`handoff.py` writes `/`
     as `_`) if present, and
-    delete any scratch files you created outside the repo. Then bring local `main`
+    delete any scratch files you created outside the repo. Stop the Docker
+    containers the task started and remove the containers, images, volumes,
+    networks and build cache it created, by name, ID or label (never a
+    machine-wide prune; leave pre-existing Docker objects alone). Then bring local `main`
     up only when that is safe: if `git -C <main-checkout> branch --show-current`
     is `main` and `git -C <main-checkout> status --porcelain` is empty (a clean
     tree), run `git -C <main-checkout> merge --ff-only origin/main`. If either
