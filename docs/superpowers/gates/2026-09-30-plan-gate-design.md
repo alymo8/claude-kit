@@ -1,10 +1,10 @@
 # Gate: Plan gate: linter rules and independent plan reviewer
 
 - **Spec:** docs/superpowers/specs/2026-09-30-plan-gate-design.md
-- **Spec SHA-256:** b2561ddc9b87ab5a172176eddd095a237c6c40dd7514c32c8b93c02521dd226e
-- **Verdict:** fail
+- **Spec SHA-256:** 7d68085ef1735e115c089af39c9ac03b2e5970430af623959d19fba68d8d7576
+- **Verdict:** pass
 - **Date:** 2026-09-30
-- **Rounds:** 3
+- **Rounds:** 4 (3 in the first run, which failed on the round limit; 1 in the rerun)
 
 ## Key decisions
 
@@ -36,7 +36,9 @@
 - round 3 [blocking] end-to-end check reworded: runs after implementation with the worktree's skill, reviewers on a detached checkout of the plan commit
 - round 3 [blocking] resume finds the plan by its `**Spec:**` line, not by today's date
 - round 3 [minor] P5 counting rule; P3 owns a malformed `**Spec:**` line; docs/ADR/manifest criterion; decision note for the no-pause rule
+- rerun round 1: no blocking findings
+- rerun round 1 [minor] plan Status lifecycle (draft when written, approved on pass or approved decisions); P4 stop reported without a record under /ship; `spec not found` message; P4 alongside other violations; record holds the last round's decisions; eval renaming and defect-6 hit rule; reason order in prose
 
 ## Open
 
-- Round limit reached: round 3's two blocking findings are fixed in the spec but no fresh reviewer has confirmed the fixes. No decision findings are open.
+- none

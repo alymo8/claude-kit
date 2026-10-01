@@ -128,7 +128,7 @@ Plan rules:
 | `P1-status` | Same as `L1-status`. |
 | `P2-date` | Same as `L2-date`. |
 | `P3-header` | `**Goal:**` and `**Spec:**` lines exist before the first `### Task` heading, and the `**Spec:**` line holds exactly one backticked path. When P3 reports the `**Spec:**` line, P4 is skipped. |
-| `P4-spec-gated` | The `**Spec:**` path exists under `--root`, and `--verify-record` on that spec would exit 0. The message carries the spec's reason (`missing`, `not passed`, `stale`). |
+| `P4-spec-gated` | The `**Spec:**` path exists under `--root`, and `--verify-record` on that spec would exit 0. The message carries the spec's reason (`missing`, `not passed`, `stale`), or `spec not found: <path>` when the path does not exist. |
 | `P5-tasks` | At least one `### Task N:` heading; numbers run 1..N in order. Each heading is compared with the previous heading's number + 1 (the first with 1); a heading that differs is one violation at its line, and a heading that matches is not a violation. |
 | `P6-task-parts` | Each task has a `**Files:**` line, a `Run:`/`Expected:` pair (or fenced block plus `Expected:`), and a `Commit` step. One violation per missing part, at the task heading's line. |
 | `P7-placeholder` | `L5-placeholder`'s word list and exceptions (backticked spans, double-quoted text) apply to the whole plan; the `etc.` part does not apply to plans. |
@@ -170,7 +170,7 @@ current hashes of the plan and of the spec named in the plan's current
 Reasons are checked in this order, and the first that applies is printed:
 `missing` → `not passed` → `stale` → `decisions not approved`. A missing or
 unreadable spec counts as `stale`. On success it prints `ok: <record path>`, as for specs. Otherwise it prints
-`missing`, `not passed`, `decisions not approved` or `stale`, then `: ` and
+`missing`, `not passed`, `stale` or `decisions not approved`, then `: ` and
 the record path, and exits 1. So a spec
 edit after planning invalidates the plan's record.
 
@@ -223,8 +223,9 @@ Output format, parsed by hand like the spec rubric:
 `/plan-gate <plan.md>` (default: the newest plan under
 `docs/superpowers/plans/`). The procedure mirrors the spec gate:
 
-1. **Lint** the plan and fix every violation until the linter exits 0. If only
-   `P4-spec-gated` fails, stop with verdict `fail`: the spec must be gated
+1. **Lint** the plan. If it has no Status bullet, add `- **Status:** draft`.
+   Fix every other violation until the linter exits 0; if `P4-spec-gated` is
+   then the only one left, stop with verdict `fail`: the spec must be gated
    first. Write no record; report that the spec must pass
    `claude-kit:spec-gate` first. Never edit the spec from the plan gate.
 2. **Review round** with a new general-purpose subagent given the plan path,
@@ -241,15 +242,17 @@ Output format, parsed by hand like the spec rubric:
      plan-introduced decisions.
    - **fail:** anything else.
 6. **Record:** write the gate record, with hashes computed after the last
-   plan edit.
+   plan edit. Its `## Plan-introduced decisions` section holds the last
+   round's list; that exact list is what the user approves.
 7. **Report to the user:**
    - **pass:** one line, "Plan gate passed in N rounds; no new decisions",
-     plus the plan path (path only; never open it). Continue straight to the
+     plus the plan path (path only; never open it). Set the plan's Status to
+     `approved` (the hash ignores it). Continue straight to the
      execution choice, with no further sign-off.
    - **pass-with-decisions:** "Plan gate passed in N rounds. The plan makes
      these decisions the spec doesn't:", then the list, then "OK?". On yes,
-     add `- **Decisions approved:** <today>` to the record. This does not
-     change either hash. On a change request, edit the plan and rerun the
+     add `- **Decisions approved:** <today>` to the record and set the plan's
+     Status to `approved`. Neither changes either hash. On a change request, edit the plan and rerun the
      gate from step 1.
    - **fail:** each open item as a direct question with options and a
      recommendation. Spec findings name the spec section to change. After the
@@ -259,12 +262,14 @@ Output format, parsed by hand like the spec rubric:
 ### `/ship` changes (`plugin/commands/ship.md`)
 
 - **Step 3, Plan.** After writing the plan, run the `claude-kit:plan-gate`
-  procedure (steps 1–6; step 7 is not shown). On `pass`, commit the plan and
-  its record and continue. On `pass-with-decisions` or `fail`, the new stop
+  procedure (steps 1–6; step 7 is not shown). On `pass`, set the plan's Status
+  to `approved`, commit the plan and its record, and continue. On `pass-with-decisions` or `fail`, the new stop
   rule fires.
 - **New stop rule.** The plan gate in step 3 returns `pass-with-decisions` or
   `fail`. Write the handoff and report the record's decisions and Open items
-  as questions. `/ship` approves the spec, not decisions the plan adds later,
+  as questions. If the gate stopped at `P4-spec-gated` (no record), report
+  the P4 reason and that the spec must pass `claude-kit:spec-gate`, and commit
+  the plan only. `/ship` approves the spec, not decisions the plan adds later,
   so it stops instead of deciding.
 - **Step 3, writing the plan.** When the spec leaves a choice open, prefer
   one the spec, its ADRs or the existing code already imply, so that a
@@ -384,7 +389,10 @@ Output format, parsed by hand like the spec rubric:
    twice, using the same method as `tests/fixtures/spec-gate/README.md`:
    reviewers run in a detached checkout of the branch without
    `tests/fixtures/plan-gate/`, on copies with neutral, shuffled names, so they
-   cannot read the defect list. Pass when
+   cannot read the defect list. When copying, each plan's `**Spec:**` line is
+   rewritten to its spec copy's neutral name. Defect 6 is a hit only if it is
+   listed under Plan-introduced decisions and not as a `[blocking]` finding.
+   Pass when
    the seeded defect is reported (as `blocking` for 1–5, as a decision for 6)
    in at least 5 of the 6 on both runs, and the control gets at most 1
    `blocking` finding per run. The table of hits is reported in the PR.
