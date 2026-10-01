@@ -1,6 +1,6 @@
 # `/ship-many`: ship independent specs concurrently
 
-- **Status:** draft
+- **Status:** approved
 - **Date:** 2026-09-30
 
 ## Purpose

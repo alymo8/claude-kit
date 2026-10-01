@@ -8,7 +8,7 @@
 |---|---|---|
 | 2026-09-30 | [Parallel plan tasks: independent tasks run as concurrent subagents](specs/2026-09-30-parallel-plan-tasks-design.md) | implemented |
 | 2026-09-30 | [Plan gate: linter rules and independent plan reviewer](specs/2026-09-30-plan-gate-design.md) | implemented |
-| 2026-09-30 | [`/ship-many`: ship independent specs concurrently](specs/2026-09-30-ship-many-design.md) | draft |
+| 2026-09-30 | [`/ship-many`: ship independent specs concurrently](specs/2026-09-30-ship-many-design.md) | approved |
 | 2026-09-30 | [Spec gate: linter and independent reviewer](specs/2026-09-30-spec-gate-design.md) | implemented |
 | 2026-09-29 | [Repo audit skills: `audit` (basic) and `audit-deep`](specs/2026-09-29-repo-audit-skills-design.md) | implemented |
 | 2026-09-18 | [Session hygiene: handoff, context meter, lean exploration](specs/2026-09-18-session-hygiene-design.md) | implemented |
@@ -20,6 +20,7 @@
 | Date | Plan | Status |
 |---|---|---|
 | 2026-10-01 | [Parallel Plan Tasks Implementation Plan](plans/2026-10-01-parallel-plan-tasks.md) | implemented |
+| 2026-10-01 | [Ship Many Implementation Plan](plans/2026-10-01-ship-many.md) | draft |
 | 2026-09-30 | [Plan Gate Implementation Plan](plans/2026-09-30-plan-gate.md) | implemented |
 | 2026-09-30 | [Spec Gate Implementation Plan](plans/2026-09-30-spec-gate.md) | implemented |
 | 2026-09-29 | [Repo audit skills Implementation Plan](plans/2026-09-29-repo-audit-skills.md) | implemented |
