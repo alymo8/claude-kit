@@ -59,3 +59,36 @@ def test_gated_spec_is_marked_approved_even_when_the_record_is_valid():
     step = _step(0)
     ok_branch = step.split("Otherwise", 1)[0]
     assert "approved" in ok_branch
+
+
+def _stops():
+    return SHIP.split("## Stop rules", 1)[1].split("## Steps", 1)[0]
+
+
+def test_step_three_gates_the_plan():
+    step = _step(3)
+    assert "claude-kit:plan-gate" in step
+    assert "docs/superpowers/gates/plans/" in step
+
+
+def test_step_three_resumes_an_existing_plan_by_its_spec_line():
+    step = _step(3)
+    assert "**Spec:**" in step
+    assert "decisions not approved" in step
+    assert "never approval" in step
+
+
+def test_step_four_verifies_the_plan_record():
+    step = _step(4)
+    assert "--verify-record" in step and "plan" in step
+
+
+def test_plan_gate_is_a_stop_rule():
+    stops = _stops().lower()
+    assert "plan gate" in stops
+    assert "pass-with-decisions" in stops
+    assert "decisions approved" in stops
+
+
+def test_pr_links_the_plan_gate_record():
+    assert "docs/superpowers/gates/plans/" in _step(7)
