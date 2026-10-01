@@ -48,7 +48,7 @@ This spec builds on two specs and assumes both have merged:
 
 - The first real `/ship-many` run on real specs. It happens on the user's
   next use; this PR verifies the grouping, a dry run, and that a headless
-  child starts with the chosen flags.
+  `claude -p` session runs with the chosen flags.
 - Specs in different repositories in one call.
 - Resuming an interrupted `/ship-many` run. Each child `/ship` leaves its own
   handoff, as today.
@@ -107,9 +107,13 @@ subagents at a time.
    to an absolute path. A path is **inside the main checkout** when it starts
    with the main checkout's root and does not start with the root of any
    other entry of `git worktree list` (a linked worktree nested under it,
-   such as `.claude/worktrees/...`, does not count). A spec that does not
-   exist, or is not inside the main checkout, is reported as `excluded` (with
-   that reason) and the other specs continue. A spec whose resolved path
+   such as `.claude/worktrees/...`, does not count), and
+   `git -C <spec's folder> rev-parse --show-toplevel` equals the main
+   checkout's root (so a spec in a separate git repository nested under it
+   does not count either). A spec that does not exist is excluded with
+   reason `not found`; one that fails the prefix check, with reason
+   `outside the main checkout`; one that fails the repository check, with
+   reason `not in this repository`. The other specs continue. A spec whose resolved path
    repeats an earlier argument is excluded with reason `duplicate`. Every
    remaining spec is then referred to
    by its path relative to the main checkout root, with `/` separators;
@@ -130,7 +134,9 @@ subagents at a time.
      fences that starts with `# `, with the `# ` prefix and trailing
      whitespace removed (the same rule `/ship` step 7 uses for the PR title).
      Step 5 uses this recorded title and never re-reads the file,
-     because a child `/ship` deletes the main checkout's untracked copy.
+     because a child `/ship` deletes the main checkout's untracked copy. A
+     spec whose title repeats an earlier spec's title is excluded with
+     reason `duplicate title`, because the PR lookup keys on the title.
 3. **Group.** Run
    `python "${CLAUDE_PLUGIN_ROOT}/scripts/parallel-plan.py" specs <specs> --max N` from the main
    checkout on the specs not excluded so far (with `--dry-run`, on every spec
@@ -157,7 +163,8 @@ subagents at a time.
    One child failing never stops the others or later waves.
 5. **Collect.** An excluded spec skips this step and keeps status
    `excluded`. For each child that ran:
-   - Its exit code comes from the background command's result. Its cost and
+   - Its exit code comes from the background command's result. Its cost
+     (`total_cost_usd`) and
      `result` text come from its JSON file when the file holds a JSON object.
    - Its PR is found by title, because `/ship` titles the PR with the spec's
      title: run
@@ -253,7 +260,8 @@ expected.
    `--max` defaulting to 3 and limiting specs only, `--dry-run` never running
    the gate, the version check `2.1.259`, the status order `merged`,
    `timed out`, `stopped` with excluded specs keeping `excluded`, the
-   exact-title PR match with `createdAt`, missing and duplicate specs
+   exact-title PR match with `createdAt`, missing, duplicate, duplicate-title
+   and not-in-this-repository (`rev-parse --show-toplevel`) specs
    reported as `excluded`, the timed-out
    recheck in step 6, the child's spec path relative to the main checkout,
    the `git worktree list --porcelain` leftover check, and the five stop
