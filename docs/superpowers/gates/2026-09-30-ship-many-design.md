@@ -1,7 +1,7 @@
 # Gate: `/ship-many`: ship independent specs concurrently
 
 - **Spec:** docs/superpowers/specs/2026-09-30-ship-many-design.md
-- **Spec SHA-256:** bd78f48d24e45b80ac7015ecaac47c8337ca56ff565191ffa008cdc92e562c35
+- **Spec SHA-256:** 49c4559449fc13ef9b9f9d05a76f6603371e36f87fb36a864c176cdd677ea8c0
 - **Verdict:** pass
 - **Date:** 2026-10-01
 - **Rounds:** 6 (rounds 4–6 run at the user's request)
@@ -68,6 +68,11 @@
   path comparison normalised by components; dry run reports duplicate
   titles; leave a worktree-isolated session first; headless slash-command
   expansion first exercised on the real run (Scope Out)
+
+- implementation: `/ship` step 7 passes the title as a single-quoted
+  literal instead of `"$(cat <title file>)"`, because the worktree-isolation
+  guard refuses command substitution (found when this PR was opened); spec
+  text updated and hash refreshed, no gate finding reopened
 
 ## Open
 

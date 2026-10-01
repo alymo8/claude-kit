@@ -124,19 +124,18 @@ A command still failing after that is handled like any other failed command.
    commit, re-run tests, push. A finding that needs a decision is a stop rule.
 7. **PR.** The PR title is the spec's **title**: the first line outside code
    fences that starts with `# `, with the `# ` prefix and trailing whitespace
-   removed (backticks and punctuation kept). Write it to a file outside the
-   repo as UTF-8 with an LF line ending, and run, with the Bash tool (not
-   PowerShell, whose native-argument quoting drops `"` and whose `cat`
-   misreads non-ASCII),
-   `gh pr create --title "$(cat <title file>)" --body-file <file>`
-   (a command substitution's output is not expanded again, so backticks and
-   `$` arrive unchanged), where the body has: Summary, links to the spec, the
-   plan and the plan gate record
+   removed (backticks and punctuation kept). Run, with the Bash tool (not
+   PowerShell, whose native-argument quoting drops `"` and mangles non-ASCII),
+   `gh pr create --title '<title>' --body-file <file>`, with the title written
+   out literally inside single quotes and each `'` in it written as `'\''`.
+   Single quotes keep backticks and `$` literal, and a literal command passes
+   worktree-isolation guards, which refuse command substitution. The body has:
+   Summary, links to the spec, the plan and the plan gate record
    (`docs/superpowers/gates/plans/<plan file name>`), Verification (the exact
    commands and their results), and the attribution line the session requires.
    Then compare `gh pr view --json title` with the title; on a mismatch run
-   `gh pr edit --title "$(cat <title file>)"` once and compare again. A title
-   that still differs is a stop rule.
+   `gh pr edit --title '<title>'` (same quoting) once and compare again. A
+   title that still differs is a stop rule.
 8. **Green CI.** `gh pr checks --watch --fail-fast`. On red, repeat the step-5 fix
    loop.
 9. **Merge.** `gh pr view --json mergeStateStatus`. If `BEHIND` or `DIRTY`:

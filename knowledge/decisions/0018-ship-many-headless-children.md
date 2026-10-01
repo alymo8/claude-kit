@@ -15,7 +15,8 @@ index never counts, same-numbered ADR files do), and runs each wave's specs as
 background `claude -p "/claude-kit:ship <spec>"` children with
 `--permission-mode auto --permission-prompts none`, at most 3 at once by
 default. Children are found afterwards by exact PR title, so `/ship` titles
-its PR with the spec's H1 through a title file. Excluded or failing specs never
+its PR with the spec's H1 verbatim, passed as a single-quoted literal in
+Bash (a worktree-isolation guard refuses command substitution). Excluded or failing specs never
 stop the others; leftovers are reported, not deleted.
 
 ## Consequences

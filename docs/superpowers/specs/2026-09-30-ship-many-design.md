@@ -215,11 +215,12 @@ In step 7, the PR title is the spec's **title**: the first line outside code
 fences that starts with `# `, with the `# ` prefix and trailing whitespace
 removed (backticks and punctuation kept), so `/ship-many` can find the PR by
 exact title. Because backticks, `$` and quotes in a shell argument can be
-expanded, step 7 writes the title to a file outside the repo and passes it
-as `--title "$(cat <title file>)"`: a command substitution's output is not
-expanded again, so the title arrives unchanged. Step 7 then checks
-`gh pr view --json title`. On a mismatch it runs
-`gh pr edit --title "$(cat <title file>)"` once and checks again; a title
+expanded, step 7 runs `gh pr create` with the Bash tool and passes the title
+as a single-quoted literal, `--title '<title>'`, with each `'` written as
+`'\''`: single quotes keep everything else literal, and a literal command
+passes worktree-isolation guards, which refuse command substitution. Step 7
+then checks `gh pr view --json title`. On a mismatch it runs
+`gh pr edit --title '<title>'` (same quoting) once and checks again; a title
 that still differs is a new `/ship` stop rule ("the PR title does not match
 the spec's title after one fix").
 
@@ -282,7 +283,8 @@ expected.
    main checkout,
    the `git worktree list --porcelain` leftover check, and the five stop
    rules; `tests/test_ship_command.py` asserts step 7 titles the PR with the
-   spec's title through `--title "$(cat <title file>)"`, fixes a mismatch
+   spec's title as a single-quoted `--title '<title>'` with no command
+   substitution, fixes a mismatch
    once with `gh pr edit`, and lists the title-mismatch stop rule, and
    step 9 regenerates
    `docs/superpowers/README.md` with `spec-index.py` and stages it with

@@ -111,9 +111,10 @@ def test_git_lock_retry_rule():
     assert "cannot lock ref" in rule
 
 
-def test_step_7_titles_the_pr_from_a_title_file():
+def test_step_7_titles_the_pr_with_a_single_quoted_title():
     step = _step(7)
-    assert '--title "$(cat <title file>)"' in step
+    assert "--title '<title>'" in step and "'\\''" in step
+    assert "$(" not in step  # no command substitution: worktree guards refuse it
     assert "gh pr view --json title" in step and "gh pr edit" in step
     assert "first line outside code fences" in step
 
@@ -129,6 +130,5 @@ def test_step_9_regenerates_the_spec_index():
     assert "git add docs/superpowers/README.md" in step
 
 
-def test_step_7_uses_bash_and_a_utf8_lf_title_file():
-    step = _step(7)
-    assert "Bash tool" in step and "UTF-8" in step and "LF" in step
+def test_step_7_uses_the_bash_tool():
+    assert "Bash tool" in _step(7)
