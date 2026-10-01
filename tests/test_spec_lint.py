@@ -204,3 +204,66 @@ def test_cli_missing_file_exits_two(root):
 
 def test_cli_no_arguments_exits_two():
     assert run_script(SCRIPT).returncode == 2
+
+
+def test_hash_ignores_status_line():
+    approved = VALID.replace("**Status:** draft", "**Status:** approved")
+    assert sl.spec_hash(VALID) == sl.spec_hash(approved)
+    assert len(sl.spec_hash(VALID)) == 64
+
+
+def test_hash_changes_on_any_other_edit():
+    assert sl.spec_hash(VALID) != sl.spec_hash(VALID.replace("Why.", "Why!"))
+
+
+def test_hash_ignores_line_endings():
+    assert sl.spec_hash(VALID) == sl.spec_hash(VALID.replace("\n", "\r\n"))
+
+
+def test_cli_hash_prints_digest(root):
+    spec = root / "spec.md"
+    spec.write_text(VALID, encoding="utf-8")
+    result = run_script(SCRIPT, "--hash", str(spec))
+    assert result.returncode == 0
+    assert result.stdout.strip() == sl.spec_hash(VALID)
+
+
+def gated(root, verdict="pass", digest=None):
+    specs = root / "docs" / "superpowers" / "specs"
+    specs.mkdir(parents=True)
+    spec = specs / "2026-09-30-x-design.md"
+    spec.write_text(VALID, encoding="utf-8")
+    if verdict is not None:
+        gates = root / "docs" / "superpowers" / "gates"
+        gates.mkdir(parents=True)
+        (gates / spec.name).write_text(
+            "# Gate: Thing\n\n"
+            f"- **Spec:** docs/superpowers/specs/{spec.name}\n"
+            f"- **Spec SHA-256:** {digest or sl.spec_hash(VALID)}\n"
+            f"- **Verdict:** {verdict}\n",
+            encoding="utf-8",
+        )
+    return spec
+
+
+@pytest.mark.parametrize(
+    ("verdict", "digest", "code", "reason"),
+    [
+        ("pass", None, 0, "ok"),
+        (None, None, 1, "missing"),
+        ("fail", None, 1, "not passed"),
+        ("pass", "0" * 64, 1, "stale"),
+    ],
+)
+def test_verify_record(root, verdict, digest, code, reason):
+    spec = gated(root, verdict, digest)
+    result = run_script(SCRIPT, "--verify-record", str(spec), "--root", str(root))
+    assert result.returncode == code
+    assert result.stdout.startswith(reason + ":")
+
+
+def test_verify_record_survives_approval(root):
+    spec = gated(root)
+    spec.write_text(VALID.replace("draft", "approved"), encoding="utf-8")
+    result = run_script(SCRIPT, "--verify-record", str(spec), "--root", str(root))
+    assert result.returncode == 0

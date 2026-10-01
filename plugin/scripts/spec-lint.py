@@ -24,6 +24,12 @@ Rules (text in fenced code blocks is ignored by all of them):
 - L8-path: each backticked repo path exists under the root, unless a line of the
   spec has both that path and "(new)".
 
+--hash prints the SHA-256 of the spec with line endings normalised and its
+first Status bullet removed, so approving a spec keeps the same hash.
+--verify-record checks docs/superpowers/gates/<spec file name> under the root:
+it must exist, say ``- **Verdict:** pass`` and carry the current hash in
+``- **Spec SHA-256:**``. Prints ok/missing/not passed/stale; exits 0 only for ok.
+
 The root defaults to ``git rev-parse --show-toplevel`` from the spec's folder,
 else the folder three levels above it (the parent of ``docs/``). Exits 0 when
 clean, 1 on violations, 2 on bad usage or an unreadable file.
@@ -32,6 +38,7 @@ clean, 1 on violations, 2 on bad usage or an unreadable file.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import re
 import subprocess
 import sys
@@ -60,6 +67,9 @@ ITEM_RE = re.compile(r"^(?:[-*]|\d+\.)\s+")
 VERIFY_RE = re.compile(r"\b(" + "|".join(VERIFY_WORDS.split()) + r")\b", re.I)
 LINE_SUFFIX_RE = re.compile(r":\d+(-\d+)?$")
 NOT_A_PATH = ("<", ">", "*", "$", "{", "://")
+GATES = Path("docs") / "superpowers" / "gates"
+VERDICT_PASS_RE = re.compile(r"^- \*\*Verdict:\*\*\s*pass\s*$", re.M)
+RECORD_HASH_RE = re.compile(r"^- \*\*Spec SHA-256:\*\*\s*([0-9a-f]{64})\s*$", re.M)
 
 Line = tuple[int, str, bool]  # (line number, text, inside a code fence)
 
@@ -260,6 +270,33 @@ def lint(text: str, root: Path) -> list[tuple[int, str, str]]:
     return sorted(found, key=lambda v: (v[0], v[1]))
 
 
+def spec_hash(text: str) -> str:
+    """SHA-256 of the spec without its Status line, line endings normalised."""
+    text = text.replace("\r\n", "\n").replace("\r", "\n")
+    kept, dropped = [], False
+    for _, line, code in parse(text):
+        if not dropped and not code and STATUS_RE.match(line):
+            dropped = True
+            continue
+        kept.append(line)
+    return hashlib.sha256("\n".join(kept).encode("utf-8")).hexdigest()
+
+
+def verify_record(spec: Path, root: Path) -> tuple[bool, str]:
+    """Whether the spec's gate record exists, passed, and matches its hash."""
+    record = root / GATES / spec.name
+    if not record.is_file():
+        return False, f"missing: {record}"
+    body = record.read_text(encoding="utf-8-sig")
+    if not VERDICT_PASS_RE.search(body):
+        return False, f"not passed: {record}"
+    match = RECORD_HASH_RE.search(body)
+    text = read(spec)
+    if not match or text is None or match.group(1) != spec_hash(text):
+        return False, f"stale: {record}"
+    return True, f"ok: {record}"
+
+
 def default_root(spec: Path) -> Path:
     try:
         result = subprocess.run(
@@ -300,7 +337,14 @@ def main(argv: list[str]) -> int:
     text = read(spec)
     if text is None:
         return 2
+    if args.hash:
+        print(spec_hash(text))
+        return 0
     root = Path(args.root) if args.root else default_root(spec)
+    if args.verify_record:
+        valid, message = verify_record(spec, root)
+        print(message)
+        return 0 if valid else 1
     found = lint(text, root)
     for number, rule, message in found:
         print(f"{args.spec}:{number}: {rule} {message}")
