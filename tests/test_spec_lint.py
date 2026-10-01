@@ -529,3 +529,98 @@ def test_p9_create_in_a_later_task_does_not_count(root):
     text = PLAN.replace("- Modify: `src/app.py`", "- Modify: `src/late.py`")
     text = text.replace("- Modify: `src/new.py`", "- Create: `src/late.py`")
     assert plan_rules(text, root) == [(14, "P9-path")]
+
+
+def test_plan_hash_ignores_status_and_ticks():
+    base = sl.plan_hash(PLAN)
+    assert len(base) == 64
+    assert (
+        sl.plan_hash(PLAN.replace("**Status:** draft", "**Status:** approved")) == base
+    )
+    assert sl.plan_hash(PLAN.replace("- [ ] **Step 1", "- [x] **Step 1")) == base
+    nested = PLAN + "\n  - [ ] nested\n"
+    assert sl.plan_hash(
+        nested.replace("  - [ ] nested", "  - [X] nested")
+    ) == sl.plan_hash(nested)
+
+
+def test_plan_hash_changes_on_other_edits_and_ticks_in_fences():
+    assert sl.plan_hash(PLAN) != sl.plan_hash(
+        PLAN.replace("Build the thing.", "Build it.")
+    )
+    fenced = PLAN.replace("Done.", "```\n- [ ] in a fence\n```")
+    ticked = fenced.replace("- [ ] in a fence", "- [x] in a fence")
+    assert sl.plan_hash(fenced) != sl.plan_hash(ticked)
+
+
+def test_plan_hash_ignores_line_endings():
+    assert sl.plan_hash(PLAN) == sl.plan_hash(PLAN.replace("\n", "\r\n"))
+
+
+def test_cli_hash_uses_plan_hash_for_plans(root):
+    plan = plan_root(root)
+    plan.write_text(PLAN.replace("- [ ] **Step 1", "- [x] **Step 1"), encoding="utf-8")
+    result = run_script(SCRIPT, "--hash", str(plan))
+    assert result.returncode == 0
+    assert result.stdout.strip() == sl.plan_hash(PLAN)
+
+
+def plan_gated(
+    root, verdict="pass", plan_digest=None, spec_digest=None, approved=False
+):
+    plan = plan_root(root)
+    plan.write_text(PLAN, encoding="utf-8")
+    if verdict is not None:
+        records = root / "docs" / "superpowers" / "gates" / "plans"
+        records.mkdir(parents=True, exist_ok=True)
+        lines = [
+            "# Plan gate: X",
+            "",
+            f"- **Plan:** docs/superpowers/plans/{plan.name}",
+            f"- **Plan SHA-256:** {plan_digest or sl.plan_hash(PLAN)}",
+            f"- **Spec:** {PLAN_SPEC}",
+            f"- **Spec SHA-256:** {spec_digest or sl.spec_hash(VALID)}",
+            f"- **Verdict:** {verdict}",
+        ]
+        if approved:
+            lines.append("- **Decisions approved:** 2026-09-30")
+        (records / plan.name).write_text("\n".join(lines) + "\n", encoding="utf-8")
+    return plan
+
+
+@pytest.mark.parametrize(
+    ("verdict", "plan_digest", "spec_digest", "approved", "code", "reason"),
+    [
+        ("pass", None, None, False, 0, "ok"),
+        ("pass-with-decisions", None, None, True, 0, "ok"),
+        (None, None, None, False, 1, "missing"),
+        ("fail", None, None, False, 1, "not passed"),
+        ("pass", "0" * 64, None, False, 1, "stale"),
+        ("pass", None, "0" * 64, False, 1, "stale"),
+        ("pass-with-decisions", None, None, False, 1, "decisions not approved"),
+        ("pass-with-decisions", "0" * 64, None, False, 1, "stale"),
+    ],
+)
+def test_verify_plan_record(
+    root, verdict, plan_digest, spec_digest, approved, code, reason
+):
+    plan = plan_gated(root, verdict, plan_digest, spec_digest, approved)
+    result = run_script(SCRIPT, "--verify-record", str(plan), "--root", str(root))
+    assert result.returncode == code
+    assert result.stdout.startswith(reason + ":")
+    assert "plans" in result.stdout.split(":", 1)[1]
+
+
+def test_verify_plan_record_goes_stale_when_the_spec_changes(root):
+    plan = plan_gated(root)
+    (root / PLAN_SPEC).write_text(VALID.replace("Why.", "Why not."), encoding="utf-8")
+    result = run_script(SCRIPT, "--verify-record", str(plan), "--root", str(root))
+    assert result.stdout.startswith("stale:")
+
+
+def test_verify_plan_record_survives_ticks_and_approval(root):
+    plan = plan_gated(root)
+    text = PLAN.replace("- [ ] **Step 1", "- [x] **Step 1").replace("draft", "approved")
+    plan.write_text(text, encoding="utf-8")
+    result = run_script(SCRIPT, "--verify-record", str(plan), "--root", str(root))
+    assert result.returncode == 0

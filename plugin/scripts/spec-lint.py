@@ -27,11 +27,26 @@ Rules (text in fenced code blocks is ignored by all of them):
   that path and "(new)". Paths elsewhere may belong to another folder or repo;
   the reviewer checks those.
 
+Plans (files whose folder is named ``plans``) get the plan rules instead:
+P1-status, P2-date (as L1, L2); P3-header (``**Goal:**`` and one-path
+``**Spec:**`` lines before the first task); P4-spec-gated (that spec has a valid
+gate record); P5-tasks (``### Task N:`` numbered 1..N); P6-task-parts (each task
+has a Files line, a Run:/command fence then Expected: in one step, and a commit
+step); P7-placeholder (as L5, without "etc."); P8-empty (as L6); P9-path
+(``- Modify:`` paths exist or were created by this or an earlier task).
+
 --hash prints the SHA-256 of the spec with line endings normalised and its
 first Status bullet removed, so approving a spec keeps the same hash.
 --verify-record checks docs/superpowers/gates/<spec file name> under the root:
 it must exist, say ``- **Verdict:** pass`` and carry the current hash in
 ``- **Spec SHA-256:**``. Prints ok/missing/not passed/stale; exits 0 only for ok.
+
+For a plan, --hash also unticks ``- [x]`` boxes outside fences, and
+--verify-record checks docs/superpowers/gates/plans/<plan file name>: Verdict
+pass, or pass-with-decisions with ``- **Decisions approved:** YYYY-MM-DD``, and
+``- **Plan SHA-256:**`` / ``- **Spec SHA-256:**`` equal to the current hashes of
+the plan and of the spec its ``**Spec:**`` line names. Prints ok, missing, not
+passed, stale or decisions not approved.
 
 The root defaults to ``git rev-parse --show-toplevel`` from the spec's folder,
 else the folder three levels above it (the parent of ``docs/``). Exits 0 when
@@ -89,6 +104,12 @@ STEP_RE = re.compile(r"^\s*- \[[ xX]\] \*\*(Step \d+[^*]*)\*\*")
 COMMIT_RE = re.compile(r"\bcommit", re.I)
 COMMAND_TAGS = ("", "bash", "sh", "shell", "powershell", "pwsh", "console")
 FILE_ITEM_RE = re.compile(r"^- (Create|Modify|Test):(.*)$")
+CHECKED_RE = re.compile(r"^(\s*)- \[[xX]\]")
+VERDICT_RE = re.compile(r"^- \*\*Verdict:\*\*\s*(\S+)\s*$", re.M)
+PLAN_HASH_RE = re.compile(r"^- \*\*Plan SHA-256:\*\*\s*([0-9a-f]{64})\s*$", re.M)
+APPROVED_RE = re.compile(
+    r"^- \*\*Decisions approved:\*\*\s*\d{4}-\d{2}-\d{2}\s*$", re.M
+)
 
 Line = tuple[int, str, bool]  # (line number, text, inside a code fence)
 
@@ -526,8 +547,17 @@ def spec_hash(text: str) -> str:
     return hashlib.sha256("\n".join(kept).encode("utf-8")).hexdigest()
 
 
+def plan_hash(text: str) -> str:
+    """As spec_hash, with every ticked box outside code fences unticked first."""
+    text = text.replace("\r\n", "\n").replace("\r", "\n")
+    lines = [t if c else CHECKED_RE.sub(r"\1- [ ]", t) for _, t, c in parse(text)]
+    return spec_hash("\n".join(lines))
+
+
 def verify_record(spec: Path, root: Path) -> tuple[bool, str]:
     """Whether the spec's gate record exists, passed, and matches its hash."""
+    if is_plan(spec):
+        return verify_plan_record(spec, root)
     record = root / GATES / spec.name
     if not record.is_file():
         return False, f"missing: {record}"
@@ -538,6 +568,44 @@ def verify_record(spec: Path, root: Path) -> tuple[bool, str]:
     text = read(spec)
     if not match or text is None or match.group(1) != spec_hash(text):
         return False, f"stale: {record}"
+    return True, f"ok: {record}"
+
+
+def plan_current(plan: Path, root: Path, body: str) -> bool:
+    """Whether a plan record's hashes match the plan and the spec it names now."""
+    text = read(plan)
+    plan_digest = PLAN_HASH_RE.search(body)
+    spec_digest = RECORD_HASH_RE.search(body)
+    if text is None or not plan_digest or not spec_digest:
+        return False
+    if plan_digest.group(1) != plan_hash(text):
+        return False
+    lines = parse(text)
+    _, ref = plan_spec(lines, task_spans(lines))
+    spec = root / ref[1] if ref else None
+    if spec is None or not spec.is_file():
+        return False
+    spec_text = read(spec)
+    return spec_text is not None and spec_digest.group(1) == spec_hash(spec_text)
+
+
+def verify_plan_record(plan: Path, root: Path) -> tuple[bool, str]:
+    """Check docs/superpowers/gates/plans/<plan file name>.
+
+    Reasons, first that applies: missing, not passed, stale, decisions not approved.
+    """
+    record = root / GATES / "plans" / plan.name
+    if not record.is_file():
+        return False, f"missing: {record}"
+    body = record.read_text(encoding="utf-8-sig")
+    verdict = VERDICT_RE.search(body)
+    kind = verdict.group(1) if verdict else ""
+    if kind not in ("pass", "pass-with-decisions"):
+        return False, f"not passed: {record}"
+    if not plan_current(plan, root, body):
+        return False, f"stale: {record}"
+    if kind == "pass-with-decisions" and not APPROVED_RE.search(body):
+        return False, f"decisions not approved: {record}"
     return True, f"ok: {record}"
 
 
@@ -582,7 +650,7 @@ def main(argv: list[str]) -> int:
     if text is None:
         return 2
     if args.hash:
-        print(spec_hash(text))
+        print(plan_hash(text) if is_plan(spec) else spec_hash(text))
         return 0
     root = Path(args.root) if args.root else default_root(spec)
     if args.verify_record:
