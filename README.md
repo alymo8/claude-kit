@@ -83,7 +83,8 @@ is in [`plugin/`](plugin/).
     per-branch handoff file, a context meter, lean exploration.
 - **[`plugin/`](plugin/)** — a Claude Code plugin: the `supabase-cli`,
   `lean-context`, `audit` and `audit-deep` skills (the audits share a citation
-  checker, `check-findings.py`), the on-demand spec → HTML renderer, the `token-report.py`
+  checker, `check-findings.py`), the `teach` skill (copied as is from
+  [mattpocock/skills](https://github.com/mattpocock/skills), MIT), the on-demand spec → HTML renderer, the `token-report.py`
   measurement script, a status line, and seven hooks (regenerate the spec/plan
   index after edits and at every stop; report leftover worktrees, inject the
   branch handoff, inject the lean-context rule unless `CLAUDE_KIT_LEAN_CONTEXT=0`,
