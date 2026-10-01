@@ -39,8 +39,8 @@ This spec builds on two specs and assumes both have merged:
 - Tests: `tests/test_ship_many_command.py` (new), and additions to
   `tests/test_parallel_plan.py`, `tests/test_ship_command.py` and
   `tests/test_plugin_manifest.py`.
-- `tests/fixtures/parallel/specs/` (new): three small specs, `a.md`, `b.md`
-  and `c.md`, for the dry-run check.
+- `tests/fixtures/parallel/specs/` (new): three small specs, named a.md,
+  b.md and c.md, for the dry-run check.
 - `plugin/.claude-plugin/plugin.json`: version 0.8.0 → 0.9.0, and
   `/ship-many` appended to its `description`.
 
@@ -48,7 +48,9 @@ This spec builds on two specs and assumes both have merged:
 
 - The first real `/ship-many` run on real specs. It happens on the user's
   next use; this PR verifies the grouping, a dry run, and that a headless
-  `claude -p` session runs with the chosen flags.
+  `claude -p` session runs with the chosen flags. That a namespaced,
+  user-only command such as `/claude-kit:ship` expands in `-p` mode (which
+  the Claude Code docs state) is first exercised on that real run.
 - Specs in different repositories in one call.
 - Resuming an interrupted `/ship-many` run. Each child `/ship` leaves its own
   handoff, as today.
@@ -90,7 +92,9 @@ A spec with no paths (no `## Scope` section, or none before its Out label)
 overlaps nothing.
 
 Spec names are the arguments as given. `overlaps` lists each overlapping pair
-once, earlier spec first, with the paths of the earlier spec that overlap.
+once, earlier spec first, with the paths of the earlier spec that overlap,
+sorted. Pairs are ordered by the earlier spec's argument position, then the
+later spec's.
 
 ### `/ship-many` (`plugin/commands/ship-many.md`)
 
@@ -103,9 +107,15 @@ subagents at a time.
 1. **Pre-flight.** `claude --version` is 2.1.259 or later (needed for
    `--permission-prompts`); `git fetch origin` succeeds; `--max` is at least
    1. The **main checkout** is the first entry of `git worktree list`,
-   wherever `/ship-many` itself was started. Each spec argument is resolved
-   to an absolute path. A path is **inside the main checkout** when it starts
-   with the main checkout's root and does not start with the root of any
+   wherever `/ship-many` itself was started. If the session is
+   worktree-isolated, it first leaves the worktree (`ExitWorktree` with
+   `keep`), as `/ship` step 11 does, because later steps run commands
+   against the main checkout. Each spec argument is resolved to an absolute
+   path. Paths are compared after resolving them and normalising separators
+   and drive-letter case, by whole path components (one path is under
+   another only if it is relative to it, as Python's `Path.is_relative_to`
+   decides). A path is **inside the main checkout** when it is under the
+   main checkout's root and not under the root of any
    other entry of `git worktree list` (a linked worktree nested under it,
    such as `.claude/worktrees/...`, does not count), and
    `git -C <spec's folder> rev-parse --show-toplevel` equals the main
@@ -125,7 +135,8 @@ subagents at a time.
    with the fallback `~/.claude/skills/claude-kit/scripts/` when the variable
    is not expanded, as `/ship` does).
    - With `--dry-run`: only report each result. Never run the gate, edit a
-     spec, or write a record.
+     spec, or write a record. Titles are still recorded (next bullet), and a
+     duplicate title is reported but does not exclude the spec.
    - Otherwise, a spec that does not print `ok:` goes through the
      `claude-kit:spec-gate` skill, steps 1–6, in this session. A spec that
      passes is set to `approved`. A spec that fails is excluded and reported
@@ -183,8 +194,11 @@ subagents at a time.
      worktree on a `feat/` branch in `git worktree list --porcelain` now that
      was not in the step 1 list. Do not delete any of them.
 6. **Finish.** For each `timed out` child, look up its PR once more as in
-   step 5 (a child the timeout did not kill may have merged since), and
-   note in the report that it may still be running. `git fetch origin`.
+   step 5 (a child the timeout did not kill may have merged since). If the
+   PR is now `MERGED`, set the status to `merged`, fill in the PR and merge
+   commit, and drop its head branch from the leftovers. Otherwise keep
+   `timed out` and note in the report that it may still be running.
+   `git fetch origin`.
    Bring local `main` up with the same safe fast-forward rule as `/ship`
    step 11. Report one table (spec, wave,
    status, exit code, PR, merge commit, cost, log file), the total cost, every entry of
@@ -263,7 +277,9 @@ expected.
    exact-title PR match with `createdAt`, missing, duplicate, duplicate-title
    and not-in-this-repository (`rev-parse --show-toplevel`) specs
    reported as `excluded`, the timed-out
-   recheck in step 6, the child's spec path relative to the main checkout,
+   recheck in step 6 (a merged PR turns the status into `merged`), leaving
+   a worktree-isolated session first, the child's spec path relative to the
+   main checkout,
    the `git worktree list --porcelain` leftover check, and the five stop
    rules; `tests/test_ship_command.py` asserts step 7 titles the PR with the
    spec's title through `--title "$(cat <title file>)"`, fixes a mismatch

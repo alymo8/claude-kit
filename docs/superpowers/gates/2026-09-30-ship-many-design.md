@@ -1,10 +1,10 @@
 # Gate: `/ship-many`: ship independent specs concurrently
 
 - **Spec:** docs/superpowers/specs/2026-09-30-ship-many-design.md
-- **Spec SHA-256:** b590af80c49378d4cf84ceadeb59aa9bb1383de8d0e610b34ec041c135ec2753
+- **Spec SHA-256:** bd78f48d24e45b80ac7015ecaac47c8337ca56ff565191ffa008cdc92e562c35
 - **Verdict:** fail
 - **Date:** 2026-10-01
-- **Rounds:** 5 (rounds 4 and 5 run at the user's request)
+- **Rounds:** 6 (rounds 4–6 run at the user's request)
 
 ## Key decisions
 
@@ -62,8 +62,14 @@
   checkout root) (fixed after round 5, not re-reviewed)
 - round 5 [minor] Scope Out wording on the headless check; duplicate titles
   excluded; cost field named (`total_cost_usd`)
+- round 6 [blocking] step 6 recheck: a PR found `MERGED` turns the status
+  into `merged` and drops its leftover (fixed after round 6, not re-reviewed)
+- round 6 [minor] `overlaps` ordering; fixture names unbackticked in Scope;
+  path comparison normalised by components; dry run reports duplicate
+  titles; leave a worktree-isolated session first; headless slash-command
+  expansion first exercised on the real run (Scope Out)
 
 ## Open
 
-- Round 5's one blocking finding is fixed in the spec but not re-reviewed.
-  Blocking findings per round: 2, 4, 4, 2, 1.
+- Round 6's one blocking finding is fixed in the spec but not re-reviewed.
+  Blocking findings per round: 2, 4, 4, 2, 1, 1.
