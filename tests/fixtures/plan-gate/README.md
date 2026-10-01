@@ -23,7 +23,7 @@ is the control, and each seeded plan is a copy of it with one edit.
 2. Copy `spec.md` into `<tmp>-eval/` as `s.md`, and each plan as a neutral
    name in shuffled order (for example `p1.md` … `p7.md`), keeping the
    mapping only outside `<tmp>`. In each copy, rewrite the `**Spec:**` line to
-   the spec copy's absolute path.
+   the spec copy's absolute path, so it names the neutral `s.md`.
 3. For each copy, dispatch a new general-purpose subagent with the prompt from
    step 2 of `plugin/skills/plan-gate/SKILL.md`: the copy as the plan, `s.md`
    as the spec, `<tmp>` as the repository, and the rubric's absolute path.
