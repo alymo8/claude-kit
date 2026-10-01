@@ -6,6 +6,7 @@
 
 | Date | Spec | Status |
 |---|---|---|
+| 2026-09-30 | [Parallel plan tasks: independent tasks run as concurrent subagents](specs/2026-09-30-parallel-plan-tasks-design.md) | approved |
 | 2026-09-30 | [Plan gate: linter rules and independent plan reviewer](specs/2026-09-30-plan-gate-design.md) | implemented |
 | 2026-09-30 | [Spec gate: linter and independent reviewer](specs/2026-09-30-spec-gate-design.md) | implemented |
 | 2026-09-29 | [Repo audit skills: `audit` (basic) and `audit-deep`](specs/2026-09-29-repo-audit-skills-design.md) | implemented |
