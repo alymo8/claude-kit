@@ -102,13 +102,13 @@ A command still failing after that is handled like any other failed command.
    on the plan from step 3 must print `ok:`; otherwise return to step 3. Then
    run `python "${CLAUDE_PLUGIN_ROOT}/scripts/parallel-plan.py" waves <plan>`
    (fallback if the variable is not expanded:
-   `~/.claude/skills/claude-kit/scripts/parallel-plan.py`). If every wave has
-   one task, use `superpowers:executing-plans` with
-   `superpowers:test-driven-development`, in this session. Otherwise use
-   `claude-kit:parallel-tasks` with `<plan>` as its argument. If the script
+   `~/.claude/skills/claude-kit/scripts/parallel-plan.py`). If the script
    exits non-zero, write a `Ruling:` ledger line with its messages and use
-   `executing-plans` as above: this is not a stop rule, because the plan is
-   still executable one task at a time. The plan's review
+   `superpowers:executing-plans` with `superpowers:test-driven-development`,
+   in this session: this is not a stop rule, because the plan is still
+   executable one task at a time. Else, if every wave has one task, use
+   `executing-plans` the same way. Otherwise use `claude-kit:parallel-tasks`
+   with `<plan>` as its argument. The plan's review
    checkpoints are progress notes, not pauses. A failing test or an unclear
    instruction is debugged with `superpowers:systematic-debugging`, not
    escalated. Before every commit run the full test suite and lint from

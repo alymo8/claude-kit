@@ -41,9 +41,10 @@ built at the same time.
        `git log --merges --format=%P <feature-branch>`. A branch that never
        got a commit sits at an ancestor of HEAD and does not count. If it
        counts, write its missing `complete` ledger line and skip the task.
-       Otherwise remove any worktree at its path
-       (`git worktree remove --force`) and delete the branch
-       (`git branch -D`).
+       Otherwise delete the branch (`git branch -D`). Either way, if the task
+       is not skipped, run `git worktree prune` and remove any worktree or
+       leftover directory at the task's path (`git worktree remove --force`),
+       whether or not its branch still exists.
      - Create its worktree:
        `git worktree add <tmp>/claude-tasks/<branch-slug>/task-N -b <feature-branch>-task-N HEAD`.
 

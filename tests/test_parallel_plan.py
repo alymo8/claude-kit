@@ -133,3 +133,14 @@ def test_cli_bad_max_and_missing_file_exit_two(tmp_path):
     path.write_text(plan((["a.py"], "none")), encoding="utf-8")
     assert run_script(SCRIPT, "waves", str(path), "--max", "0").returncode == 2
     assert run_script(SCRIPT, "waves", str(tmp_path / "no.md")).returncode == 2
+
+
+def test_pytest_node_id_is_its_file():
+    assert pp.as_path("tests/x.py::test_a") == "tests/x.py"
+
+
+def test_wrapped_files_bullet_is_read():
+    text = plan((["a.py"], "none"), (["c.py"], "none")).replace(
+        "- Modify: `a.py`\n", "- Modify: `a.py` and\n  `c.py`\n", 1
+    )
+    assert waves(text) == [[1], [2]]

@@ -49,7 +49,7 @@ NOT_A_PATH = ("<", ">", "*", "$", "{", "://")
 
 def as_path(span: str) -> str | None:
     """The span as a path, or None when it is not one."""
-    span = LINE_SUFFIX_RE.sub("", span)
+    span = LINE_SUFFIX_RE.sub("", span.split("::", 1)[0])  # pytest node ids
     if not span or any(ch.isspace() for ch in span):
         return None
     if any(bad in span for bad in NOT_A_PATH) or span.startswith(("-", "~")):
@@ -76,22 +76,28 @@ def any_overlap(left, right) -> bool:
 def task_paths(body) -> set[str]:
     """Paths in the Create/Modify/Test bullets of a task's Files block."""
     out: set[str] = set()
-    in_files = False
+    in_files = in_bullet = False
     for _, line, code in body:
         if code:
-            in_files = False
+            in_files = in_bullet = False
             continue
         if sl.FILES_RE.match(line):
-            in_files = True
+            in_files, in_bullet = True, False
             continue
         match = BULLET_RE.match(line) if in_files else None
         if match:
-            for span in sl.SPAN_RE.findall(match.group(2)):
-                path = as_path(span)
-                if path:
-                    out.add(path)
-        elif line.strip() and not line.startswith((" ", "\t")):
-            in_files = False
+            text, in_bullet = match.group(2), True
+        elif in_bullet and line.startswith((" ", "\t")) and line.strip():
+            text = line  # a wrapped bullet's continuation line
+        else:
+            if line.strip() and not line.startswith((" ", "\t")):
+                in_files = False
+            in_bullet = False
+            continue
+        for span in sl.SPAN_RE.findall(text):
+            path = as_path(span)
+            if path:
+                out.add(path)
     return out
 
 
