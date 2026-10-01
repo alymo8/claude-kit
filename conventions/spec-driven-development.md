@@ -92,6 +92,37 @@ The gate writes `docs/superpowers/gates/<spec file name>` with the verdict and
 the spec's hash (Status line excluded). When the record is missing, failed or
 stale, `/ship` runs the gate itself, and stops if the gate fails.
 
+## Plan gate
+
+Every plan passes the kit's plan gate (`claude-kit:plan-gate`) before it is
+executed. The gate lints the plan with `plugin/scripts/spec-lint.py` (plan
+rules apply to files in a `plans` folder), then runs up to three rounds of a
+fresh-context reviewer that maps every spec item to a task, tries to execute
+each task cold, and checks task order and code claims
+([ADR 0016](../knowledge/decisions/0016-plan-gate-signs-off-on-new-decisions-only.md)).
+
+The linter requires, outside code blocks:
+
+- `- **Status:**` and `- **Date:** YYYY-MM-DD` bullets.
+- `**Goal:**` and `**Spec:**` lines before the first task; `**Spec:**` holds
+  one backticked path to a spec with a passing spec gate record.
+- `### Task N:` headings numbered 1, 2, 3 in order.
+- In each task: a `**Files:**` line, a step with `Run:` (or a command fence)
+  followed by `Expected:`, and a step whose label contains "commit".
+- No TBD, TODO or FIXME (upper case) or "as discussed" placeholders, and no
+  empty sections.
+- Every `- Modify:` path exists, or a `- Create:` or `- Test:` bullet of the
+  same or an earlier task names it.
+
+There are three verdicts. `pass`: the plan goes straight to execution and
+the user sees one line. `pass-with-decisions`: the plan makes choices the
+spec did not settle, and the user approves that list in one line. `fail`:
+the open items go to the user as questions. The gate writes
+`docs/superpowers/gates/plans/<plan file name>` with both the plan's hash
+(Status line and checkbox ticks excluded) and its spec's hash, so editing
+either makes the record stale. Under `/ship`, anything but `pass` stops the
+run.
+
 ## Self-contained plans
 
 A plan is a **handoff document**: execution may happen in a fresh session, in a

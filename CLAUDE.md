@@ -29,6 +29,15 @@ Do not let significant choices pass silently.
   get my agreement before building. Then verify against exactly those criteria and
   report the evidence (see the `superpowers:verification-before-completion` skill).
 
+## Designing a spec
+
+When designing a spec with me, present the design once, in full, then write
+the spec: no approval pause between design sections. Ask me only the
+questions the design needs (decisions under "Verify key decisions with me");
+I take part by answering them and giving instructions. The spec gate and the
+plan gate review the documents, and my sign-off is each gate's verdict and
+key decisions.
+
 ## Specs and plans
 
 Specs and plans are Markdown under `docs/superpowers/specs/` and
@@ -45,6 +54,13 @@ never copy the renderer into a repo.
 the gate's verdict and key decisions, answered in one line; I do not read the
 spec in full ([ADR 0015](knowledge/decisions/0015-spec-gate-replaces-full-read.md)).
 `/ship` requires a passing gate record under `docs/superpowers/gates/`.
+
+**Gate every plan.** After writing or revising a plan, run the
+`claude-kit:plan-gate` skill on it before offering an execution choice. A
+`pass` goes straight to the execution choice; `pass-with-decisions` needs my
+one-line OK on the decisions it lists first; I do not read the plan
+([ADR 0016](knowledge/decisions/0016-plan-gate-signs-off-on-new-decisions-only.md)).
+`/ship` gates its own plan and stops on any plan-introduced decision.
 
 Plans must be self-contained: whoever executes one has none of our conversation
 context. Apply every bullet under "Self-contained plans" in

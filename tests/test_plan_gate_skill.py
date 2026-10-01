@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
-from helpers import PLUGIN
+import json
+
+from helpers import PLUGIN, REPO
 
 GATE = PLUGIN / "skills" / "plan-gate"
 LINTER_REL = "../../scripts/spec-lint.py"
@@ -61,3 +63,16 @@ def test_rubric_defines_finding_format_and_probes():
         assert field in rubric
     for probe in ("Cold execution", "Order", "Code claims", "scope creep"):
         assert probe in rubric
+
+
+def test_docs_and_manifest_wire_the_gate():
+    def text(rel):
+        return (REPO / rel).read_text(encoding="utf-8")
+
+    assert "## Plan gate" in text("conventions/spec-driven-development.md")
+    adr = "0016-plan-gate-signs-off-on-new-decisions-only.md"
+    assert (REPO / "knowledge" / "decisions" / adr).is_file()
+    assert f"]({adr})" in text("knowledge/decisions/README.md")
+    manifest = json.loads(text("plugin/.claude-plugin/plugin.json"))
+    assert manifest["version"] == "0.7.0"
+    assert "spec and plan gates" in manifest["description"]
