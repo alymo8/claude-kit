@@ -102,6 +102,10 @@ SPEC_LINE_RE = re.compile(r"^\*\*Spec:\*\*")
 FILES_RE = re.compile(r"^\*\*Files:\*\*")
 STEP_RE = re.compile(r"^\s*- \[[ xX]\] \*\*(Step \d+[^*]*)\*\*")
 COMMIT_RE = re.compile(r"\bcommit", re.I)
+RUN_RE = re.compile(r"\bRun\b")
+ARROW_RE = re.compile(r"→\s*\S")  # "Run: `cmd` → result" states the output
+NO_FILES_RE = re.compile(r"^\*\*Files:\*\*\s*none\b", re.I)
+PARENS_RE = re.compile(r"\([^)]*\)")
 COMMAND_TAGS = ("", "bash", "sh", "shell", "powershell", "pwsh", "console")
 FILE_ITEM_RE = re.compile(r"^- (Create|Modify|Test):(.*)$")
 CHECKED_RE = re.compile(r"^(\s*)- \[[xX]\]")
@@ -426,7 +430,10 @@ def steps(body: list[Line]) -> list[list[Line]]:
 
 
 def runs_then_expects(step: list[Line], openers: dict[int, str]) -> bool:
-    """Whether a ``Run:`` line or command fence comes before an ``Expected:`` line."""
+    """Whether a run (a ``Run`` line or a command fence) comes before its output.
+
+    The output is an ``Expected:`` line, or an arrow on the ``Run`` line itself.
+    """
     seen_run = False
     for number, line, code in step:
         if code:
@@ -436,7 +443,9 @@ def runs_then_expects(step: list[Line], openers: dict[int, str]) -> bool:
             continue
         if seen_run and "Expected:" in line:
             return True
-        if "Run:" in line:
+        if RUN_RE.search(line):
+            if ARROW_RE.search(line):
+                return True
             seen_run = True
     return False
 
@@ -453,8 +462,11 @@ def check_task_parts(
         if not any(runs_then_expects(step, openers) for step in parts):
             message = f"Task {task}: no step with 'Run:' then 'Expected:'"
             out.append((number, "P6-task-parts", message))
-        labels = [STEP_RE.match(step[0][1]).group(1) for step in parts]
-        if not any(COMMIT_RE.search(label) for label in labels):
+        no_files = any(NO_FILES_RE.match(t) for _, t, c in body if not c)
+        committed = any(COMMIT_RE.search(step[0][1]) for step in parts) or any(
+            c and "git commit" in t for _, t, c in body
+        )
+        if not committed and not no_files:
             out.append((number, "P6-task-parts", f"Task {task}: no commit step"))
     return out
 
@@ -489,7 +501,8 @@ def file_items(body: list[Line]) -> list[tuple[int, str, list[str]]]:
             continue
         match = FILE_ITEM_RE.match(line) if in_files else None
         if match:
-            spans = [LINE_SUFFIX_RE.sub("", s) for s in SPAN_RE.findall(match.group(2))]
+            rest = PARENS_RE.sub("", match.group(2))  # asides are not file names
+            spans = [LINE_SUFFIX_RE.sub("", s) for s in SPAN_RE.findall(rest)]
             out.append(
                 (number, match.group(1), [s for s in spans if looks_like_path(s)])
             )

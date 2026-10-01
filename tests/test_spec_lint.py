@@ -624,3 +624,48 @@ def test_verify_plan_record_survives_ticks_and_approval(root):
     plan.write_text(text, encoding="utf-8")
     result = run_script(SCRIPT, "--verify-record", str(plan), "--root", str(root))
     assert result.returncode == 0
+
+
+# Back-test loosenings: shapes sound existing plans use that the rules misread.
+
+
+def test_p9_ignores_paths_in_parentheses(root):
+    plan_root(root)
+    text = PLAN.replace(
+        "- Modify: `src/app.py`",
+        "- Modify: `src/app.py` (verify `tools/x.sh` is still relative)",
+    )
+    assert sl.lint_plan(text, root) == []
+
+
+def test_p6_arrow_states_the_expected_output(root):
+    plan_root(root)
+    text = PLAN.replace(
+        "Run: `pytest tests/test_new.py -q`\nExpected: FAIL",
+        "Run: `pytest tests/test_new.py -q` → FAIL",
+    )
+    assert sl.lint_plan(text, root) == []
+
+
+def test_p6_run_without_a_colon(root):
+    plan_root(root)
+    text = PLAN.replace("Run: `pytest", "Run\n`pytest")
+    assert sl.lint_plan(text, root) == []
+
+
+def test_p6_commit_in_step_text_or_command_fence(root):
+    plan_root(root)
+    text = PLAN.replace(
+        "- [ ] **Step 2: Commit**", "- [ ] **Step 2:** Suite, then commit."
+    )
+    text = text.replace("- [ ] **Step 3: Commit**", "- [ ] **Step 3: Save**")
+    assert sl.lint_plan(text, root) == []
+
+
+def test_p6_no_commit_needed_when_files_are_none(root):
+    plan_root(root)
+    text = PLAN.replace(
+        "**Files:**\n- Modify: `src/new.py`", "**Files:** none changed."
+    )
+    text = text.replace("- [ ] **Step 2: Commit**", "- [ ] **Step 2: Report**")
+    assert sl.lint_plan(text, root) == []
