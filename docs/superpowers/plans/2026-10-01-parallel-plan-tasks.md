@@ -1025,7 +1025,7 @@ Expected: `pytest` all pass; ruff clean.
 ````markdown
 # Smoke Plan
 
-- **Status:** implemented
+- **Status:** approved
 - **Date:** 2026-10-01
 
 **Goal:** Add three tiny modules under `smoke/` to exercise parallel waves.
