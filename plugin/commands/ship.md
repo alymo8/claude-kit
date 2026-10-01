@@ -37,6 +37,7 @@ These are the only reasons to stop. When one fires: write the handoff with the
   `- **Decisions approved:** <today>` to the record and set the plan's Status
   to `approved`; otherwise update the plan (or the spec, which is gated again)
   and rerun the plan gate. Commit, and continue `/ship` from step 4.
+- The PR title does not match the spec's title after one fix in step 7.
 
 ## Git lock retry
 
@@ -121,14 +122,27 @@ A command still failing after that is handled like any other failed command.
 6. **Review.** Use `superpowers:requesting-code-review` on `origin/main..HEAD`,
    then `superpowers:receiving-code-review`. Fix every finding you can verify;
    commit, re-run tests, push. A finding that needs a decision is a stop rule.
-7. **PR.** `gh pr create --title "<spec title>" --body-file <file>` where the body
-   has: Summary, links to the spec, the plan and the plan gate record
+7. **PR.** The PR title is the spec's **title**: the first line outside code
+   fences that starts with `# `, with the `# ` prefix and trailing whitespace
+   removed (backticks and punctuation kept). Write it to a file outside the
+   repo and run `gh pr create --title "$(cat <title file>)" --body-file <file>`
+   (a command substitution's output is not expanded again, so backticks and
+   `$` arrive unchanged), where the body has: Summary, links to the spec, the
+   plan and the plan gate record
    (`docs/superpowers/gates/plans/<plan file name>`), Verification (the exact
    commands and their results), and the attribution line the session requires.
+   Then compare `gh pr view --json title` with the title; on a mismatch run
+   `gh pr edit --title "$(cat <title file>)"` once and compare again. A title
+   that still differs is a stop rule.
 8. **Green CI.** `gh pr checks --watch --fail-fast`. On red, repeat the step-5 fix
    loop.
 9. **Merge.** `gh pr view --json mergeStateStatus`. If `BEHIND` or `DIRTY`:
-   `git fetch origin && git rebase origin/main`, resolve every conflict, re-run
+   `git fetch origin && git rebase origin/main`, resolve every conflict (a
+   conflict in `docs/superpowers/README.md` is resolved by running
+   `python "${CLAUDE_PLUGIN_ROOT}/scripts/spec-index.py" docs/superpowers`, with
+   the fallback `~/.claude/skills/claude-kit/scripts/spec-index.py`, then
+   `git add docs/superpowers/README.md`, never by hand; other files as
+   before), then `git rebase --continue`, re-run
    tests, `git push --force-with-lease`, return to step 8. Then
    `gh pr merge --squash --delete-branch`. Run from a worktree this exits
    non-zero *after* merging, because it cannot check out `main` here; confirm
