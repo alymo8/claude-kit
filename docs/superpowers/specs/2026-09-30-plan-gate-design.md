@@ -1,6 +1,6 @@
 # Plan gate: linter rules and independent plan reviewer
 
-- **Status:** approved
+- **Status:** implemented
 - **Date:** 2026-09-30
 
 ## Purpose
