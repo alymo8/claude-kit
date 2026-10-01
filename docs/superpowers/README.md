@@ -18,6 +18,7 @@
 
 | Date | Plan | Status |
 |---|---|---|
+| 2026-10-01 | [Parallel Plan Tasks Implementation Plan](plans/2026-10-01-parallel-plan-tasks.md) | approved |
 | 2026-09-30 | [Plan Gate Implementation Plan](plans/2026-09-30-plan-gate.md) | implemented |
 | 2026-09-30 | [Spec Gate Implementation Plan](plans/2026-09-30-spec-gate.md) | implemented |
 | 2026-09-29 | [Repo audit skills Implementation Plan](plans/2026-09-29-repo-audit-skills.md) | implemented |
