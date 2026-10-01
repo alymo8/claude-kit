@@ -109,3 +109,26 @@ def test_git_lock_retry_rule():
     rule = SHIP.split("## Git lock retry", 1)[1].split("## Steps", 1)[0]
     assert "Unable to create '...lock': File exists" in rule
     assert "cannot lock ref" in rule
+
+
+def test_step_7_titles_the_pr_with_a_single_quoted_title():
+    step = _step(7)
+    assert "--title '<title>'" in step and "'\\''" in step
+    assert "$(" not in step  # no command substitution: worktree guards refuse it
+    assert "gh pr view --json title" in step and "gh pr edit" in step
+    assert "first line outside code fences" in step
+
+
+def test_title_mismatch_is_a_stop_rule():
+    stops = SHIP.split("## Stop rules", 1)[1].split("## Git lock retry", 1)[0]
+    assert "PR title does not match the spec's title" in stops
+
+
+def test_step_9_regenerates_the_spec_index():
+    step = _step(9)
+    assert "spec-index.py" in step
+    assert "git add docs/superpowers/README.md" in step
+
+
+def test_step_7_uses_the_bash_tool():
+    assert "Bash tool" in _step(7)

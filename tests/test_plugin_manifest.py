@@ -38,6 +38,7 @@ def test_commands_exist_with_frontmatter():
         "adopt-conventions": "scripts/scaffold.py",
         "handoff": "scripts/handoff.py",
         "ship": None,
+        "ship-many": "scripts/parallel-plan.py",
         "spec-html": "scripts/open-spec.py",
     }
     for name, script in expected.items():
@@ -119,7 +120,7 @@ def test_stop_hook_regenerates_spec_index():
 
 
 def test_side_effecting_commands_are_user_only():
-    user_only = {"ship", "new-project", "adopt-conventions", "spec-html"}
+    user_only = {"ship", "ship-many", "new-project", "adopt-conventions", "spec-html"}
     for name in user_only | {"handoff"}:
         text = (PLUGIN / "commands" / f"{name}.md").read_text(encoding="utf-8")
         frontmatter = text.split("---", 2)[1]

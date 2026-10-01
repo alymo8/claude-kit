@@ -125,6 +125,14 @@ squash-merge → verify `main` → cleanup, with no further check-ins. Invoking 
 my explicit approval for the merge; it stops only on the rules listed in the
 command.
 
+**`/ship-many <spec.md> ...` ships several approved specs at once.** It gates
+each spec, groups the ones whose Scope In lists share no file
+(`parallel-plan.py specs`), and runs each group's specs as concurrent
+headless `/ship` runs (at most 3 by default); specs that share a file run in
+sequence. Invoking it is my approval for every listed spec and its merge, like
+`/ship`. Use `--dry-run` first to see the waves without launching anything
+([ADR 0018](knowledge/decisions/0018-ship-many-headless-children.md)).
+
 ## Developing the kit (this repo)
 
 ```
