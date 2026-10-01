@@ -112,7 +112,11 @@ A command still failing after that is handled like any other failed command.
    checkpoints are progress notes, not pauses. A failing test or an unclear
    instruction is debugged with `superpowers:systematic-debugging`, not
    escalated. Before every commit run the full test suite and lint from
-   `CLAUDE.md`; commit per task.
+   `CLAUDE.md`; commit per task. Before the first Docker command, record the
+   baseline (`docker ps -aq`, `docker images -q`, `docker volume ls -q`,
+   `docker network ls -q`) in a scratch file outside the repo; then label every
+   object the task creates `claude-kit.task=<slug>` (compose: `-p <slug>`) and
+   build with `docker buildx create --name <slug>`.
 5. **CI.** `git push -u origin feat/<slug>`. Find the run for the pushed commit:
    `gh run list --commit $(git rev-parse HEAD) --json databaseId,status,conclusion`
    (retry every 15 s until it appears), then `gh run watch <id> --exit-status`.
@@ -147,17 +151,21 @@ A command still failing after that is handled like any other failed command.
     out of the feature worktree (`ExitWorktree` with `keep` if the session
     entered it with `EnterWorktree`, otherwise change directory): Windows cannot
     remove a directory in use, and a worktree-isolated session may not run git
-    against the main checkout. Run every git command as
+    against the main checkout. If the task used Docker, clean it up next, while
+    the worktree (and any compose file in it) still exists: stop and remove the
+    containers labelled `claude-kit.task=<slug>` (`docker compose -p <slug> down
+    --volumes --rmi local` for a stack); remove the images, volumes and networks
+    the task created or pulled that are not in the step-4 baseline; and
+    `docker buildx rm <slug>`. Never run a prune without a
+    `label=claude-kit.task=<slug>` filter, and never remove anything in the
+    baseline. Run every git command as
     `git -C <main-checkout> ...`; none of them changes that checkout's files or
     branch: `worktree remove <worktree-path>`, `worktree prune`,
     `branch -D feat/<slug>`, `push origin --delete feat/<slug>` (the merge's
     `--delete-branch` aborts before the remote step when run from a worktree),
     `fetch --prune`. Delete `.claude/handoffs/feat_<slug>.md` (`handoff.py` writes `/`
     as `_`) if present, and
-    delete any scratch files you created outside the repo. Stop the Docker
-    containers the task started and remove the containers, images, volumes,
-    networks and build cache it created, by name, ID or label (never a
-    machine-wide prune; leave pre-existing Docker objects alone). Then bring local `main`
+    delete any scratch files you created outside the repo. Then bring local `main`
     up only when that is safe: if `git -C <main-checkout> branch --show-current`
     is `main` and `git -C <main-checkout> status --porcelain` is empty (a clean
     tree), run `git -C <main-checkout> merge --ff-only origin/main`. If either
@@ -165,7 +173,9 @@ A command still failing after that is handled like any other failed command.
     leave local `main` as it is and say so in the report; this is not a stop
     rule. Check: `git worktree list` shows neither the feature worktree nor
     `<tmp>`, and `git ls-remote --heads origin` and `git branch -a` have no
-    `feat/<slug>`.
+    `feat/<slug>`; if the task used Docker,
+    `docker ps -a --filter label=claude-kit.task=<slug> -q` is empty and
+    `docker buildx ls` has no `<slug>`.
 12. **Report.** One message: the PR link, the squash commit on `main`, the
     verification output from step 10, whether local `main` was fast-forwarded
     (and why not, if not), the review findings you fixed, and anything left out

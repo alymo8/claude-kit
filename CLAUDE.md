@@ -103,10 +103,17 @@ pulling the latest `main` so the worktree branches from up-to-date code.
 (or I have explicitly abandoned it), use `superpowers:finishing-a-development-branch`
 to integrate and clean up: the worktree removed and pruned, the branch deleted
 locally and on the remote, and any scratch files created outside the repo deleted.
-Docker is part of the workspace: stop the containers the task started, and remove
-the containers, images, volumes, networks and build cache it created. Target them
-by name, ID or label; never run a machine-wide `docker system prune` or
-`docker builder prune -a`, and leave anything that existed before the task alone.
+Docker is part of the workspace. Before a task first uses Docker, make its objects
+identifiable. Record the IDs that already exist (`docker ps -aq`, `images -q`,
+`volume ls -q`, `network ls -q`) in a scratch file outside the repo. Label what the
+task creates (`--label claude-kit.task=<slug>`, compose `-p <slug>`) and build with
+its own builder (`docker buildx create --name <slug>`). At cleanup, before removing
+the worktree: stop and remove the task's containers (`docker compose -p <slug> down
+--volumes --rmi local` for a stack), remove the images, volumes and networks it
+created or pulled that are not in the baseline, and remove its builder
+(`docker buildx rm <slug>`, which drops that build cache). Never run a prune
+(`docker system|volume|image|container|network|builder prune`) without a
+`label=claude-kit.task=<slug>` filter, and never remove anything in the baseline.
 The kit's session-start hook reports leftover worktrees and branches; treat that as
 a to-do, but **never delete anything with unmerged commits or uncommitted changes
 without asking me first.** The normal end of a working session on a feature is
