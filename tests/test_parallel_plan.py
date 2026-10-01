@@ -144,3 +144,86 @@ def test_wrapped_files_bullet_is_read():
         "- Modify: `a.py`\n", "- Modify: `a.py` and\n  `c.py`\n", 1
     )
     assert waves(text) == [[1], [2]]
+
+
+def spec(*paths, out=()):
+    """A spec whose Scope In names ``paths`` and whose Out names ``out``."""
+    text = "# S\n\n- **Status:** draft\n\n## Scope\n\n**In:**\n\n"
+    text += "".join(f"- `{p}`: x.\n" for p in paths)
+    text += "\n**Out:**\n\n" + "".join(f"- `{p}`: later.\n" for p in out)
+    return text
+
+
+def grouped(*texts, max_size=3):
+    named = [(name, text) for name, text in zip("abcdef", texts, strict=False)]
+    return pp.plan_specs(named, max_size)
+
+
+def test_disjoint_specs_share_a_wave():
+    assert grouped(spec("x/a.py"), spec("x/b.py")) == ([["a", "b"]], [])
+
+
+def test_shared_scope_path_splits_and_is_listed():
+    waves, found = grouped(spec("x/a.py"), spec("x/a.py"))
+    assert waves == [["a"], ["b"]]
+    assert found == [["a", "b", ["x/a.py"]]]
+
+
+def test_shared_root_file_splits():
+    assert grouped(spec("CLAUDE.md"), spec("CLAUDE.md"))[0] == [["a"], ["b"]]
+
+
+def test_spec_index_alone_never_splits():
+    index = "docs/superpowers/README.md"
+    assert grouped(spec(index), spec(index)) == ([["a", "b"]], [])
+
+
+def test_same_numbered_adr_files_split():
+    first = spec("knowledge/decisions/0019-one.md")
+    second = spec("knowledge/decisions/0019-two.md")
+    assert grouped(first, second)[0] == [["a"], ["b"]]
+
+
+def test_paths_after_out_are_ignored():
+    assert grouped(spec("x/a.py"), spec("x/b.py", out=["x/a.py"]))[0] == [["a", "b"]]
+
+
+def test_max_caps_a_wave():
+    texts = [spec(f"x/{n}.py") for n in "abcd"]
+    assert grouped(*texts)[0] == [["a", "b", "c"], ["d"]]
+
+
+def test_spec_without_scope_overlaps_nothing():
+    assert grouped("# S\n\nNo scope.\n", spec("x/a.py"))[0] == [["a", "b"]]
+
+
+def test_overlaps_are_ordered_and_sorted():
+    texts = (spec("x/b.py", "x/a.py"), spec("x/a.py", "x/b.py"), spec("x/a.py"))
+    waves, found = grouped(*texts)
+    assert waves == [["a"], ["b"], ["c"]]
+    assert found == [
+        ["a", "b", ["x/a.py", "x/b.py"]],
+        ["a", "c", ["x/a.py"]],
+        ["b", "c", ["x/a.py"]],
+    ]
+
+
+def test_cli_specs_prints_json_with_names_as_given(tmp_path):
+    first, second = tmp_path / "one.md", tmp_path / "two.md"
+    first.write_text(spec("x/a.py"), encoding="utf-8")
+    second.write_text(spec("x/a.py"), encoding="utf-8")
+    result = run_script(SCRIPT, "specs", str(first), str(second))
+    assert result.returncode == 0, result.stderr
+    assert json.loads(result.stdout) == {
+        "waves": [[str(first)], [str(second)]],
+        "overlaps": [[str(first), str(second), ["x/a.py"]]],
+    }
+
+
+def test_cli_specs_bad_input_exits_two(tmp_path):
+    path = tmp_path / "one.md"
+    path.write_text(spec("x/a.py"), encoding="utf-8")
+    assert run_script(SCRIPT, "specs", str(path), "--max", "0").returncode == 2
+    missing = run_script(SCRIPT, "specs", str(tmp_path / "no.md"))
+    assert missing.returncode == 2
+    assert "cannot read" in missing.stderr
