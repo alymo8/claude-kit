@@ -1,10 +1,10 @@
 # Gate: `/ship-many`: ship independent specs concurrently
 
 - **Spec:** docs/superpowers/specs/2026-09-30-ship-many-design.md
-- **Spec SHA-256:** 5516a26c704092400198a47dd39fa6a8c84256767309dba77e2352fe4d853991
+- **Spec SHA-256:** b590af80c49378d4cf84ceadeb59aa9bb1383de8d0e610b34ec041c135ec2753
 - **Verdict:** fail
 - **Date:** 2026-10-01
-- **Rounds:** 4 (round 4 run at the user's request)
+- **Rounds:** 5 (rounds 4 and 5 run at the user's request)
 
 ## Key decisions
 
@@ -57,8 +57,13 @@
   `/ship` stop rule (fixed after round 4, not re-reviewed)
 - round 4 [minor] script invocation paths; duplicate specs excluded; what a
   stop rule does; status-order wording; fixture names and expected output
+- round 5 [blocking] specs in a separate repository nested under the main
+  checkout are now excluded (`rev-parse --show-toplevel` must equal the main
+  checkout root) (fixed after round 5, not re-reviewed)
+- round 5 [minor] Scope Out wording on the headless check; duplicate titles
+  excluded; cost field named (`total_cost_usd`)
 
 ## Open
 
-- Round 4's two blocking findings are fixed in the spec but not
-  re-reviewed. Blocking findings per round: 2, 4, 4, 2.
+- Round 5's one blocking finding is fixed in the spec but not re-reviewed.
+  Blocking findings per round: 2, 4, 4, 2, 1.
