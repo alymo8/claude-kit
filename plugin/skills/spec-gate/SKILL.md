@@ -13,8 +13,8 @@ the work without questions.
 
 ## Setup
 
-- **Spec:** `$ARGUMENTS` if given, else the newest `*.md` under
-  `docs/superpowers/specs/`. Name it in one line.
+- **Spec:** `$ARGUMENTS` if given, else the `*.md` under `docs/superpowers/specs/`
+  whose file name sorts last (the newest date prefix). Name it in one line.
 - **Linter:** `python <this skill's directory>/../../scripts/spec-lint.py`
   (fallback: `~/.claude/skills/claude-kit/scripts/spec-lint.py`).
 - **Rubric:** `rubric.md` in this skill's directory.

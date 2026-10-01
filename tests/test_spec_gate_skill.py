@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from helpers import PLUGIN
+from helpers import PLUGIN, REPO
 
 GATE = PLUGIN / "skills" / "spec-gate"
 LINTER_REL = "../../scripts/spec-lint.py"
@@ -51,3 +51,14 @@ def test_rubric_defines_finding_format_and_probes():
     for field in ("**Line:**", "**Problem:**", "**Fix:**"):
         assert field in rubric
     assert "more than 15 tasks" in rubric
+
+
+def test_docs_wire_the_gate():
+    def text(rel):
+        return (REPO / rel).read_text(encoding="utf-8")
+
+    assert "claude-kit:spec-gate" in text("CLAUDE.md")
+    assert "## Spec gate" in text("conventions/spec-driven-development.md")
+    adr = "0015-spec-gate-replaces-full-read.md"
+    assert (REPO / "knowledge" / "decisions" / adr).is_file()
+    assert f"]({adr})" in text("knowledge/decisions/README.md")

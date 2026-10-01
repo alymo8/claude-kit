@@ -47,8 +47,8 @@ and relies on gated specs.
   required spec sections the linter enforces.
 - `knowledge/decisions/0015-spec-gate-replaces-full-read.md` (new): ADR 0015.
 - Tests: `tests/test_spec_lint.py` (new), additions to
-  `tests/test_ship_command.py`, and a `test_spec_gate_skill` check in the
-  style of `tests/test_audit_skills.py`.
+  `tests/test_ship_command.py`, and `tests/test_spec_gate_skill.py` (new),
+  structure checks in the style of `tests/test_audit_skills.py`.
 - A reviewer eval: `tests/fixtures/spec-gate/` (new) with seeded-defect specs
   and a README describing how to run the eval manually.
 - Plugin version bump in `plugin/.claude-plugin/plugin.json` (0.5.2 → 0.6.0).
@@ -87,17 +87,20 @@ already describes, in the form existing specs use:
 ```
 python spec-lint.py SPEC.md [--root DIR]        # lint
 python spec-lint.py --hash SPEC.md               # print the spec hash
-python spec-lint.py --verify-record SPEC.md      # check the gate record
+python spec-lint.py --verify-record SPEC.md [--root DIR]  # check the gate record
 ```
 
-`--root` is the repo root for path checks. It defaults to
+`--root` is the repo root for path checks and gate records (`--hash` does not
+use it). It defaults to
 `git rev-parse --show-toplevel` run from the spec's directory, and falls back
 to the directory three levels above the spec's folder (the parent of `docs/`).
 
 **Lint mode** prints one line per violation as `SPEC:LINE: RULE message` and
 then a summary line. Exit 0 when clean, 1 on any violation, 2 on bad usage or
 an unreadable file. Text inside fenced code blocks is ignored by every rule.
-The rules:
+A violation about something absent reports line 1 (L1, L2, L3), except L4,
+which reports the `## Scope` heading line (with no Scope section, only L3
+fires). The rules:
 
 | Rule | Check |
 |---|---|
@@ -105,9 +108,9 @@ The rules:
 | `L2-date` | A Date bullet in `YYYY-MM-DD` form. |
 | `L3-section` | Each required H2 section is present. One violation per missing section. |
 | `L4-out-of-scope` | An `**Out:**` marker in Scope (a qualified label such as `**Out (later specs):**` counts), or an `## Out of scope` section, with at least one bullet after it. |
-| `L5-placeholder` | No `TBD`, `TODO`, `FIXME`, `???` or `as discussed` (case-insensitive, whole word) anywhere outside backticked spans and double-quoted text. No `etc.` outside them in the Scope or Success criteria sections. |
-| `L6-empty` | No heading followed directly by a heading of the same or a higher level, or by end of file, with no text in between. |
-| `L7-criterion` | Every top-level list item (`-`, `*` or `N.`) under Success criteria names how it is verified: it contains a backticked span, or one of the words `test`, `pytest`, `run`, `command`, `exit`, `output`, `prints`, `returns`, `asserts`, `manual`, `verify`, `check` (case-insensitive, whole word). |
+| `L5-placeholder` | No `TBD`, `TODO`, `FIXME` or `as discussed` (case-insensitive, whole word), or a literal `???`, anywhere outside backticked spans and double-quoted text. No `etc.` outside them in the Scope or Success criteria sections. |
+| `L6-empty` | No heading followed directly by a heading of the same or a higher level (as many or fewer `#`), or by end of file, with no text in between. |
+| `L7-criterion` | Every top-level list item (`-`, `*` or `N.`) under Success criteria names how it is verified. An item's text is its first line plus every following line up to the next top-level item, including nested sub-items. That text contains a backticked span, or one of the words `test`, `pytest`, `run`, `command`, `exit`, `output`, `prints`, `returns`, `asserts`, `manual`, `verify`, `check` (case-insensitive, whole word). |
 | `L8-path` | Every backticked span in the Scope section before its Out label (the files the spec changes) that looks like a repo path exists under `--root`. Paths elsewhere may be relative to another folder or repo, so the reviewer checks those. A missing Scope path still passes when some line of the spec contains both that span and `(new)`, so a new file is marked once, where it is introduced. A span "looks like a repo path" when it contains `/`, has no whitespace, does not contain `<`, `>`, `*`, `$`, `{` or `://`, does not start with `-` or `~`, and either has a file extension or ends with `/`. |
 
 **Hash mode** prints the SHA-256 hex digest of the spec's UTF-8 text, after
@@ -173,8 +176,8 @@ The reviewer flags only; it never edits the spec.
 
 ### `plugin/skills/spec-gate/SKILL.md`
 
-`/spec-gate <spec.md>` (default: the newest spec under
-`docs/superpowers/specs/`). The procedure:
+`/spec-gate <spec.md>` (default: the spec under `docs/superpowers/specs/`
+whose file name sorts last, i.e. the newest date prefix). The procedure:
 
 1. **Lint.** Run `spec-lint.py` on the spec, fix every violation, and re-run
    until it exits 0.
@@ -306,6 +309,11 @@ user's review is the gate's one-line verdict, not a read of the spec.
    the PR, and commit its gate record. Then `spec-lint.py --verify-record` on
    this spec exits 0. (Spec 2 will be gated the same way when it is written;
    that is not part of this PR.)
-8. **The suite and lint pass.** `pytest` and
+8. **Docs are wired.** `pytest tests/test_spec_gate_skill.py` checks that the
+   workspace `CLAUDE.md` names `claude-kit:spec-gate`, that
+   `conventions/spec-driven-development.md` has a `## Spec gate` section, and
+   that ADR 0015 exists and has a row in `knowledge/decisions/README.md`.
+   A manual check confirms `plugin/.claude-plugin/plugin.json` says `0.6.0`.
+9. **The suite and lint pass.** `pytest` and
    `ruff check plugin tests; ruff format --check plugin tests` pass, locally
    and in CI.
