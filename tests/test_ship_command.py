@@ -38,3 +38,24 @@ def test_cleanup_does_not_run_inside_the_main_checkout():
     # Local main moves only by a guarded fast-forward, after leaving the worktree.
     assert "merge --ff-only origin/main" in step and "clean tree" in step
     assert step.index("ExitWorktree") < step.index("merge --ff-only")
+
+
+def test_step_zero_requires_a_valid_gate_record():
+    step = _step(0)
+    assert "spec-lint.py" in step and "--verify-record" in step
+    assert "claude-kit:spec-gate" in step
+
+
+def test_failed_gate_is_a_stop_rule():
+    stops = SHIP.split("## Stop rules", 1)[1].split("## Steps", 1)[0]
+    assert "gate fails" in stops.lower()
+
+
+def test_gate_record_moves_into_the_worktree_with_the_spec():
+    assert "docs/superpowers/gates/" in _step(2)
+
+
+def test_gated_spec_is_marked_approved_even_when_the_record_is_valid():
+    step = _step(0)
+    ok_branch = step.split("Otherwise", 1)[0]
+    assert "approved" in ok_branch

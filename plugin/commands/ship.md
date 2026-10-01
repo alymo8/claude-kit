@@ -27,9 +27,19 @@ These are the only reasons to stop. When one fires: write the handoff with the
   required checks). An error printed *after* the PR is merged is not a refusal;
   step 9 says how to tell them apart.
 - `git fetch origin` fails in step 1.
+- The spec gate fails in step 0. Report the gate record's Open items.
 
 ## Steps
 
+0. **Gate.** Run
+   `python "${CLAUDE_PLUGIN_ROOT}/scripts/spec-lint.py" --verify-record <spec>`
+   (fallback if the variable is not expanded:
+   `~/.claude/skills/claude-kit/scripts/spec-lint.py`). If it prints `ok:`,
+   set the spec's Status to `approved` if it is not already, and continue.
+   Otherwise run the `claude-kit:spec-gate` skill on the spec, steps
+   1–6 (skip step 7's question: invoking `/ship` is the approval), then set the
+   spec's Status to `approved`. On a pass verdict, continue; on a fail, that
+   is a stop rule.
 1. **Pre-flight.** If you are already in a worktree on a feature branch created
    for this spec, do only step 2's spec hand-off, then go to step 3 (the
    worktree and baseline test run are skipped). Otherwise: `git fetch origin`.
@@ -38,10 +48,12 @@ These are the only reasons to stop. When one fires: write the handoff with the
    it.
 2. **Worktree.** Use `superpowers:using-git-worktrees`. Branch `feat/<slug>` from
    `origin/main`, not local `main` (the git fallback is
-   `git worktree add <path> -b feat/<slug> origin/main`). If the spec is not on
-   `origin/main` (it is usually an untracked file in the main checkout), copy it
-   to the same path in the worktree and commit it there. Then, only if the main
-   checkout's copy is untracked and identical to the committed one
+   `git worktree add <path> -b feat/<slug> origin/main`). If the spec or its
+   gate record (`docs/superpowers/gates/<spec file name>`) is missing from
+   `origin/main` or differs from it (they are usually untracked files in the
+   main checkout), copy each to the same path in the worktree and commit them
+   there. Then, for each of the two files, only if the main checkout's copy is
+   untracked and identical to the committed one
    (`git diff --no-index --quiet`), delete it from the main checkout, so the
    merge can later reach local `main` without an "untracked file would be
    overwritten" error; otherwise leave it and mention it in the report. Run the

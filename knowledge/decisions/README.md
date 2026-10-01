@@ -20,3 +20,4 @@ the next number; superseded ones are never deleted.
 | [0012](0012-jev-triage-pilot.md) | jev triage pilot is an opt-in third-party judge | moved | 2026-09-28 |
 | [0013](0013-ship-never-works-in-local-main.md) | `/ship` never works in or depends on the local `main` checkout | accepted | 2026-09-29 |
 | [0014](0014-lean-context-env-switch.md) | Lean context is switched by an env var, on by default | accepted | 2026-09-29 |
+| [0015](0015-spec-gate-replaces-full-read.md) | A spec gate replaces the user's full read of a spec | accepted | 2026-09-30 |
