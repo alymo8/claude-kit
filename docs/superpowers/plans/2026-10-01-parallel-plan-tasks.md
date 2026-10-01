@@ -1,6 +1,6 @@
 # Parallel Plan Tasks Implementation Plan
 
-- **Status:** approved
+- **Status:** implemented
 - **Date:** 2026-10-01
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
@@ -1025,7 +1025,7 @@ Expected: `pytest` all pass; ruff clean.
 ````markdown
 # Smoke Plan
 
-- **Status:** approved
+- **Status:** implemented
 - **Date:** 2026-10-01
 
 **Goal:** Add three tiny modules under `smoke/` to exercise parallel waves.
