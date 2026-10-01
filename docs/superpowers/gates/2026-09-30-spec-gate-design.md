@@ -1,7 +1,7 @@
 # Gate: Spec gate: linter and independent reviewer
 
 - **Spec:** docs/superpowers/specs/2026-09-30-spec-gate-design.md
-- **Spec SHA-256:** e958811a3743df2ec16bedb8eea05d536c50f9e2dd26b896794bae81b16f604f
+- **Spec SHA-256:** 4d69976c1c9d1f40a9b3489c768f1aa709fb94805ee87a15e5b40ac863465794
 - **Verdict:** pass
 - **Date:** 2026-09-30
 - **Rounds:** 2
@@ -45,6 +45,9 @@
 - round 2 [minor] verify-record success output stated (`ok: <record>`)
 - round 2 [minor] L1 and the hash use the first Status bullet
 - round 2 [minor] `rubric.md` is authoritative over the spec's summary
+- code review: L5 matches TBD/TODO/FIXME in upper case only ("a todo app" is
+  not a placeholder); `/ship` step 0 marks an already-gated spec `approved`.
+  Hash updated after these edits; no gate finding was reopened.
 
 ## Open
 

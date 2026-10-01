@@ -108,7 +108,7 @@ fires). The rules:
 | `L2-date` | A Date bullet in `YYYY-MM-DD` form. |
 | `L3-section` | Each required H2 section is present. One violation per missing section. |
 | `L4-out-of-scope` | An `**Out:**` marker in Scope (a qualified label such as `**Out (later specs):**` counts), or an `## Out of scope` section, with at least one bullet after it. |
-| `L5-placeholder` | No `TBD`, `TODO`, `FIXME` or `as discussed` (case-insensitive, whole word), or a literal `???`, anywhere outside backticked spans and double-quoted text. No `etc.` outside them in the Scope or Success criteria sections. |
+| `L5-placeholder` | No `TBD`, `TODO` or `FIXME` (upper case, whole word; "a todo app" is fine), `as discussed` (any case, whole words), or a literal `???`, anywhere outside backticked spans and double-quoted text. No `etc.` outside them in the Scope or Success criteria sections. |
 | `L6-empty` | No heading followed directly by a heading of the same or a higher level (as many or fewer `#`), or by end of file, with no text in between. |
 | `L7-criterion` | Every top-level list item (`-`, `*` or `N.`) under Success criteria names how it is verified. An item's text is its first line plus every following line up to the next top-level item, including nested sub-items. That text contains a backticked span, or one of the words `test`, `pytest`, `run`, `command`, `exit`, `output`, `prints`, `returns`, `asserts`, `manual`, `verify`, `check` (case-insensitive, whole word). |
 | `L8-path` | Every backticked span in the Scope section before its Out label (the files the spec changes) that looks like a repo path exists under `--root`. Paths elsewhere may be relative to another folder or repo, so the reviewer checks those. A missing Scope path still passes when some line of the spec contains both that span and `(new)`, so a new file is marked once, where it is introduced. A span "looks like a repo path" when it contains `/`, has no whitespace, does not contain `<`, `>`, `*`, `$`, `{` or `://`, does not start with `-` or `~`, and either has a file extension or ends with `/`. |
@@ -233,7 +233,8 @@ whose file name sorts last, i.e. the newest date prefix). The procedure:
 ### `/ship` changes (`plugin/commands/ship.md`)
 
 - **New step 0, Gate.** Run `spec-lint.py --verify-record <spec>`. On exit 0,
-  continue. Otherwise run the `claude-kit:spec-gate` procedure (steps 1–6;
+  set the spec's Status to `approved` if it is not already, and continue.
+  Otherwise run the `claude-kit:spec-gate` procedure (steps 1–6;
   step 7's question is skipped, since invoking `/ship` is the approval). On a
   pass, set the spec's Status to `approved` (the hash ignores that line, so
   the record stays valid) and continue; this also covers specs never gated

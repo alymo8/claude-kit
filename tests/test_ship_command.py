@@ -53,3 +53,9 @@ def test_failed_gate_is_a_stop_rule():
 
 def test_gate_record_moves_into_the_worktree_with_the_spec():
     assert "docs/superpowers/gates/" in _step(2)
+
+
+def test_gated_spec_is_marked_approved_even_when_the_record_is_valid():
+    step = _step(0)
+    ok_branch = step.split("Otherwise", 1)[0]
+    assert "approved" in ok_branch

@@ -35,7 +35,8 @@ These are the only reasons to stop. When one fires: write the handoff with the
    `python "${CLAUDE_PLUGIN_ROOT}/scripts/spec-lint.py" --verify-record <spec>`
    (fallback if the variable is not expanded:
    `~/.claude/skills/claude-kit/scripts/spec-lint.py`). If it prints `ok:`,
-   continue. Otherwise run the `claude-kit:spec-gate` skill on the spec, steps
+   set the spec's Status to `approved` if it is not already, and continue.
+   Otherwise run the `claude-kit:spec-gate` skill on the spec, steps
    1–6 (skip step 7's question: invoking `/ship` is the approval), then set the
    spec's Status to `approved`. On a pass verdict, continue; on a fail, that
    is a stop rule.

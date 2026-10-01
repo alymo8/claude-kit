@@ -283,3 +283,24 @@ def test_verify_record_survives_approval(root):
     spec.write_text(VALID.replace("draft", "approved"), encoding="utf-8")
     result = run_script(SCRIPT, "--verify-record", str(spec), "--root", str(root))
     assert result.returncode == 0
+
+
+def test_longer_fence_is_not_closed_by_a_shorter_inner_fence(root):
+    fenced = "````markdown\n```python\nTODO = 1\n# comment\n```\n````"
+    text = VALID.replace("Text.", fenced)
+    assert sl.lint(text, root) == []
+
+
+def test_backticks_in_info_string_do_not_open_a_fence(root):
+    text = VALID.replace("Text.", "```x``` is inline.\n\nWhy: TBD.")
+    assert rules(text, root) == [(25, "L5-placeholder")]
+
+
+def test_lowercase_todo_in_prose_is_fine(root):
+    text = VALID.replace("Why.", "A todo app stores todo items.")
+    assert sl.lint(text, root) == []
+
+
+def test_crlf_spec_lints_like_lf(root):
+    text = VALID.replace("Why.", "TODO")
+    assert sl.lint(text.replace("\n", "\r\n"), root) == sl.lint(text, root)

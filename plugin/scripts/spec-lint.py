@@ -14,8 +14,9 @@ Rules (text in fenced code blocks is ignored by all of them):
   Success criteria (case-insensitive prefix match).
 - L4-out-of-scope: an ``**Out:**`` label (``**Out (later):**`` too) in Scope,
   or an ``## Out of scope`` section, followed by at least one list item.
-- L5-placeholder: no TBD, TODO, FIXME, ??? or "as discussed" outside backticks
-  and double quotes; no "etc." outside them in Scope or Success criteria.
+- L5-placeholder: no TBD, TODO, FIXME (upper case), ??? or "as discussed" (any
+  case) outside backticks and double quotes; no "etc." outside them in Scope or
+  Success criteria.
 - L6-empty: no heading followed by a same-or-higher-level heading (or the end of
   the file) with nothing in between.
 - L7-criterion: each top-level list item under Success criteria has a backticked
@@ -61,11 +62,11 @@ VERIFY_WORDS = (
 STATUS_RE = re.compile(r"^- \*\*Status:\*\*\s*(.*?)\s*$")
 DATE_RE = re.compile(r"^- \*\*Date:\*\*\s*(.*?)\s*$")
 HEADING_RE = re.compile(r"^(#{1,6})\s+(.*?)\s*$")
-FENCE_RE = re.compile(r"^\s*(```|~~~)")
+FENCE_RE = re.compile(r"^ {0,3}(`{3,}|~{3,})(.*)$")
 SPAN_RE = re.compile(r"`([^`\n]+)`")
 QUOTED_RE = re.compile(r"\"[^\"\n]*\"|“[^”\n]*”")
 OUT_RE = re.compile(r"\*\*Out\b[^*\n]*:\*\*")
-PLACEHOLDER_RE = re.compile(r"\b(TBD|TODO|FIXME)\b|\?\?\?|\bas discussed\b", re.I)
+PLACEHOLDER_RE = re.compile(r"\b(TBD|TODO|FIXME)\b|\?\?\?|\b(?i:as discussed)\b")
 ETC_RE = re.compile(r"\betc\.", re.I)
 ITEM_RE = re.compile(r"^(?:[-*]|\d+\.)\s+")
 VERIFY_RE = re.compile(r"\b(" + "|".join(VERIFY_WORDS.split()) + r")\b", re.I)
@@ -79,18 +80,27 @@ Line = tuple[int, str, bool]  # (line number, text, inside a code fence)
 
 
 def parse(text: str) -> list[Line]:
-    """Split text into numbered lines, flagging fenced code (fence lines too)."""
+    """Split text into numbered lines, flagging fenced code (fence lines too).
+
+    Fences follow CommonMark: a fence closes only on a run of the same character
+    at least as long with nothing after it, so a ```` fence can hold a ``` one,
+    and a backtick fence's info string cannot contain a backtick.
+    """
     out: list[Line] = []
     fence = None
     for number, line in enumerate(text.splitlines(), 1):
         match = FENCE_RE.match(line)
         if match:
-            if fence is None:
-                fence = match.group(1)
-            elif match.group(1) == fence:
-                fence = None
-            out.append((number, line, True))
-            continue
+            run, rest = match.groups()
+            if fence is None and not (run[0] == "`" and "`" in rest):
+                fence = run
+                out.append((number, line, True))
+                continue
+            if fence and run[0] == fence[0] and len(run) >= len(fence):
+                if not rest.strip():
+                    fence = None
+                    out.append((number, line, True))
+                    continue
         out.append((number, line, fence is not None))
     return out
 
