@@ -10,6 +10,8 @@
 ## Global Constraints
 
 - The suite is `pytest tests smoke`; lint is not required for `smoke/`.
+- This repo's `.gitignore` whitelists top-level folders, so `smoke/` files
+  are added with `git add -f`.
 - `smoke/` has no `__init__.py`; tests import modules by name.
 
 ### Task 1: Module a
@@ -26,7 +28,7 @@
   (`ModuleNotFoundError`).
 - [ ] **Step 3: Write `smoke/a.py`** — `def a(): return 1`.
 - [ ] **Step 4: Run it** — Run: `pytest smoke/test_a.py -q` Expected: PASS.
-- [ ] **Step 5: Commit** — `git add smoke/a.py smoke/test_a.py` and
+- [ ] **Step 5: Commit** — `git add -f smoke/a.py smoke/test_a.py` and
   `git commit -m "smoke: a"`.
 
 ### Task 2: Module b
@@ -42,7 +44,7 @@
 - [ ] **Step 2: Run it** — Run: `pytest smoke/test_b.py -q` Expected: FAIL.
 - [ ] **Step 3: Write `smoke/b.py`** — `def b(): return 2`.
 - [ ] **Step 4: Run it** — Run: `pytest smoke/test_b.py -q` Expected: PASS.
-- [ ] **Step 5: Commit** — `git add smoke/b.py smoke/test_b.py` and
+- [ ] **Step 5: Commit** — `git add -f smoke/b.py smoke/test_b.py` and
   `git commit -m "smoke: b"`.
 
 ### Task 3: Module c uses a and b
@@ -59,5 +61,5 @@
 - [ ] **Step 3: Write `smoke/c.py`** — `from a import a`, `from b import b`,
   `def c(): return a() + b()`.
 - [ ] **Step 4: Run it** — Run: `pytest tests smoke -q` Expected: PASS.
-- [ ] **Step 5: Commit** — `git add smoke/c.py smoke/test_c.py` and
+- [ ] **Step 5: Commit** — `git add -f smoke/c.py smoke/test_c.py` and
   `git commit -m "smoke: c"`.
