@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from helpers import PLUGIN
+from helpers import PLUGIN, REPO
 
 SKILL = PLUGIN / "skills" / "parallel-tasks" / "SKILL.md"
 SCRIPT_REL = "../../scripts/parallel-plan.py"
@@ -51,3 +51,14 @@ def test_subagent_prompt_has_the_lock_retry():
 
 def test_resume_skips_complete_tasks():
     assert "complete` ledger line" in body()
+
+
+def test_docs_wire_parallel_tasks():
+    conventions = (REPO / "conventions" / "spec-driven-development.md").read_text(
+        encoding="utf-8"
+    )
+    assert "**Depends on:**" in conventions
+    adr = "0017-parallel-plan-tasks.md"
+    assert (REPO / "knowledge" / "decisions" / adr).is_file()
+    index = (REPO / "knowledge" / "decisions" / "README.md").read_text(encoding="utf-8")
+    assert f"]({adr})" in index

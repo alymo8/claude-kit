@@ -127,6 +127,19 @@ the open items go to the user as questions. The gate writes
 either makes the record stale. Under `/ship`, anything but `pass` stops the
 run.
 
+## Parallel plan tasks
+
+A task may carry one `**Depends on:**` line under its `**Files:**` block:
+`none`, or the earlier tasks whose results it uses (`Task 1, Task 3`). A task
+without the line runs after every earlier task, so plans without these lines
+run exactly as before. `plugin/scripts/parallel-plan.py waves` groups tasks
+into waves: tasks in a wave share no file (from their Create, Modify and Test
+bullets) and depend on no task in the same wave. Under `/ship`, a wave with
+more than one task runs through `claude-kit:parallel-tasks`: one subagent and
+git worktree per task, merged back in task order
+([ADR 0017](../knowledge/decisions/0017-parallel-plan-tasks.md)). The plan
+gate checks the line with rule `P10-depends`.
+
 ## Self-contained plans
 
 A plan is a **handoff document**: execution may happen in a fresh session, in a
