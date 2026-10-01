@@ -79,11 +79,13 @@ The linter requires, outside code blocks:
 - `- **Status:**` and `- **Date:** YYYY-MM-DD` bullets.
 - `## Purpose`, `## Scope`, `## Design` (or `## Structure`), `## Decisions`
   and `## Success criteria` sections.
-- An `**Out:**` list inside Scope, or an `## Out of scope` section.
+- An `**Out:**` list (or `**Out (later specs):**`) inside Scope, or an
+  `## Out of scope` section.
 - No TBD, TODO, FIXME or "as discussed" placeholders, and no empty sections.
 - A way to verify each success criterion (a command, test, output or manual
   check).
-- Every backticked repo path exists, or is marked `(new)` where introduced.
+- Every backticked repo path in Scope's In list (the files the spec changes)
+  exists, or is marked `(new)` where introduced.
 
 The gate writes `docs/superpowers/gates/<spec file name>` with the verdict and
 the spec's hash (Status line excluded). `/ship` refuses a spec whose record is

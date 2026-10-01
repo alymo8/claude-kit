@@ -104,11 +104,11 @@ The rules:
 | `L1-status` | A Status bullet with one of the four values. |
 | `L2-date` | A Date bullet in `YYYY-MM-DD` form. |
 | `L3-section` | Each required H2 section is present. One violation per missing section. |
-| `L4-out-of-scope` | An `**Out:**` marker in Scope, or an `## Out of scope` section, with at least one bullet after it. |
-| `L5-placeholder` | No `TBD`, `TODO`, `FIXME`, `???` or `as discussed` (case-insensitive, whole word) anywhere outside backticked spans. No `etc.` outside backticked spans in the Scope or Success criteria sections. |
+| `L4-out-of-scope` | An `**Out:**` marker in Scope (a qualified label such as `**Out (later specs):**` counts), or an `## Out of scope` section, with at least one bullet after it. |
+| `L5-placeholder` | No `TBD`, `TODO`, `FIXME`, `???` or `as discussed` (case-insensitive, whole word) anywhere outside backticked spans and double-quoted text. No `etc.` outside them in the Scope or Success criteria sections. |
 | `L6-empty` | No heading followed directly by a heading of the same or a higher level, or by end of file, with no text in between. |
 | `L7-criterion` | Every top-level list item (`-`, `*` or `N.`) under Success criteria names how it is verified: it contains a backticked span, or one of the words `test`, `pytest`, `run`, `command`, `exit`, `output`, `prints`, `returns`, `asserts`, `manual`, `verify`, `check` (case-insensitive, whole word). |
-| `L8-path` | Every backticked span that looks like a repo path exists under `--root`, unless some line of the spec contains both that span and `(new)`, so a new file is marked once, where it is introduced. A span "looks like a repo path" when it contains `/`, has no whitespace, does not contain `<`, `>`, `*`, `$`, `{` or `://`, does not start with `-` or `~`, and either has a file extension or ends with `/`. |
+| `L8-path` | Every backticked span in the Scope section before its Out label (the files the spec changes) that looks like a repo path exists under `--root`. Paths elsewhere may be relative to another folder or repo, so the reviewer checks those. A missing Scope path still passes when some line of the spec contains both that span and `(new)`, so a new file is marked once, where it is introduced. A span "looks like a repo path" when it contains `/`, has no whitespace, does not contain `<`, `>`, `*`, `$`, `{` or `://`, does not start with `-` or `~`, and either has a file extension or ends with `/`. |
 
 **Hash mode** prints the SHA-256 hex digest of the spec's UTF-8 text, after
 line endings are normalised to `\n` and the Status bullet line is removed. So

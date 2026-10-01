@@ -169,9 +169,25 @@ def test_l8_new_path_marked_once_is_fine(root):
 
 
 def test_l8_ignores_line_suffix_and_placeholders(root):
-    text = VALID.replace(
-        "Text.", "See `src/app.py:1-2`, `docs/<slug>.md`, `**/*.html`, `origin/main`."
-    )
+    spans = "`src/app.py:1-2`, `docs/<slug>.md`, `**/*.html`, `origin/main`"
+    text = VALID.replace("`src/app.py`: the app.", spans + ": the app.")
+    assert sl.lint(text, root) == []
+
+
+def test_l8_only_checks_scope_before_out(root):
+    in_design = VALID.replace("Text.", "Writes `src/gone.py` at runtime.")
+    assert sl.lint(in_design, root) == []
+    in_out = VALID.replace("- Anything else.", "- `src/gone.py`, a later spec.")
+    assert sl.lint(in_out, root) == []
+
+
+def test_l4_out_label_with_qualifier(root):
+    text = VALID.replace("**Out:**", "**Out (later specs):**")
+    assert sl.lint(text, root) == []
+
+
+def test_l5_double_quoted_placeholder_is_fine(root):
+    text = VALID.replace("Why.", 'Concrete paths, no "as discussed".')
     assert sl.lint(text, root) == []
 
 

@@ -12,17 +12,19 @@ Rules (text in fenced code blocks is ignored by all of them):
 - L2-date: a ``- **Date:** YYYY-MM-DD`` bullet.
 - L3-section: H2 sections Purpose, Scope, Design (or Structure), Decisions,
   Success criteria (case-insensitive prefix match).
-- L4-out-of-scope: an ``**Out:**`` marker in Scope, or an ``## Out of scope``
-  section, followed by at least one list item.
-- L5-placeholder: no TBD, TODO, FIXME, ??? or "as discussed" outside backticks;
-  no "etc." outside backticks in Scope or Success criteria.
+- L4-out-of-scope: an ``**Out:**`` label (``**Out (later):**`` too) in Scope,
+  or an ``## Out of scope`` section, followed by at least one list item.
+- L5-placeholder: no TBD, TODO, FIXME, ??? or "as discussed" outside backticks
+  and double quotes; no "etc." outside them in Scope or Success criteria.
 - L6-empty: no heading followed by a same-or-higher-level heading (or the end of
   the file) with nothing in between.
 - L7-criterion: each top-level list item under Success criteria has a backticked
   span or a verification word (test, pytest, run, command, exit, output, prints,
   returns, asserts, manual, verify, check).
-- L8-path: each backticked repo path exists under the root, unless a line of the
-  spec has both that path and "(new)".
+- L8-path: each backticked repo path in Scope, before its Out label (the files
+  the spec changes), exists under the root, unless a line of the spec has both
+  that path and "(new)". Paths elsewhere may belong to another folder or repo;
+  the reviewer checks those.
 
 --hash prints the SHA-256 of the spec with line endings normalised and its
 first Status bullet removed, so approving a spec keeps the same hash.
@@ -61,6 +63,8 @@ DATE_RE = re.compile(r"^- \*\*Date:\*\*\s*(.*?)\s*$")
 HEADING_RE = re.compile(r"^(#{1,6})\s+(.*?)\s*$")
 FENCE_RE = re.compile(r"^\s*(```|~~~)")
 SPAN_RE = re.compile(r"`([^`\n]+)`")
+QUOTED_RE = re.compile(r"\"[^\"\n]*\"|“[^”\n]*”")
+OUT_RE = re.compile(r"\*\*Out\b[^*\n]*:\*\*")
 PLACEHOLDER_RE = re.compile(r"\b(TBD|TODO|FIXME)\b|\?\?\?|\bas discussed\b", re.I)
 ETC_RE = re.compile(r"\betc\.", re.I)
 ITEM_RE = re.compile(r"^(?:[-*]|\d+\.)\s+")
@@ -126,7 +130,8 @@ def find(secs: dict, prefixes: tuple[str, ...]) -> tuple[int, list[Line]] | None
 
 
 def strip_spans(line: str) -> str:
-    return SPAN_RE.sub("", line)
+    """The line without backticked spans and double-quoted text."""
+    return QUOTED_RE.sub("", SPAN_RE.sub("", line))
 
 
 def check_status_date(lines: list[Line]) -> list[tuple[int, str, str]]:
@@ -157,12 +162,13 @@ def check_sections(secs: dict) -> list[tuple[int, str, str]]:
     return out
 
 
-def has_item_after(body: list[Line], marker: str) -> bool:
+def has_item_after(body: list[Line]) -> bool:
+    """Whether an ``**Out...:**`` label in the body is followed by a list item."""
     seen = False
     for _, line, code in body:
         if code:
             continue
-        if marker in line:
+        if OUT_RE.search(line):
             seen = True
         elif seen and ITEM_RE.match(line.strip()):
             return True
@@ -176,7 +182,7 @@ def check_out_of_scope(secs: dict) -> list[tuple[int, str, str]]:
     scope = find(secs, ("scope",))
     if scope is None:
         return []  # already reported by L3
-    if has_item_after(scope[1], "**Out:**"):
+    if has_item_after(scope[1]):
         return []
     return [(scope[0], "L4-out-of-scope", "no '**Out:**' list in Scope")]
 
@@ -240,11 +246,25 @@ def looks_like_path(span: str) -> bool:
     return bool(Path(span).suffix) or span.endswith("/")
 
 
-def check_paths(lines: list[Line], root: Path) -> list[tuple[int, str, str]]:
+def in_scope(secs: dict) -> list[tuple[int, str]]:
+    """Prose lines of the Scope section before its ``**Out...:**`` label."""
+    scope = find(secs, ("scope",))
+    out = []
+    for number, line, code in scope[1] if scope else []:
+        if not code and OUT_RE.search(line):
+            break
+        if not code:
+            out.append((number, line))
+    return out
+
+
+def check_paths(
+    lines: list[Line], secs: dict, root: Path
+) -> list[tuple[int, str, str]]:
     prose = [(n, t) for n, t, c in lines if not c]
     new = {s for _, t in prose if "(new)" in t for s in SPAN_RE.findall(t)}
     out = []
-    for number, line in prose:
+    for number, line in in_scope(secs):
         for span in SPAN_RE.findall(line):
             if not looks_like_path(span) or span in new:
                 continue
@@ -265,7 +285,7 @@ def lint(text: str, root: Path) -> list[tuple[int, str, str]]:
         + check_placeholders(lines, secs)
         + check_empty(lines)
         + check_criteria(secs)
-        + check_paths(lines, root)
+        + check_paths(lines, secs, root)
     )
     return sorted(found, key=lambda v: (v[0], v[1]))
 
