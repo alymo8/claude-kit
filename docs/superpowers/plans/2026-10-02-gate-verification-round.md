@@ -23,7 +23,7 @@ ruff.
 
 ## Context for a cold start
 
-- Work in the worktree `C:\Users\alymo\Desktop\Github\.worktrees\gate-verification-round`
+- Work in the worktree `.worktrees/gate-verification-round` (under the repository root)
   on branch `feat/gate-verification-round`, cut from `origin/main` at
   `597663d`. The spec and its gate record are committed on this branch. Run
   every command from the worktree root.
