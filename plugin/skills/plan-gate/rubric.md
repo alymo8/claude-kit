@@ -35,6 +35,10 @@ about. Flag problems only; never edit the plan or the spec.
    *how* to deliver what the spec asks for; work that no spec item asks for
    is scope creep (check 1), not a decision. List a decision only here, not
    also under Findings, unless it contradicts something the spec does settle.
+7. **Plan questions.** Read the spec's gate record (the prompt names it). For
+   each question under its `## Plan questions` section, name the task that
+   answers it. A question no task answers is `blocking`. A missing section
+   or `- none` means there is nothing to check.
 
 ## Severity
 
