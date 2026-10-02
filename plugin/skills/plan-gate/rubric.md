@@ -37,8 +37,9 @@ about. Flag problems only; never edit the plan or the spec.
    also under Findings, unless it contradicts something the spec does settle.
 7. **Plan questions.** Read the spec's gate record (the prompt names it). For
    each question under its `## Plan questions` section, name the task that
-   answers it. A question no task answers is `blocking`. A missing section
-   or `- none` means there is nothing to check.
+   answers it, as a `## Coverage` line `- Plan question: <question> → Task
+   <n> | UNMAPPED`. An unmapped question is `blocking`. A missing section or
+   `- none` means there is nothing to check.
 
 ## Severity
 

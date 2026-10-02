@@ -90,7 +90,7 @@ A command still failing after that is handled like any other failed command.
    existing code already imply, so a routine plan passes without stopping.
    Answer every question under the `## Plan questions` section of the spec's
    gate record (`docs/superpowers/gates/<spec file name>`) in the task it
-   affects. Do not offer an execution choice. Then add a `**Depends on:**` line under each
+   affects (none if the section is missing). Do not offer an execution choice. Then add a `**Depends on:**` line under each
    task's `**Files:**` block: `none`, or the earlier tasks whose results it
    uses (`Task 1, Task 3`). Shared files need not be listed
    (`parallel-plan.py` orders them anyway), so a task whose only link to

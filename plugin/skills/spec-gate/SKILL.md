@@ -84,6 +84,9 @@ can settle do not block: they are handed to the plan.
       run the next verification round on those fixes only.
 
    At most 5 review rounds in total (3 discovery + 2 verification).
+   If verification round 2 returns `[blocking]` findings, fix those that are
+   clear, then list each one under Open as "fixed after verification round
+   2, not verified" (or "unresolved" if not fixed); the verdict is `fail`.
 5. **Verdict.** `pass` when the linter is clean, the last round (discovery or
    verification) returned no `[blocking]` findings, and there are no decision
    findings. Otherwise `fail`. `[plan]` findings never affect the verdict.

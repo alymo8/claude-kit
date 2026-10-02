@@ -86,6 +86,9 @@ did not settle.
       run the next verification round on those fixes only.
 
    At most 5 review rounds in total (3 discovery + 2 verification).
+   If verification round 2 returns `[blocking]` findings, fix those that are
+   clear, then list each one under Open as "fixed after verification round
+   2, not verified" (or "unresolved" if not fixed); the verdict is `fail`.
 
    The **plan-introduced decisions** are the last discovery round's list plus
    every verification round's `## Decisions changed` entries (a changed
