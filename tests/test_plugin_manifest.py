@@ -155,3 +155,19 @@ def test_handoff_command_has_focus_skills_and_redaction():
     assert text.index("## Suggested skills") < text.index("## Open questions")
     assert "Never write secrets" in text
     assert "commit or" in text and "diff" in text
+
+
+def test_hooks_json_registers_grill_inject():
+    hooks = json.loads((PLUGIN / "hooks" / "hooks.json").read_text(encoding="utf-8"))
+    assert any(
+        "grill_inject.py" in h["command"]
+        for g in hooks["hooks"]["SessionStart"]
+        for h in g["hooks"]
+    )
+
+
+def test_description_mentions_grill():
+    plugin_json = PLUGIN / ".claude-plugin" / "plugin.json"
+    data = json.loads(plugin_json.read_text(encoding="utf-8"))
+    assert "grill" in data["description"]
+    assert data["version"] == "0.11.0"
