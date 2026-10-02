@@ -132,3 +132,9 @@ def test_step_9_regenerates_the_spec_index():
 
 def test_step_7_uses_the_bash_tool():
     assert "Bash tool" in _step(7)
+
+
+def test_plan_writer_answers_the_spec_records_plan_questions():
+    step = _step(3)
+    assert "## Plan questions" in step
+    assert "docs/superpowers/gates/<spec file name>" in step
