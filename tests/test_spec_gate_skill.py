@@ -36,7 +36,20 @@ def test_skill_uses_linter_rubric_and_records():
     assert "--hash" in body
     assert "docs/superpowers/gates/" in body
     assert "- **Spec SHA-256:**" in body and "- **Verdict:**" in body
-    assert "3 rounds" in body
+    assert "3 discovery rounds" in body
+    for text in (
+        "verify.md",
+        "verification round",
+        "## Plan questions",
+        "3 discovery + 2 verification",
+        "--no-index",
+        "exit status 1",
+        "skip verification",
+        "<D> discovery + <V> verification",
+        "skips step 7's question",
+    ):
+        assert text in body
+    assert "3 discovery rounds" in frontmatter(body)["description"]
 
 
 def test_rubric_defines_finding_format_and_probes():
