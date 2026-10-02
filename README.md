@@ -1,4 +1,4 @@
-# Workspace preferences
+# Claude Kit
 
 An attempt to open source my agentic coding set up, skills, and shared tooling for building software
 with [Claude Code](https://claude.com/claude-code). This repo is the workspace-level
