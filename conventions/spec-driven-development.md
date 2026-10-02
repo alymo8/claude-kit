@@ -12,6 +12,11 @@ keyboard. The [knowledge layer](knowledge-layer.md) feeds this flow, and the
    committing to an approach. Surface the real problem and the alternatives; land on
    a direction. (Use the `superpowers:brainstorming` skill for creative/feature
    work.)
+
+   With the kit's opt-in grill on (`CLAUDE_KIT_GRILL=1`), the
+   `claude-kit:grill` skill then interviews you on the agreed design and a
+   coverage checklist (`plugin/skills/grill/coverage.md`) before the spec is
+   written.
 2. **Spec.** Write a design document that captures *what* is being built and *why*:
    purpose, scope (explicitly including **out of scope**), structure, the decisions
    made during brainstorming, and success criteria. The spec is the contract the
@@ -64,6 +69,11 @@ A good spec answers, in roughly this order:
 - **Structure / design** — the shape of the solution.
 - **Decisions** — the choices made and the alternatives rejected, with reasons.
 - **Success criteria** — how we will know it is done and correct.
+- **Coverage** (required when `CLAUDE_KIT_GRILL=1`, for specs dated
+  2026-10-01 or later) — one `- **<Area>:**` bullet per area in
+  `plugin/skills/grill/coverage.md`, saying where the spec addresses it or
+  `N/A` with the reason. `spec-lint.py` rule `L9-coverage` checks it
+  ([ADR 0019](../knowledge/decisions/0019-spec-grill-opt-in.md)).
 
 ## Spec gate
 

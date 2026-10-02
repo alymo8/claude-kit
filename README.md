@@ -27,7 +27,8 @@ flowchart LR
     spec["Write the spec<br/>what, why, scope"]
     sgate["Spec gate<br/>independent review"]:::gate
     sok{{"Human signs off<br/>the spec"}}:::you
-    brain --> dec --> spec --> sgate --> sok
+    grill["Grill (opt-in)<br/>decisions + coverage"]:::gate
+    brain --> dec --> grill --> spec --> sgate --> sok
   end
 
   subgraph ship["3 · Ship"]
@@ -82,12 +83,13 @@ is in [`plugin/`](plugin/).
   - [Session hygiene](conventions/session-hygiene.md) — short sessions, a
     per-branch handoff file, a context meter, lean exploration.
 - **[`plugin/`](plugin/)** — a Claude Code plugin: the `supabase-cli`,
-  `lean-context`, `audit` and `audit-deep` skills (the audits share a citation
+  `lean-context`, `grill` (opt-in, `CLAUDE_KIT_GRILL=1`), `audit` and
+  `audit-deep` skills (the audits share a citation
   checker, `check-findings.py`), the `teach` skill (copied as is from
   [mattpocock/skills](https://github.com/mattpocock/skills), MIT), the on-demand spec → HTML renderer, the `token-report.py`
-  measurement script, a status line, and seven hooks (regenerate the spec/plan
+  measurement script, a status line, and eight hooks (regenerate the spec/plan
   index after edits and at every stop; report leftover worktrees, inject the
-  branch handoff, inject the lean-context rule unless `CLAUDE_KIT_LEAN_CONTEXT=0`,
+  branch handoff, inject the lean-context rule unless `CLAUDE_KIT_LEAN_CONTEXT=0`, inject the grill rule when `CLAUDE_KIT_GRILL=1`,
   and nudge past a context threshold at the right moments;
   snapshot git state at session end). Install once per machine with `plugin\install.ps1` — it junctions
   `~/.claude/skills/claude-kit` to this folder so edits are live, and adds the

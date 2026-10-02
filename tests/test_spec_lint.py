@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+import shutil
+
 import pytest
-from helpers import PLUGIN, load_module, run_script
+from helpers import PLUGIN, clean_env, load_module, run_script
 
 SCRIPT = PLUGIN / "scripts" / "spec-lint.py"
 sl = load_module(SCRIPT, "spec_lint")
@@ -49,6 +51,17 @@ def root(tmp_path):
     (tmp_path / "src").mkdir()
     (tmp_path / "src" / "app.py").write_text("x = 1\n", encoding="utf-8")
     return tmp_path
+
+
+@pytest.fixture(autouse=True)
+def no_grill(monkeypatch):
+    """Lint results never depend on the developer's CLAUDE_KIT_GRILL."""
+    monkeypatch.delenv("CLAUDE_KIT_GRILL", raising=False)
+
+
+@pytest.fixture
+def grill(monkeypatch):
+    monkeypatch.setenv("CLAUDE_KIT_GRILL", "1")
 
 
 def rules(text, root):
@@ -776,3 +789,131 @@ def test_depends_value_parses():
     assert sl.depends_value("none") == []
     assert sl.depends_value("Task 1, Task 3") == [1, 3]
     assert sl.depends_value("Task 1 and Task 2") is None
+
+
+AREAS = [
+    "Purpose and success",
+    "Scope boundary",
+    "Interfaces",
+    "Data and irreversible actions",
+    "Failure modes",
+    "Security and secrets",
+    "Testing",
+    "Rollout and compatibility",
+    "Docs and decisions",
+]
+GRILLED = (
+    VALID.replace("2026-09-30", "2026-10-01")
+    + "\n## Coverage\n\n"
+    + "".join(f"- **{area}:** Design.\n" for area in AREAS)
+)
+BARE = GRILLED.split("\n## Coverage")[0] + "\n"
+
+
+def l9(text, root):
+    return [line for line, rule in rules(text, root) if rule == "L9-coverage"]
+
+
+def test_l9_reads_the_nine_areas():
+    assert sl.coverage_areas() == AREAS
+
+
+def test_l9_full_coverage_is_clean(root, grill):
+    assert rules(GRILLED, root) == []
+
+
+def test_l9_missing_section(root, grill):
+    assert l9(BARE, root) == [1]
+
+
+def test_l9_missing_area(root, grill):
+    text = GRILLED.replace("- **Security and secrets:** Design.\n", "")
+    assert len(l9(text, root)) == 1
+
+
+def test_l9_empty_area(root, grill):
+    text = GRILLED.replace("- **Testing:** Design.", "- **Testing:**")
+    assert len(l9(text, root)) == 1
+
+
+def test_l9_bare_na(root, grill):
+    text = GRILLED.replace("- **Testing:** Design.", "- **Testing:** N/A -")
+    assert len(l9(text, root)) == 1
+
+
+def test_l9_na_with_reason_is_fine(root, grill):
+    text = GRILLED.replace("- **Testing:** Design.", "- **Testing:** N/A: no code.")
+    assert l9(text, root) == []
+
+
+def test_l9_continuation_lines_count(root, grill):
+    text = GRILLED.replace("- **Testing:** Design.", "- **Testing:**\n  Design.")
+    assert l9(text, root) == []
+
+
+def test_l9_unknown_area_ignored_and_first_duplicate_checked(root, grill):
+    text = GRILLED.replace(
+        "- **Testing:** Design.\n",
+        "- **Testing:**\n- **Testing:** Design.\n- **Extra:** x.\n",
+    )
+    assert len(l9(text, root)) == 1
+
+
+def test_l9_off_when_switch_unset(root):
+    assert l9(BARE, root) == []
+
+
+def test_l9_off_for_other_values(root, monkeypatch):
+    monkeypatch.setenv("CLAUDE_KIT_GRILL", "true")
+    assert l9(BARE, root) == []
+
+
+def test_l9_skips_older_specs(root, grill):
+    assert l9(BARE.replace("2026-10-01", "2026-09-30"), root) == []
+
+
+def test_l9_skips_unparsable_date(root, grill):
+    assert l9(BARE.replace("2026-10-01", "2026-02-30"), root) == []
+
+
+def test_l9_never_checks_plans(root, grill):
+    plan = "# P\n\n- **Status:** draft\n- **Date:** 2026-10-01\n"
+    assert all(rule != "L9-coverage" for _, rule, _ in sl.lint_plan(plan, root))
+
+
+def test_l9_coverage_file_without_areas_is_reported(root, tmp_path, grill):
+    empty = tmp_path / "coverage.md"
+    empty.write_text("# Coverage checklist\n\nNo areas.\n", encoding="utf-8")
+    lines = sl.parse(GRILLED)
+    found = sl.check_coverage(lines, sl.sections(lines), empty)
+    assert [rule for _, rule, _ in found] == ["L9-coverage"]
+
+
+def test_l9_missing_coverage_file_is_reported(root, tmp_path):
+    # A copy of the plugin's scripts/ folder with no skills/grill/ beside it.
+    install = tmp_path / "install"
+    (install / "scripts").mkdir(parents=True)
+    copy = install / "scripts" / "spec-lint.py"
+    shutil.copy(SCRIPT, copy)
+    spec = root / "spec.md"
+    spec.write_text(GRILLED, encoding="utf-8")
+    result = run_script(
+        copy, str(spec), "--root", str(root), env=clean_env(CLAUDE_KIT_GRILL="1")
+    )
+    assert result.returncode == 1
+    assert "L9-coverage" in result.stdout
+    assert "coverage.md" in result.stdout
+
+
+def test_l9_undecodable_coverage_file_is_reported(tmp_path, grill):
+    bad = tmp_path / "coverage.md"
+    bad.write_bytes(b"\xff\xfe## Areas\n")
+    lines = sl.parse(GRILLED)
+    found = sl.check_coverage(lines, sl.sections(lines), bad)
+    assert [rule for _, rule, _ in found] == ["L9-coverage"]
+
+
+@pytest.mark.parametrize("value", ["N/A.", "**N/A**", "_N/A_ -", "n/a"])
+def test_l9_na_without_reason_variants(root, grill, value):
+    text = GRILLED.replace("- **Testing:** Design.", f"- **Testing:** {value}")
+    assert len(l9(text, root)) == 1

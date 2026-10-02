@@ -38,6 +38,11 @@ I take part by answering them and giving instructions. The spec gate and the
 plan gate review the documents, and my sign-off is each gate's verdict and
 key decisions.
 
+With `CLAUDE_KIT_GRILL=1`, the `claude-kit:grill` skill runs between the
+design summary and the spec
+([ADR 0019](knowledge/decisions/0019-spec-grill-opt-in.md)); its rounds and the
+shared-understanding confirmation are the only pause.
+
 ## Specs and plans
 
 Specs and plans are Markdown under `docs/superpowers/specs/` and

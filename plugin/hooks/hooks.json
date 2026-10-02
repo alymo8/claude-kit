@@ -29,6 +29,14 @@
         ]
       },
       {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python \"${CLAUDE_PLUGIN_ROOT}/hooks/grill_inject.py\""
+          }
+        ]
+      },
+      {
         "matcher": "startup|clear",
         "hooks": [
           {
