@@ -1,6 +1,6 @@
 # Spec grill: an opt-in interview before the spec is written
 
-- **Status:** approved
+- **Status:** implemented
 - **Date:** 2026-10-01
 
 ## Purpose
