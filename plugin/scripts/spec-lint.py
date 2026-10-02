@@ -26,6 +26,12 @@ Rules (text in fenced code blocks is ignored by all of them):
   the spec changes), exists under the root, unless a line of the spec has both
   that path and "(new)". Paths elsewhere may belong to another folder or repo;
   the reviewer checks those.
+- L9-coverage: only when CLAUDE_KIT_GRILL=1 and the Date parses to a date on
+  or after 2026-10-01: a ``## Coverage`` section with one ``- **<Area>:**``
+  bullet per area in skills/grill/coverage.md (next to this script's folder),
+  each with text, and ``N/A`` followed by a reason. Continuation lines count;
+  unknown areas are ignored; the first of two bullets for an area is checked.
+  An unreadable coverage.md, or one with no areas, is itself a violation.
 
 Plans (files whose folder is named ``plans``) get the plan rules instead:
 P1-status, P2-date (as L1, L2); P3-header (``**Goal:**`` and one-path
@@ -63,9 +69,11 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import os
 import re
 import subprocess
 import sys
+from datetime import date
 from pathlib import Path
 
 STATUSES = ("draft", "approved", "implemented", "superseded")
@@ -122,6 +130,11 @@ APPROVED_RE = re.compile(
 )
 DEPENDS_RE = re.compile(r"^\s*(?:- )?\*\*Depends on:\*\*\s*(.*?)\s*$")
 DEPENDS_ITEM_RE = re.compile(r"^Task (\d+)$")
+COVERAGE_FROM = date(2026, 10, 1)
+COVERAGE_FILE = Path(__file__).resolve().parent.parent / "skills" / "grill"
+COVERAGE_FILE = COVERAGE_FILE / "coverage.md"
+AREA_RE = re.compile(r"^- \*\*([^*]+?):\*\*(.*)$")
+NA_STRIP = ":-–— "
 
 Line = tuple[int, str, bool]  # (line number, text, inside a code fence)
 
@@ -331,6 +344,88 @@ def check_paths(
     return out
 
 
+def grill_on() -> bool:
+    return os.environ.get("CLAUDE_KIT_GRILL") == "1"
+
+
+def coverage_areas(path: Path | None = None) -> list[str] | None:
+    """Area names from coverage.md's ``## Areas`` bullets; None if unreadable."""
+    try:
+        text = (path or COVERAGE_FILE).read_text(encoding="utf-8")
+    except OSError:
+        return None
+    body = find(sections(parse(text)), ("areas",))
+    if body is None:
+        return []
+    found = []
+    for _, line, code in body[1]:
+        match = None if code else AREA_RE.match(line)
+        if match:
+            found.append(match.group(1).strip())
+    return found
+
+
+def spec_date(lines: list[Line]) -> date | None:
+    for _, line, code in lines:
+        match = None if code else DATE_RE.match(line)
+        if match:
+            try:
+                return date.fromisoformat(match.group(1))
+            except ValueError:
+                return None
+    return None
+
+
+def coverage_entries(body: list[Line]) -> dict[str, tuple[int, str]]:
+    """Lowercased area -> (line, text incl. continuation lines); first wins."""
+    entries: dict[str, tuple[int, list[str]]] = {}
+    current = None
+    for number, line, code in body:
+        match = None if code else AREA_RE.match(line)
+        if match:
+            key = match.group(1).strip().lower()
+            current = None if key in entries else key
+            if current:
+                entries[key] = (number, [match.group(2)])
+        elif code or ITEM_RE.match(line):
+            current = None
+        elif current and line[:1].isspace() and line.strip():
+            entries[current][1].append(line)
+        elif line.strip():
+            current = None
+    return {k: (n, " ".join(t).strip()) for k, (n, t) in entries.items()}
+
+
+def check_coverage(
+    lines: list[Line], secs: dict, areas_file: Path | None = None
+) -> list[tuple[int, str, str]]:
+    if not grill_on():
+        return []
+    when = spec_date(lines)
+    if when is None or when < COVERAGE_FROM:
+        return []
+    path = areas_file or COVERAGE_FILE
+    areas = coverage_areas(path)
+    if not areas:
+        return [(1, "L9-coverage", f"cannot read coverage areas: {path}")]
+    body = find(secs, ("coverage",))
+    if body is None:
+        return [(1, "L9-coverage", "missing section '## Coverage'")]
+    entries = coverage_entries(body[1])
+    out = []
+    for area in areas:
+        entry = entries.get(area.lower())
+        if entry is None:
+            out.append((body[0], "L9-coverage", f"no entry for area {area!r}"))
+            continue
+        number, text = entry
+        if not text:
+            out.append((number, "L9-coverage", f"area {area!r} has no text"))
+        elif text.upper().startswith("N/A") and not text[3:].strip(NA_STRIP):
+            out.append((number, "L9-coverage", f"area {area!r}: N/A without reason"))
+    return out
+
+
 def lint(text: str, root: Path) -> list[tuple[int, str, str]]:
     """All violations in a spec, as (line, rule, message), sorted by line."""
     lines = parse(text)
@@ -343,6 +438,7 @@ def lint(text: str, root: Path) -> list[tuple[int, str, str]]:
         + check_empty(lines)
         + check_criteria(secs)
         + check_paths(lines, secs, root)
+        + check_coverage(lines, secs)
     )
     return sorted(found, key=lambda v: (v[0], v[1]))
 
