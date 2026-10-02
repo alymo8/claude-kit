@@ -53,6 +53,37 @@ def test_rubric_defines_finding_format_and_probes():
     assert "more than 15 tasks" in rubric
 
 
+CLASSES = (
+    "wrong-build",
+    "contradiction",
+    "false-claim",
+    "uncheckable",
+    "open-what",
+    "too-large",
+)
+
+
+def test_rubric_limits_blocking_to_classes_and_adds_plan_severity():
+    rubric = read("rubric.md")
+    for text in ("### [plan]", "**Class:**", "**Question:**", "six classes"):
+        assert text in rubric
+    for name in CLASSES:
+        assert f"`{name}`" in rubric
+
+
+def test_verify_rubric_is_scoped_to_the_diff():
+    verify = read("verify.md")
+    for text in (
+        "## Fixes",
+        "## Findings",
+        "### [blocking]",
+        "## Decisions changed",
+        "outside the diff",
+        "not resolved",
+    ):
+        assert text in verify
+
+
 def test_docs_wire_the_gate():
     def text(rel):
         return (REPO / rel).read_text(encoding="utf-8")

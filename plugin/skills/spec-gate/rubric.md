@@ -13,20 +13,23 @@ never edit the spec.
 
 1. **Dry-run plan.** Write the ordered list of implementation tasks you would
    plan from this spec. Under each, list every question you would have to ask
-   before building it. Each question the spec does not answer is a `blocking`
-   finding.
+   before building it. Each question the spec does not answer is a finding:
+   `blocking` (class `open-what`) when it is about *what* to build, `plan`
+   when it is about *how* (see Severity).
 2. **Ambiguity.** Find requirements with two reasonable readings that lead to
    different code or behaviour. Quote the requirement and state both readings.
+   It is `blocking` (class `open-what`) when the readings build different
+   things, and `plan` when both readings meet the spec.
 3. **Contradictions** between sections, including Design versus Decisions
-   versus Success criteria versus Scope.
+   versus Success criteria versus Scope (class `contradiction`).
 4. **Code claims.** Check every statement about existing code, files,
    functions, commands or behaviour against the repository (open the files,
-   search for the names). A false claim is `blocking`.
+   search for the names). A false claim is `blocking` (class `false-claim`).
 5. **Checkability.** For each success criterion, say how it would be checked.
-   A criterion with no objective check is `blocking`.
+   A criterion with no objective check is `blocking` (class `uncheckable`).
 6. **Scope size.** If the dry-run plan has more than 15 tasks, or covers two
    or more independent subsystems that could ship separately, raise a
-   `blocking` finding proposing the split.
+   `blocking` finding (class `too-large`) proposing the split.
 7. **Key decisions.** List the decisions the spec makes about scope,
    architecture, product boundary, data or irreversible actions, or the
    interpretation of the request. These are not findings; the user confirms
@@ -34,11 +37,29 @@ never edit the spec.
 
 ## Severity
 
-- `blocking`: an implementer would have to guess or stop, or would build the
-  wrong thing.
+- `blocking`: only when the finding fits one of these six classes, named in
+  its `**Class:**` field:
+  1. `wrong-build`: as written, the spec leads to the wrong behaviour or to
+     harm (data loss, an unsafe rerun, a change to something that must not
+     change).
+  2. `contradiction`: two parts of the spec disagree.
+  3. `false-claim`: a statement about existing code, files, commands or
+     behaviour is untrue.
+  4. `uncheckable`: a success criterion has no objective check.
+  5. `open-what`: a question about *what* to build (behaviour, scope,
+     interface, data) that the spec does not answer.
+  6. `too-large`: check 6 (scope size) fires; the finding proposes the split.
+- `plan`: a *how* question the plan can settle without changing what gets
+  built. Test: if two implementers answered it differently, would both still
+  meet the spec? Yes means `plan`. Examples: test file placement, helper
+  structure, exact constants the spec does not constrain, step order inside
+  one task. The gate does not fix these in the spec; it hands the question
+  to the plan.
 - `minor`: wording or clarity that does not change what gets built.
 
-Do not pad. A spec with no blocking problems gets no blocking findings.
+A problem that fits none of the six classes is `plan` or `minor`, never
+`blocking`. Do not pad. A spec with no blocking problems gets no blocking
+findings.
 
 ## Output format
 
@@ -50,9 +71,15 @@ Return exactly this, and nothing before or after it:
 
 ## Findings
 ### [blocking] <title>
+- **Class:** wrong-build | contradiction | false-claim | uncheckable | open-what | too-large
 - **Line:** <spec line number or section>
 - **Problem:** <what is wrong, quoting the spec>
 - **Fix:** <a concrete change to the spec>
+
+### [plan] <title>
+- **Line:** <spec line number or section>
+- **Problem:** <what the spec leaves open>
+- **Question:** <the question the plan must answer>
 
 ### [minor] <title>
 - **Line:** ...
