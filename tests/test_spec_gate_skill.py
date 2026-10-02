@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import json
+
 from helpers import PLUGIN, REPO
 
 GATE = PLUGIN / "skills" / "spec-gate"
@@ -106,3 +108,20 @@ def test_docs_wire_the_gate():
     adr = "0015-spec-gate-replaces-full-read.md"
     assert (REPO / "knowledge" / "decisions" / adr).is_file()
     assert f"]({adr})" in text("knowledge/decisions/README.md")
+
+
+def test_adr_0020_and_convention_wire_the_new_rounds():
+    def text(rel):
+        return (REPO / rel).read_text(encoding="utf-8")
+
+    adr = "0020-gates-end-with-verification.md"
+    assert (REPO / "knowledge" / "decisions" / adr).is_file()
+    assert f"]({adr})" in text("knowledge/decisions/README.md")
+    conv = text("conventions/spec-driven-development.md")
+    spec_gate = conv.split("## Spec gate", 1)[1].split("\n## ", 1)[0]
+    plan_gate = conv.split("## Plan gate", 1)[1].split("\n## ", 1)[0]
+    for section in (spec_gate, plan_gate):
+        assert adr in section and "verification round" in section
+    assert "[plan]" in spec_gate
+    manifest = json.loads(text("plugin/.claude-plugin/plugin.json"))
+    assert manifest["version"] == "0.12.0"

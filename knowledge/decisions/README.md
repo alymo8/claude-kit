@@ -25,3 +25,4 @@ the next number; superseded ones are never deleted.
 | [0017](0017-parallel-plan-tasks.md) | Independent plan tasks run as concurrent subagents | accepted | 2026-10-01 |
 | [0018](0018-ship-many-headless-children.md) | `/ship-many` runs independent specs as headless `/ship` children | accepted | 2026-10-01 |
 | [0019](0019-spec-grill-opt-in.md) | An opt-in grill runs between the design and the spec | accepted | 2026-10-01 |
+| [0020](0020-gates-end-with-verification.md) | Gates end with a verification round; blocking is a fixed set of classes | accepted | 2026-10-02 |
