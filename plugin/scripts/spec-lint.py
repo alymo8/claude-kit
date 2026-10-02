@@ -134,7 +134,7 @@ COVERAGE_FROM = date(2026, 10, 1)
 COVERAGE_FILE = Path(__file__).resolve().parent.parent / "skills" / "grill"
 COVERAGE_FILE = COVERAGE_FILE / "coverage.md"
 AREA_RE = re.compile(r"^- \*\*([^*]+?):\*\*(.*)$")
-NA_STRIP = ":-–— "
+NA_STRIP = ":-–—.*_ "
 
 Line = tuple[int, str, bool]  # (line number, text, inside a code fence)
 
@@ -352,7 +352,7 @@ def coverage_areas(path: Path | None = None) -> list[str] | None:
     """Area names from coverage.md's ``## Areas`` bullets; None if unreadable."""
     try:
         text = (path or COVERAGE_FILE).read_text(encoding="utf-8")
-    except OSError:
+    except (OSError, UnicodeDecodeError):
         return None
     body = find(sections(parse(text)), ("areas",))
     if body is None:
@@ -419,6 +419,7 @@ def check_coverage(
             out.append((body[0], "L9-coverage", f"no entry for area {area!r}"))
             continue
         number, text = entry
+        text = text.strip("*_ ")  # **N/A** and _N/A_ are still N/A
         if not text:
             out.append((number, "L9-coverage", f"area {area!r} has no text"))
         elif text.upper().startswith("N/A") and not text[3:].strip(NA_STRIP):

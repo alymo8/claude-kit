@@ -903,3 +903,17 @@ def test_l9_missing_coverage_file_is_reported(root, tmp_path):
     assert result.returncode == 1
     assert "L9-coverage" in result.stdout
     assert "coverage.md" in result.stdout
+
+
+def test_l9_undecodable_coverage_file_is_reported(tmp_path, grill):
+    bad = tmp_path / "coverage.md"
+    bad.write_bytes(b"\xff\xfe## Areas\n")
+    lines = sl.parse(GRILLED)
+    found = sl.check_coverage(lines, sl.sections(lines), bad)
+    assert [rule for _, rule, _ in found] == ["L9-coverage"]
+
+
+@pytest.mark.parametrize("value", ["N/A.", "**N/A**", "_N/A_ -", "n/a"])
+def test_l9_na_without_reason_variants(root, grill, value):
+    text = GRILLED.replace("- **Testing:** Design.", f"- **Testing:** {value}")
+    assert len(l9(text, root)) == 1
