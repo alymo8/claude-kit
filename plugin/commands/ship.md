@@ -87,8 +87,10 @@ A command still failing after that is handled like any other failed command.
    the existing plan. If there is no plan, use `superpowers:writing-plans` to
    write `docs/superpowers/plans/<YYYY-MM-DD>-<slug>.md` from the spec. Where
    the spec leaves a choice open, prefer one the spec, its ADRs or the
-   existing code already imply, so a routine plan passes without stopping. Do
-   not offer an execution choice. Then add a `**Depends on:**` line under each
+   existing code already imply, so a routine plan passes without stopping.
+   Answer every question under the `## Plan questions` section of the spec's
+   gate record (`docs/superpowers/gates/<spec file name>`) in the task it
+   affects (none if the section is missing). Do not offer an execution choice. Then add a `**Depends on:**` line under each
    task's `**Files:**` block: `none`, or the earlier tasks whose results it
    uses (`Task 1, Task 3`). Shared files need not be listed
    (`parallel-plan.py` orders them anyway), so a task whose only link to

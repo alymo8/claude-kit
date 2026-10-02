@@ -79,10 +79,17 @@ A good spec answers, in roughly this order:
 
 Every spec passes the kit's spec gate (`claude-kit:spec-gate`) before review.
 The gate lints the spec with `plugin/scripts/spec-lint.py`, then runs up to
-three rounds of a fresh-context reviewer that tries to plan the work from the
-spec alone and reports every question it would have to ask. The user then
-confirms a short verdict and the key decisions rather than reading the whole
-spec ([ADR 0015](../knowledge/decisions/0015-spec-gate-replaces-full-read.md)).
+three discovery rounds of a fresh-context reviewer that tries to plan the
+work from the spec alone. A finding is `[blocking]` only in one of six
+classes (wrong-build, contradiction, false-claim, uncheckable, open-what,
+too-large); a "how" question the plan can settle is a `[plan]` finding, which
+is not fixed in the spec but listed under `## Plan questions` in the gate
+record for the plan to answer. When the last discovery round's blocking
+findings were fixed, up to two verification rounds check only those fixes
+and the diff they made. The user then confirms a short verdict and the key
+decisions rather than reading the whole spec
+([ADR 0015](../knowledge/decisions/0015-spec-gate-replaces-full-read.md),
+[ADR 0020](../knowledge/decisions/0020-gates-end-with-verification.md)).
 
 The linter requires, outside code blocks:
 
@@ -106,10 +113,14 @@ stale, `/ship` runs the gate itself, and stops if the gate fails.
 
 Every plan passes the kit's plan gate (`claude-kit:plan-gate`) before it is
 executed. The gate lints the plan with `plugin/scripts/spec-lint.py` (plan
-rules apply to files in a `plans` folder), then runs up to three rounds of a
-fresh-context reviewer that maps every spec item to a task, tries to execute
-each task cold, and checks task order and code claims
+rules apply to files in a `plans` folder), then runs up to three discovery
+rounds of a fresh-context reviewer that maps every spec item to a task, tries
+to execute each task cold, checks task order and code claims, and checks
+that the plan answers the spec gate record's Plan questions
 ([ADR 0016](../knowledge/decisions/0016-plan-gate-signs-off-on-new-decisions-only.md)).
+When the last discovery round's blocking findings were fixed, up to two
+verification rounds check only those fixes
+([ADR 0020](../knowledge/decisions/0020-gates-end-with-verification.md)).
 
 The linter requires, outside code blocks:
 

@@ -45,7 +45,19 @@ def test_skill_uses_linter_rubric_and_records():
     ):
         assert field in body
     assert "pass-with-decisions" in body
-    assert "3 rounds" in body
+    assert "3 discovery rounds" in body
+    assert "../spec-gate/verify.md" in body
+    assert (GATE / "../spec-gate/verify.md").resolve().is_file()
+    for text in (
+        "verification round",
+        "Plan questions",
+        "## Decisions changed",
+        "3 discovery + 2 verification",
+        "skip verification",
+        "runs steps 1–6 only",
+    ):
+        assert text in body
+    assert "3 discovery rounds" in frontmatter(body)["description"]
     assert "P4-spec-gated" in body
 
 
@@ -63,6 +75,7 @@ def test_rubric_defines_finding_format_and_probes():
         assert field in rubric
     for probe in ("Cold execution", "Order", "Code claims", "scope creep"):
         assert probe in rubric
+    assert "Plan questions" in rubric
 
 
 def test_docs_and_manifest_wire_the_gate():

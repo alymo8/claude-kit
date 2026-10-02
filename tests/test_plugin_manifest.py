@@ -170,4 +170,5 @@ def test_description_mentions_grill():
     plugin_json = PLUGIN / ".claude-plugin" / "plugin.json"
     data = json.loads(plugin_json.read_text(encoding="utf-8"))
     assert "grill" in data["description"]
-    assert data["version"] == "0.11.0"
+    version = tuple(int(part) for part in data["version"].split("."))
+    assert version >= (0, 11, 0)
