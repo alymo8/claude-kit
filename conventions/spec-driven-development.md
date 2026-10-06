@@ -161,6 +161,14 @@ git worktree per task, merged back in task order
 ([ADR 0017](../knowledge/decisions/0017-parallel-plan-tasks.md)). The plan
 gate checks the line with rule `P10-depends`.
 
+## Fast path for POCs
+
+`/ship-fast <spec.md>` is the ungated path for a proof of concept of about
+an hour: it skips the spec and plan gates, writes a short task list instead
+of a full plan, and ends at an open pull request with green CI for the user
+to review and merge
+([ADR 0021](../knowledge/decisions/0021-ship-fast-skips-gates.md)).
+
 ## Self-contained plans
 
 A plan is a **handoff document**: execution may happen in a fresh session, in a

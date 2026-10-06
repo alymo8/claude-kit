@@ -138,6 +138,15 @@ sequence. Invoking it is my approval for every listed spec and its merge, like
 `/ship`. Use `--dry-run` first to see the waves without launching anything
 ([ADR 0018](knowledge/decisions/0018-ship-many-headless-children.md)).
 
+**`/ship-fast <spec.md>` is the light path for an hour-sized POC.** No gate
+runs; it writes a short task list, builds independent tasks in parallel,
+runs one `code-review low --fix` pass and a smoke run against the spec's
+acceptance criteria, and stops at an open PR with green CI that I review and
+merge. A `- **Repo:** new <name> <node|python>` spec header makes it
+scaffold the project and create a private GitHub repo. It still stops on a
+scope or behaviour decision the spec does not settle
+([ADR 0021](knowledge/decisions/0021-ship-fast-skips-gates.md)).
+
 ## Developing the kit (this repo)
 
 ```
