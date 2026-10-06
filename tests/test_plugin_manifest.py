@@ -39,6 +39,7 @@ def test_commands_exist_with_frontmatter():
         "handoff": "scripts/handoff.py",
         "ship": None,
         "ship-many": "scripts/parallel-plan.py",
+        "ship-fast": "scripts/scaffold.py",
         "spec-html": "scripts/open-spec.py",
     }
     for name, script in expected.items():
@@ -120,7 +121,14 @@ def test_stop_hook_regenerates_spec_index():
 
 
 def test_side_effecting_commands_are_user_only():
-    user_only = {"ship", "ship-many", "new-project", "adopt-conventions", "spec-html"}
+    user_only = {
+        "ship",
+        "ship-many",
+        "ship-fast",
+        "new-project",
+        "adopt-conventions",
+        "spec-html",
+    }
     for name in user_only | {"handoff"}:
         text = (PLUGIN / "commands" / f"{name}.md").read_text(encoding="utf-8")
         frontmatter = text.split("---", 2)[1]
@@ -172,3 +180,10 @@ def test_description_mentions_grill():
     assert "grill" in data["description"]
     version = tuple(int(part) for part in data["version"].split("."))
     assert version >= (0, 11, 0)
+
+
+def test_description_mentions_ship_fast():
+    plugin_json = PLUGIN / ".claude-plugin" / "plugin.json"
+    data = json.loads(plugin_json.read_text(encoding="utf-8"))
+    assert "/ship-fast" in data["description"]
+    assert data["version"] == "0.13.0"
