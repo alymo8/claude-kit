@@ -1,26 +1,35 @@
 ---
-description: Use for a proof of concept of about an hour - take a spec to a tested, smoke-run pull request with green CI, with no gates, no review round and no merge; independent tasks run in parallel
-argument-hint: [path-to-spec.md]
+description: Use for a proof of concept of about an hour - interview the user for the spec (or take an existing one), ask the product decisions out loud, and take it to a tested, smoke-run pull request with green CI, with no gates, no review round and no merge; independent tasks run in parallel
+argument-hint: [spec.md | idea]
 disable-model-invocation: true
 ---
 
-Ship the spec at `$ARGUMENTS` fast (if empty: the newest `*.md` under
-`docs/superpowers/specs/`; name it in one line and continue). This is the
-light path for a proof of concept of about an hour: no gate runs on the spec
-or on the task list, there is no formal review round, and the run ends at an
-open pull request with green CI. The user reviews and merges it; never merge
-it yourself.
+Ship a proof of concept of about an hour fast, with the user deciding what
+it does. `$ARGUMENTS` is a spec path or an idea (see Input). This is the
+light path: no gate runs on the spec or on the task list, there is no formal
+review round, and the run ends at an open pull request with green CI. The
+user reviews and merges it; never merge it yourself. The run may be shown
+live to a client: phrase every question in product terms.
 
 Invoking `/ship-fast` is the user's approval for every step below,
 including creating a private GitHub repository when the spec asks for one.
-Do not ask for confirmation except under the Stop rules. Where a skill this
-command invokes says "ask" or "wait for the answer", take the path this
-command names and continue. Report once, at the end. Do not check local
-`main` or stop for its state, and skip the workspace's pre-flight branch
-check: invoking `/ship-fast` waives it.
+Do not ask for confirmation except in step 0, step 3b, a product or risky
+engineering question (see Questions), and the Stop rules. Inside step 0,
+`superpowers:brainstorming` and `claude-kit:grill` put their questions to
+the user, within step 0's budget. Anywhere else, where a skill this command
+invokes says "ask" or "wait for the answer", take the path this command
+names and continue. Do not check local `main` or stop for its state, and
+skip the workspace's pre-flight branch check: invoking `/ship-fast` waives
+it. Never delete a repository, and never suggest deleting one: the user
+does that themselves.
 
 ## Input
 
+- `$ARGUMENTS`, resolved against the current directory, names an existing
+  `.md` file: it is the spec. Skip step 0.
+- `$ARGUMENTS` ends in `.md` but names no existing file: that is a stop
+  rule (a mistyped spec path), not an idea.
+- Otherwise (free text, or empty): the text is the idea; run step 0.
 - **Acceptance criteria:** the spec's `## Success criteria` section, or else
   the first `##` section whose heading contains "criteria" or
   "verification" (any case). If there is none, that is a stop rule: never
@@ -31,20 +40,71 @@ check: invoking `/ship-fast` waives it.
 - `<slug>`: the spec's file name without `.md`, without a leading
   `YYYY-MM-DD-` and without a trailing `-design`.
 
+## Progress lines
+
+At the start of each step 0 to 8, including step 3b, post one
+plain-language line naming the step and what it is about to do, for
+example "Step 4: building the upload flow, tests first." Progress lines are
+not reports; the single report is step 9.
+
+## Questions
+
+A **product choice** is one a user of the POC would see or feel: behaviour,
+scope, data taken in, shown or kept, layout, wording, defaults, sample data.
+An **engineering choice** is any other: libraries, file layout, test
+approach, data storage, security hardening, interfaces between modules.
+
+A **risky engineering choice** is one that deletes or migrates existing
+data, uses real credentials or a paid external service, or changes an
+interface that something outside the POC depends on. Risky choices are
+always asked, outside every budget: in step 3b's engineering part when the
+task list exposes them, inline when they surface later.
+
+Other engineering choices are asked only in step 3b's engineering part (at
+most 3); every one not asked takes the simplest option that fits the
+repository and is listed under **Assumptions**. Step 0 asks no engineering
+question except two, both inside its budget: Home (when step 0 item 2 does
+not settle it) and the choice among brainstorming's approaches.
+
+**Format.** Every question uses grill's format: numbered, with options when
+there are any, and a recommended answer with a one-line reason.
+
+**Inline questions.** A product choice or risky engineering choice still
+open after step 3b is asked inline, one question in that format. The run
+waits for the answer, appends it to the task list's `## Decisions`, commits
+the task list, and continues from the same point. No handoff is written and
+the run does not end.
+
+**Non-interactive runs.** Before the first question, check whether the
+`AskUserQuestion` tool is available in this session (listed directly or
+as a deferred tool both count as available); if it is not (for
+example a scripted `claude -p` run), the session is non-interactive. In a
+non-interactive session: step 0 is a stop rule (the interview needs the
+user; pass a spec path). Every product or non-risky engineering question in
+step 3b or later takes its recommended answer, listed as "assumed (not
+asked)" in the task list's `## Decisions` and in the PR body, and the run
+continues. A risky engineering choice is a stop rule: the handoff lists it
+with its options and recommendation.
+
+**Where answers go.** Every question the user answered, product or
+engineering, appears under **Decisions** in the PR body and the report;
+product choices taken without asking appear there as "assumed (not
+asked)". Only engineering choices taken without asking go under
+**Assumptions**.
+
 ## Stop rules
 
 These are the only reasons to stop. When one fires: write the handoff with
 the `claude-kit:handoff` skill, state the blocker and what you tried, and
-end your turn.
+end your turn. Every stop after step 0 also states the absolute path of the
+spec to pass on the rerun, in the stop message and in the handoff: for a
+new repository, the in-repository copy once step 1 has committed it, and
+before that the `~/.claude/ship-fast-specs/` path.
 
+- `$ARGUMENTS` ends in `.md` and names no existing file.
+- Step 0 in a non-interactive session.
+- A risky engineering choice in a non-interactive session.
 - The spec has no acceptance criteria.
-- A choice needed to proceed is not settled by the spec, its ADRs or the
-  existing code, and it changes scope, product behaviour or the public
-  interface, or touches data irreversibly. Ask it as one question with the
-  options and your recommendation. When the user answers, record the answer
-  under **Decisions** in the PR body and continue from where you stopped. A
-  "how" choice that changes none of those is not a stop: pick the simplest
-  option, list it under **Assumptions** in the PR body, and continue.
 - `git fetch origin`, `scaffold.py`, the stack's init command, or
   `gh repo create` fails.
 - The baseline test suite of an existing repository is red.
@@ -62,7 +122,9 @@ A command still failing after that is handled like any other failed command.
 
 ## Resume
 
-A rerun after a stop continues where the last run stopped:
+A rerun after a stop continues where the last run stopped. A run that
+stopped before step 0 wrote the spec starts the interview again; after
+that, rerun with the spec path the stop message gave.
 
 A repository folder counts as this run's only if it holds
 `docs/superpowers/specs/<spec file name>` (step 1 commits it there). Any
@@ -90,12 +152,74 @@ refuses it, and that is a stop rule.
   exists on the branch, skip step 3, and in step 4 implement only the tasks
   whose commit message (`<slug>: task N`) is not yet in
   `git log origin/main..HEAD`.
+- If that task list already has a `## Decisions` section, skip step 3b.
 
 ## Steps
 
 Record the wall-clock time at the start of each step from 2 to 7, and when
 step 7 ends. A resumed run reports the minutes it measured.
 
+0. **Spec.** Only when Input says so. **Budget: at most 7 questions to the
+   user in the whole step**, brainstorming and grill together, counting
+   each numbered question and each single question (the idea question and
+   the approach choice included). Fewer is better: a clear idea may need 2
+   or 3.
+   1. **Idea.** With no idea text, ask "What are we building, and for
+      whom?" and wait for the answer in the user's words. This counts as 1.
+   2. **Home.** If the current directory is inside a git repository that
+      is not the claude-kit repository itself (the one whose
+      `plugin/.claude-plugin/plugin.json` has `"name": "claude-kit"`), that
+      repository is the home: state it in one line and read its stack from
+      its files; do not ask. Otherwise Home is a grill question: a new
+      repository (name, and `node` or `python`) or the path of an existing
+      one.
+   3. **Design.** Run `superpowers:brainstorming` on the idea, on its
+      architectural path, with these overrides: skip its separate
+      clarifying questions and its visual-companion offer; read the home
+      repository, if there is one, for context; propose 2–3 approaches with
+      a recommendation; present the design for the recommended approach
+      once, in full, with no per-section approval. The approach choice is
+      not asked on its own: it is the first question of the grill's first
+      round. Stop there: do not write brainstorming's spec, run any review
+      of it, or invoke writing-plans.
+   4. **Grill.** Run `claude-kit:grill` on that design with these
+      overrides: its tree holds the design's open product choices and the
+      areas below **instead of** the `coverage.md` areas, and it asks at
+      most the budget left, most important first, aiming for one round and
+      two at most.
+      - **Users and outcome:** who uses it and what they get.
+      - **Core flows:** the steps a user takes, start to finish.
+      - **In and cut:** what the POC does, and what it leaves out.
+      - **Data:** what it takes in, what it shows, what it keeps.
+      - **States and wording:** empty, loading and error screens, and the
+        text users read.
+      - **Acceptance criteria:** how the user will check the POC works.
+      - **Home:** as in item 2, only when it is not settled there.
+
+      Every open product choice that does not fit the budget takes the
+      grill's recommended answer and is listed in the grill summary as
+      **Assumed (not asked)**. Acceptance criteria are never only assumed:
+      when they do not fit as their own question, the summary proposes them
+      and the user's confirmation covers them. If the user chose an
+      approach other than the recommended one, the summary states the
+      chosen approach and what it changes in the design; the design is not
+      presented again. The summary's coverage list names the areas above,
+      not `coverage.md`'s. The user's confirmation of the summary is the
+      spec's approval; a correction to an assumption in that reply is
+      applied and does not count against the budget.
+   5. **Write the spec.** Pick `<slug>`, a short kebab-case name for the
+      POC. Write Status `approved`, Date, a
+      `- **Repo:** new <name> <stack>` line when Home is a new repository,
+      and the sections Purpose, Scope (`**In:**` and `**Out:**`), Design,
+      Decisions (each question and the user's answer, then an
+      **Assumed (not asked)** list) and Success criteria (the acceptance
+      criteria). No `## Coverage` section. The file name is
+      `<YYYY-MM-DD>-<slug>-design.md`: in an existing repository, under
+      `docs/superpowers/specs/` in its main checkout (step 2 commits it on
+      the branch); for a new repository, under `~/.claude/ship-fast-specs/`
+      (durable across sessions and outside every repository; step 1 copies
+      it in). State the path in one line, do not open it, and continue to
+      step 1 without another pause. No gate runs.
 1. **Repo.** With a `**Repo:** new <name> <stack>` line, run
    `python "${CLAUDE_PLUGIN_ROOT}/scripts/scaffold.py" --name <name> --stack <stack>`
    (fallback if the variable is not expanded:
@@ -132,6 +256,24 @@ step 7 ends. A resumed run reports the minutes it measured.
    that proves it is done; and its commit message, `<slug>: task N <name>`.
    No step-by-step code. Split the work along file boundaries so that
    independent tasks share no file. Commit the task list. No gate runs.
+
+   3b. **Decisions round.** After the task list is committed and before
+   step 4: one round in the question format, in two labelled parts, then
+   wait for the answers (a non-interactive session takes the recommended
+   answers, see Questions):
+   - **Product:** the product choices that writing the tasks exposed and
+     that the spec neither decides nor lists as assumed. Ask at most 3;
+     any beyond 3 take their recommended answer and are listed as assumed.
+   - **Engineering:** every risky engineering choice the task list exposes,
+     plus at most 3 other engineering choices, picked by how much they
+     shape the build (data storage, new dependencies or services,
+     structure). The rest are assumed and listed under Assumptions.
+
+   Write the answers and the assumed choices under a `## Decisions` section
+   in the task list, after its header lines and before its first
+   `### Task`, and commit. Leave out a part with nothing to ask. If both
+   are empty, say so in one line, write `## Decisions` with the single line
+   `- none new`, and commit.
 4. **Implement.** Run
    `python "${CLAUDE_PLUGIN_ROOT}/scripts/parallel-plan.py" waves <plan>`
    (fallback: `~/.claude/skills/claude-kit/scripts/parallel-plan.py`). If it
@@ -140,13 +282,17 @@ step 7 ends. A resumed run reports the minutes it measured.
    run `claude-kit:parallel-tasks` with `<plan>` as its argument (at most 3
    tasks at once). Inside `parallel-tasks`, skip its final whole-branch
    review (step 6 below is the review) but still remove its temp directory,
-   and settle any pre-flight concern about the task list having no
-   step-by-step code with a `Ruling:` ledger line rather than a question.
-   Tests cover the core path and every acceptance criterion
-   a test can check; skip edge cases the spec does not ask for. Before each
-   commit run the full suite and lint; commit per task with its commit
-   message. Before the first Docker command, record the baseline
-   (`docker ps -aq`, `docker images -q`, `docker volume ls -q`,
+   settle any pre-flight concern about the task list having no
+   step-by-step code with a `Ruling:` ledger line rather than a question,
+   and append this sentence to each subagent's prompt: "A product choice or
+   risky engineering choice that the plan's `## Decisions` does not settle
+   is not guessed: report the task as failed and name the question." When
+   a task fails that way, ask its question inline (see Questions) before
+   implementing that task inline. Tests cover the core path and every
+   acceptance criterion a test can check; skip edge cases the spec does not
+   ask for. Before each commit run the full suite and lint; commit per task
+   with its commit message. Before the first Docker command, record the
+   baseline (`docker ps -aq`, `docker images -q`, `docker volume ls -q`,
    `docker network ls -q`) in a scratch file outside the repo; then label
    every object the task creates `claude-kit.task=<slug>` (compose:
    `-p <slug>`) and build with `docker buildx create --name <slug>`.
@@ -167,10 +313,12 @@ step 7 ends. A resumed run reports the minutes it measured.
    PowerShell), `gh pr create --title '<title>' --body-file <file>`, with
    the title written out literally inside single quotes and each `'` in it
    written as `'\''`. The body has: Summary; Acceptance criteria, each with
-   its evidence (the test name or the smoke-run output); Decisions (the
-   user's answers, if any); Assumptions; Cut (what the POC leaves out);
-   links to the spec and the task list; Verification (the exact commands
-   and their results); and the attribution line the session requires. Then
+   its evidence (the test name or the smoke-run output); Decisions (every
+   question the user answered, then the product choices "assumed (not
+   asked)"); Assumptions (engineering choices taken without asking); Cut
+   (what the POC leaves out); links to the spec and the task list;
+   Verification (the exact commands and their results); and the
+   attribution line the session requires. Then
    compare `gh pr view --json title` with the title; on a mismatch run
    `gh pr edit --title '<title>'` once. Whether the repository has CI is
    decided only by whether `.github/workflows/*.yml` exists on the branch.
@@ -194,9 +342,10 @@ step 7 ends. A resumed run reports the minutes it measured.
    wrote on this branch (`.claude/handoffs/poc_<slug>.md`) lives in the
    feature worktree and goes with `worktree remove`; leave the main
    checkout's handoff files alone. Delete any scratch files you created
-   outside the repo.
+   outside the repo; the spec under `~/.claude/ship-fast-specs/` is not a
+   scratch file and stays. The repository itself always stays.
 9. **Report.** One message: the PR link; each acceptance criterion with its
-   evidence; Decisions and Assumptions; the review fixes; the CI result
-   (and, for a new repository, that its first `main` run was red because it
-   had no tests yet); and the wall-clock minutes of steps 2 to 7 (each,
-   and in total).
+   evidence; Decisions (answered, then assumed) and Assumptions; the review
+   fixes; the CI result (and, for a new repository, that its first `main`
+   run was red because it had no tests yet); and the wall-clock minutes of
+   steps 2 to 7 (each, and in total).
