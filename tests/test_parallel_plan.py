@@ -240,3 +240,17 @@ def test_cli_warns_on_a_spec_without_paths(tmp_path):
     result = run_script(SCRIPT, "specs", str(empty), str(full))
     assert result.returncode == 0
     assert "no Scope paths" in result.stderr and str(empty) in result.stderr
+
+
+def test_decisions_section_before_tasks_keeps_waves():
+    base = plan((["a.py"], "none"), (["b.py"], "Task 1"), (["c.py"], "none"))
+    head, rest = base.split("\n### Task 1", 1)
+    decisions = (
+        "\n## Decisions\n\n"
+        "- **Product:** Q1 - Empty list: show `No items yet`.\n"
+        "- **Engineering:** Q2 - Storage: a JSON file at `data/items.json`.\n"
+        "- Assumed (not asked): sort newest first.\n"
+        "- Create: `c.py`\n"  # would tie Task 1 to Task 3 if read as a file
+    )
+    with_decisions = head + decisions + "\n### Task 1" + rest
+    assert waves(with_decisions) == waves(base)

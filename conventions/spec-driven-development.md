@@ -167,7 +167,10 @@ gate checks the line with rule `P10-depends`.
 an hour: it skips the spec and plan gates, writes a short task list instead
 of a full plan, and ends at an open pull request with green CI for the user
 to review and merge
-([ADR 0021](../knowledge/decisions/0021-ship-fast-skips-gates.md)).
+([ADR 0021](../knowledge/decisions/0021-ship-fast-skips-gates.md)). Given an
+idea instead of a spec, `/ship-fast` first runs a short interview in which
+the user decides the product, and the user's confirmation approves the spec
+([ADR 0022](../knowledge/decisions/0022-ship-fast-user-driven-spec.md)).
 
 ## Self-contained plans
 

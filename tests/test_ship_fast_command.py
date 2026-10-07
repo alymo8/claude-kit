@@ -51,3 +51,77 @@ def test_review_fixes_are_pinned():
     assert ".github/workflows/*.yml" in SHIP_FAST
     assert "name collision" in SHIP_FAST
     assert "--no-workspace" in SHIP_FAST
+
+
+PRODUCT_AREAS = (
+    "Users and outcome",
+    "Core flows",
+    "In and cut",
+    "Data",
+    "States and wording",
+    "Acceptance criteria",
+    "Home",
+)
+
+
+def test_spec_phase():
+    for needle in (
+        "superpowers:brainstorming",
+        "claude-kit:grill",
+        "at most 7",
+        "Assumed (not asked)",
+        "[spec.md | idea]",
+        "~/.claude/ship-fast-specs/",
+        "visual-companion",
+        *PRODUCT_AREAS,
+    ):
+        assert needle in SHIP_FAST, needle
+
+
+def test_input_rules():
+    assert "names no existing file" in SHIP_FAST
+    assert "newest" not in SHIP_FAST
+
+
+def test_decisions_round():
+    for needle in (
+        "Decisions round",
+        "## Decisions",
+        "at most 3",
+        "**Product:**",
+        "**Engineering:**",
+        "- none new",
+    ):
+        assert needle in SHIP_FAST, needle
+
+
+def test_questions_rules():
+    for needle in (
+        "risky engineering choice",
+        "does not end",
+        "AskUserQuestion",
+        "non-interactive",
+        "Progress lines",
+        "including step 3b",
+    ):
+        assert needle in SHIP_FAST, needle
+
+
+def test_old_stop_rule_and_repo_deletion_absent():
+    assert "changes scope, product behaviour" not in SHIP_FAST
+    assert "gh repo delete" not in SHIP_FAST
+    assert "Never delete a repository" in SHIP_FAST
+
+
+def test_review_fixes_for_edge_paths():
+    # Risky stop keeps its question; early stops need no repo; title line;
+    # early non-interactive check; Home is confirmed; idea text ending in .md.
+    for needle in (
+        "before `## Decisions` is written",
+        "without a handoff",
+        "single token",
+        "a `# <title>` line",
+        "At the start of step 0",
+        "the grill summary names Home",
+    ):
+        assert needle in SHIP_FAST, needle
