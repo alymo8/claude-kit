@@ -103,11 +103,13 @@ is in [`plugin/`](plugin/).
   approved spec all the way to a squash-merged, cleaned-up change on `main`
   without further check-ins; it stops only on the rules listed in the command
   (red CI after three fixes, a review finding that needs a decision, a refused
-  merge, a failed pre-flight). `/ship-fast <spec.md>` is the light path for
-  an hour-sized POC: no gates, a short task list run in parallel where it can
-  be, one quick review and a smoke run, ending at a pull request with green
-  CI that you merge. `/spec-html [path]` renders a
-  spec or plan (the latest one when no path is given) and opens its HTML view.
+  merge, a failed pre-flight). `/ship-fast [spec.md | idea]` is the light
+  path for an hour-sized POC: given an idea it first interviews you for the
+  spec (at most 7 product questions), then runs with no gates, a short task
+  list run in parallel where it can be, one quick review and a smoke run,
+  ending at a pull request with green CI that you merge. `/spec-html [path]`
+  renders a spec or plan (the latest one when no path is given) and opens
+  its HTML view.
 - **[`knowledge/decisions/`](knowledge/decisions/)** — this repo's own ADRs.
 - **[`docs/superpowers/`](docs/superpowers/)** — specs and plans for changes to
   the kit itself.

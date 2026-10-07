@@ -66,3 +66,25 @@ def test_docs_wire_ship_fast():
     )
     assert "`/ship` or `/ship-fast`" in skill
     assert "committed in `/ship` step 3" not in skill
+
+
+def _paragraphs_with(text, needle):
+    return [p for p in text.replace("\r\n", "\n").split("\n\n") if needle in p]
+
+
+def test_docs_wire_ship_fast_interview():
+    adr = "0022-ship-fast-user-driven-spec.md"
+    decisions = REPO / "knowledge" / "decisions"
+    assert (decisions / adr).is_file()
+    index = (decisions / "README.md").read_text(encoding="utf-8")
+    assert f"]({adr})" in index
+    row_0021 = next(
+        line for line in index.splitlines() if "0021-ship-fast-skips-gates.md" in line
+    )
+    assert "amended by 0022" in row_0021
+    adr_0021 = (decisions / "0021-ship-fast-skips-gates.md").read_text("utf-8")
+    assert "amended by 0022" in adr_0021 and adr in adr_0021
+    for name in ("README.md", "CLAUDE.md", "conventions/spec-driven-development.md"):
+        text = (REPO / name).read_text(encoding="utf-8")
+        paragraphs = _paragraphs_with(text, "/ship-fast")
+        assert any("interview" in p for p in paragraphs), name

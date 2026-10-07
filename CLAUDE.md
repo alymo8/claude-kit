@@ -138,14 +138,20 @@ sequence. Invoking it is my approval for every listed spec and its merge, like
 `/ship`. Use `--dry-run` first to see the waves without launching anything
 ([ADR 0018](knowledge/decisions/0018-ship-many-headless-children.md)).
 
-**`/ship-fast <spec.md>` is the light path for an hour-sized POC.** No gate
-runs; it writes a short task list, builds independent tasks in parallel,
-runs one `code-review low --fix` pass and a smoke run against the spec's
-acceptance criteria, and stops at an open PR with green CI that I review and
-merge. A `- **Repo:** new <name> <node|python>` spec header makes it
-scaffold the project and create a private GitHub repo. It still stops on a
-scope or behaviour decision the spec does not settle
-([ADR 0021](knowledge/decisions/0021-ship-fast-skips-gates.md)).
+**`/ship-fast [spec.md | idea]` is the light path for an hour-sized POC.**
+Given an idea (or nothing), it first interviews me for the spec: a
+brainstorming design, then at most 7 product questions with recommended
+answers; my confirmation approves the spec. Given a spec, it skips that.
+No gate runs; it writes a short task list, asks at most 3 product and 3
+engineering questions the task split exposed (plus any risky choice), builds
+independent tasks in parallel, runs one `code-review low --fix` pass and a
+smoke run against the spec's acceptance criteria, and stops at an open PR
+with green CI that I review and merge. Product or risky questions that come
+up later are asked inline and never end the run. A
+`- **Repo:** new <name> <node|python>` spec header makes it scaffold the
+project and create a private GitHub repo; it never deletes a repo
+([ADR 0021](knowledge/decisions/0021-ship-fast-skips-gates.md),
+[ADR 0022](knowledge/decisions/0022-ship-fast-user-driven-spec.md)).
 
 ## Developing the kit (this repo)
 

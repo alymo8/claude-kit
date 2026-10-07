@@ -26,4 +26,5 @@ the next number; superseded ones are never deleted.
 | [0018](0018-ship-many-headless-children.md) | `/ship-many` runs independent specs as headless `/ship` children | accepted | 2026-10-01 |
 | [0019](0019-spec-grill-opt-in.md) | An opt-in grill runs between the design and the spec | accepted | 2026-10-01 |
 | [0020](0020-gates-end-with-verification.md) | Gates end with a verification round; blocking is a fixed set of classes | accepted | 2026-10-02 |
-| [0021](0021-ship-fast-skips-gates.md) | `/ship-fast` takes a POC spec to a PR with no gates | accepted | 2026-10-06 |
+| [0021](0021-ship-fast-skips-gates.md) | `/ship-fast` takes a POC spec to a PR with no gates | accepted; amended by 0022 | 2026-10-06 |
+| [0022](0022-ship-fast-user-driven-spec.md) | `/ship-fast` interviews the user for the spec and asks product decisions | accepted | 2026-10-07 |
