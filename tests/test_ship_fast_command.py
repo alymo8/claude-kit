@@ -43,6 +43,20 @@ def test_resume_and_cleanup():
     assert ".claude/handoffs/poc_<slug>.md" in SHIP_FAST
 
 
+def test_cleanup_waits_for_the_user():
+    # The run hands over a running POC; cleanup runs only on request.
+    steps = SHIP_FAST.split("## Steps", 1)[1].split("## Cleanup (on request)", 1)
+    assert len(steps) == 2, "missing Cleanup (on request) section"
+    run, cleanup = steps
+    assert "worktree remove" not in run and "branch -D" not in run
+    assert "worktree remove" in cleanup and "branch -D" in cleanup
+    assert "**Hand over.**" in run and "leave it running" in run
+    assert "Do not suggest cleaning up in the report" in run
+    assert "tested the app or finished presenting" in run
+    assert "ask before removing anything" in cleanup
+    assert ".docker-baseline.txt" in SHIP_FAST
+
+
 def test_review_fixes_are_pinned():
     # Workspace pre-flight is waived, parallel-tasks' own review is skipped,
     # CI presence is read from workflow files, and resume needs the spec copy.
