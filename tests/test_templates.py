@@ -68,3 +68,41 @@ def test_claude_review_is_disabled_by_default():
     )
     assert "workflow_dispatch:" in yaml_only
     assert "pull_request" not in yaml_only
+
+
+SECRET_SCAN = PROJECT / ".github" / "workflows" / "secret-scan.yml"
+KIT_SECRET_SCAN = PLUGIN.parent / ".github" / "workflows" / "secret-scan.yml"
+
+
+def _yaml_lines(text):
+    return [line for line in text.splitlines() if not line.lstrip().startswith("#")]
+
+
+def test_secret_scan_uses_pinned_cli():
+    text = SECRET_SCAN.read_text("utf-8")
+    assert "gitleaks-action" not in text
+    assert re.search(r"GITLEAKS_VERSION: \d+\.\d+\.\d+\b", text)
+    assert re.search(r"GITLEAKS_SHA256: [0-9a-f]{64}\b", text)
+    for needle in (
+        "sha256sum -c",
+        "gitleaks git",
+        '--log-opts="HEAD"',
+        "fetch-depth: 0",
+    ):
+        assert needle in text, needle
+
+
+def test_secret_scan_declares_read_only_permissions():
+    lines = _yaml_lines(SECRET_SCAN.read_text("utf-8"))
+    start = lines.index("permissions:")
+    block = []
+    for line in lines[start + 1 :]:
+        if line and not line[0].isspace():
+            break
+        block.append(line.strip())
+    assert "contents: read" in block
+    assert all(not entry or entry == "contents: read" for entry in block), block
+
+
+def test_kit_secret_scan_matches_template():
+    assert KIT_SECRET_SCAN.read_bytes() == SECRET_SCAN.read_bytes()
