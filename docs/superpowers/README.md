@@ -23,7 +23,7 @@
 
 | Date | Plan | Status |
 |---|---|---|
-| 2026-10-07 | [Ship Fast User-Driven Spec Implementation Plan](plans/2026-10-07-ship-fast-user-driven-spec.md) | draft |
+| 2026-10-07 | [Ship Fast User-Driven Spec Implementation Plan](plans/2026-10-07-ship-fast-user-driven-spec.md) | approved |
 | 2026-10-06 | [Ship Fast Implementation Plan](plans/2026-10-06-ship-fast.md) | approved |
 | 2026-10-02 | [Gates Converge Implementation Plan](plans/2026-10-02-gate-verification-round.md) | approved |
 | 2026-10-01 | [Parallel Plan Tasks Implementation Plan](plans/2026-10-01-parallel-plan-tasks.md) | implemented |
