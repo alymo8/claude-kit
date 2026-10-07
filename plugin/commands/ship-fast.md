@@ -15,7 +15,9 @@ Invoking `/ship-fast` is the user's approval for every step below,
 including creating a private GitHub repository when the spec asks for one.
 Do not ask for confirmation except under the Stop rules. Where a skill this
 command invokes says "ask" or "wait for the answer", take the path this
-command names and continue. Report once, at the end.
+command names and continue. Report once, at the end. Do not check local
+`main` or stop for its state, and skip the workspace's pre-flight branch
+check: invoking `/ship-fast` waives it.
 
 ## Input
 
@@ -62,10 +64,15 @@ A command still failing after that is handled like any other failed command.
 
 A rerun after a stop continues where the last run stopped:
 
-- With `**Repo:** new`, if the repository folder already exists as a git
-  repository with an `origin` remote, step 1 only runs `git fetch origin`
+A repository folder counts as this run's only if it holds
+`docs/superpowers/specs/<spec file name>` (step 1 commits it there). Any
+other existing folder at that path is a name collision: `scaffold.py`
+refuses it, and that is a stop rule.
+
+- With `**Repo:** new`, if this run's repository folder already exists as a
+  git repository with an `origin` remote, step 1 only runs `git fetch origin`
   there.
-- With `**Repo:** new`, if the repository folder exists as a git
+- With `**Repo:** new`, if this run's repository folder exists as a git
   repository without an `origin` remote (a stop in step 1): skip
   `scaffold.py`, run the stack's init commands only if their output
   (`pyproject.toml` or `package.json`) is missing, commit anything
@@ -86,7 +93,8 @@ A rerun after a stop continues where the last run stopped:
 
 ## Steps
 
-Record the wall-clock time at the start of each step from 2 to 7.
+Record the wall-clock time at the start of each step from 2 to 7, and when
+step 7 ends. A resumed run reports the minutes it measured.
 
 1. **Repo.** With a `**Repo:** new <name> <stack>` line, run
    `python "${CLAUDE_PLUGIN_ROOT}/scripts/scaffold.py" --name <name> --stack <stack>`
@@ -94,7 +102,10 @@ Record the wall-clock time at the start of each step from 2 to 7.
    `~/.claude/skills/claude-kit/scripts/scaffold.py`). Pass no `--parent`:
    the repository is created beside the other project repos in the
    workspace, and `<repo>` is the path the script prints. In `<repo>`, run
-   the stack's init commands the script prints, copy the spec to
+   only the stack's init commands from the script's `next:` line (not
+   `/init`, and not its `gh repo create` hint), passing `--no-workspace` to
+   `uv init` so a parent `pyproject.toml` does not adopt the new project;
+   copy the spec to
    `docs/superpowers/specs/<spec file name>` (the original stays where it
    was), and commit the init output and the spec together. Then run
    `gh repo create <name> --private --source <repo> --push`. The first
@@ -127,7 +138,11 @@ Record the wall-clock time at the start of each step from 2 to 7.
    exits non-zero, or every wave has one task, implement the tasks in order
    in this session with `superpowers:test-driven-development`. Otherwise
    run `claude-kit:parallel-tasks` with `<plan>` as its argument (at most 3
-   tasks at once). Tests cover the core path and every acceptance criterion
+   tasks at once). Inside `parallel-tasks`, skip its final whole-branch
+   review (step 6 below is the review) but still remove its temp directory,
+   and settle any pre-flight concern about the task list having no
+   step-by-step code with a `Ruling:` ledger line rather than a question.
+   Tests cover the core path and every acceptance criterion
    a test can check; skip edge cases the spec does not ask for. Before each
    commit run the full suite and lint; commit per task with its commit
    message. Before the first Docker command, record the baseline
@@ -137,12 +152,13 @@ Record the wall-clock time at the start of each step from 2 to 7.
    `-p <slug>`) and build with `docker buildx create --name <slug>`.
 5. **Smoke run.** Use the `run` skill to launch the app and check every
    acceptance criterion that no test covers. Record the evidence for each
-   (command output, or a screenshot path). A criterion that fails is fixed
+   (command output, or a screenshot path); write screenshots and sample
+   inputs to the scratchpad, not the worktree. A criterion that fails is fixed
    with `superpowers:systematic-debugging` and rechecked, at most 2 times
    per criterion; a criterion still failing after that is a stop rule.
 6. **Quick review.** Run the `code-review` skill with the arguments
-   `low --fix poc/<slug>` (the branch is the target, so it covers every
-   commit on it). Then read `git diff`: keep each edit that fixes a
+   `low --fix poc/<slug>` (the branch is the target, diffed against
+   `origin/main`, so it covers every commit on it). Then read `git diff`: keep each edit that fixes a
    correctness bug and revert the rest. Re-run the full suite and lint, and
    commit `<slug>: review fixes` if anything is left.
 7. **PR.** `git push -u origin poc/<slug>`. The PR title is the spec's
@@ -156,11 +172,13 @@ Record the wall-clock time at the start of each step from 2 to 7.
    links to the spec and the task list; Verification (the exact commands
    and their results); and the attribution line the session requires. Then
    compare `gh pr view --json title` with the title; on a mismatch run
-   `gh pr edit --title '<title>'` once. Then `gh pr checks --watch
-   --fail-fast`. On red: `gh run view <id> --log-failed`, fix with
+   `gh pr edit --title '<title>'` once. Whether the repository has CI is
+   decided only by whether `.github/workflows/*.yml` exists on the branch.
+   If it does, run `gh pr checks` every 15 seconds until checks appear
+   (they start a few seconds after the PR is created), then
+   `gh pr checks --watch --fail-fast`. On red: `gh run view <id> --log-failed`, fix with
    `superpowers:systematic-debugging`, commit, push, count one attempt. If
-   the repository has no CI workflow, skip the watch and say so in the
-   report.
+   there is no workflow file, skip the watch and say so in the report.
 8. **Cleanup.** Leave the feature worktree first (`ExitWorktree` with
    `keep` if the session entered it with `EnterWorktree`, otherwise change
    directory). If the task used Docker: stop and remove the containers
@@ -180,4 +198,5 @@ Record the wall-clock time at the start of each step from 2 to 7.
 9. **Report.** One message: the PR link; each acceptance criterion with its
    evidence; Decisions and Assumptions; the review fixes; the CI result
    (and, for a new repository, that its first `main` run was red because it
-   had no tests yet); and the wall-clock minutes of steps 2 to 7.
+   had no tests yet); and the wall-clock minutes of steps 2 to 7 (each,
+   and in total).

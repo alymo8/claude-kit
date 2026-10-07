@@ -22,7 +22,7 @@
 
 | Date | Plan | Status |
 |---|---|---|
-| 2026-10-06 | [Ship Fast Implementation Plan](plans/2026-10-06-ship-fast.md) | draft |
+| 2026-10-06 | [Ship Fast Implementation Plan](plans/2026-10-06-ship-fast.md) | approved |
 | 2026-10-02 | [Gates Converge Implementation Plan](plans/2026-10-02-gate-verification-round.md) | approved |
 | 2026-10-01 | [Parallel Plan Tasks Implementation Plan](plans/2026-10-01-parallel-plan-tasks.md) | implemented |
 | 2026-10-01 | [Ship Many Implementation Plan](plans/2026-10-01-ship-many.md) | implemented |

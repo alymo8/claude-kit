@@ -41,3 +41,13 @@ def test_names_its_pieces():
 def test_resume_and_cleanup():
     assert "## Resume" in SHIP_FAST
     assert ".claude/handoffs/poc_<slug>.md" in SHIP_FAST
+
+
+def test_review_fixes_are_pinned():
+    # Workspace pre-flight is waived, parallel-tasks' own review is skipped,
+    # CI presence is read from workflow files, and resume needs the spec copy.
+    assert "pre-flight branch" in SHIP_FAST
+    assert "skip its final whole-branch" in SHIP_FAST
+    assert ".github/workflows/*.yml" in SHIP_FAST
+    assert "name collision" in SHIP_FAST
+    assert "--no-workspace" in SHIP_FAST
