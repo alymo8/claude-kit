@@ -140,8 +140,8 @@ sequence. Invoking it is my approval for every listed spec and its merge, like
 
 **`/ship-fast [spec.md | idea]` is the light path for an hour-sized POC.**
 Given an idea (or nothing), it first interviews me for the spec: a
-brainstorming design, then at most 7 product questions with recommended
-answers; my confirmation approves the spec. Given a spec, it skips that.
+brainstorming design, then product questions with recommended answers (at
+most 7 questions in all); my confirmation approves the spec. Given a spec, it skips that.
 No gate runs; it writes a short task list, asks at most 3 product and 3
 engineering questions the task split exposed (plus any risky choice), builds
 independent tasks in parallel, runs one `code-review low --fix` pass and a

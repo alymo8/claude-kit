@@ -111,3 +111,17 @@ def test_old_stop_rule_and_repo_deletion_absent():
     assert "changes scope, product behaviour" not in SHIP_FAST
     assert "gh repo delete" not in SHIP_FAST
     assert "Never delete a repository" in SHIP_FAST
+
+
+def test_review_fixes_for_edge_paths():
+    # Risky stop keeps its question; early stops need no repo; title line;
+    # early non-interactive check; Home is confirmed; idea text ending in .md.
+    for needle in (
+        "before `## Decisions` is written",
+        "without a handoff",
+        "single token",
+        "a `# <title>` line",
+        "At the start of step 0",
+        "the grill summary names Home",
+    ):
+        assert needle in SHIP_FAST, needle

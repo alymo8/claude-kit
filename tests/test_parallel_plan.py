@@ -250,6 +250,7 @@ def test_decisions_section_before_tasks_keeps_waves():
         "- **Product:** Q1 - Empty list: show `No items yet`.\n"
         "- **Engineering:** Q2 - Storage: a JSON file at `data/items.json`.\n"
         "- Assumed (not asked): sort newest first.\n"
+        "- Create: `c.py`\n"  # would tie Task 1 to Task 3 if read as a file
     )
     with_decisions = head + decisions + "\n### Task 1" + rest
     assert waves(with_decisions) == waves(base)

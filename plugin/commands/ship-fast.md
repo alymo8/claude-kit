@@ -27,8 +27,9 @@ does that themselves.
 
 - `$ARGUMENTS`, resolved against the current directory, names an existing
   `.md` file: it is the spec. Skip step 0.
-- `$ARGUMENTS` ends in `.md` but names no existing file: that is a stop
-  rule (a mistyped spec path), not an idea.
+- `$ARGUMENTS` is a single token (no spaces) ending in `.md` that
+  names no existing file: that is a stop rule (a mistyped spec path), not an
+  idea. Free text that happens to end in `.md` is an idea.
 - Otherwise (free text, or empty): the text is the idea; run step 0.
 - **Acceptance criteria:** the spec's `## Success criteria` section, or else
   the first `##` section whose heading contains "criteria" or
@@ -75,7 +76,8 @@ waits for the answer, appends it to the task list's `## Decisions`, commits
 the task list, and continues from the same point. No handoff is written and
 the run does not end.
 
-**Non-interactive runs.** Before the first question, check whether the
+**Non-interactive runs.** At the start of step 0 (or, with a spec path,
+before the first question), check whether the
 `AskUserQuestion` tool is available in this session (listed directly or
 as a deferred tool both count as available); if it is not (for
 example a scripted `claude -p` run), the session is non-interactive. In a
@@ -83,8 +85,12 @@ non-interactive session: step 0 is a stop rule (the interview needs the
 user; pass a spec path). Every product or non-risky engineering question in
 step 3b or later takes its recommended answer, listed as "assumed (not
 asked)" in the task list's `## Decisions` and in the PR body, and the run
-continues. A risky engineering choice is a stop rule: the handoff lists it
-with its options and recommendation.
+continues. A risky engineering choice is a stop rule, and in step 3b it
+stops before `## Decisions` is written, so the rerun asks step 3b again:
+the stop message and the handoff list the choice with its options and
+recommendation, and say how to settle it (rerun interactively, or add the
+answer to the spec's `## Decisions`, which step 3b then treats as
+decided).
 
 **Where answers go.** Every question the user answered, product or
 engineering, appears under **Decisions** in the PR body and the report;
@@ -101,7 +107,12 @@ spec to pass on the rerun, in the stop message and in the handoff: for a
 new repository, the in-repository copy once step 1 has committed it, and
 before that the `~/.claude/ship-fast-specs/` path.
 
-- `$ARGUMENTS` ends in `.md` and names no existing file.
+The first two stops below happen before any repository or branch exists:
+they end the run without a handoff, printing the blocker and the corrected
+invocation (for example `/ship-fast <path to an existing spec.md>`).
+
+- `$ARGUMENTS` is a single token ending in `.md` that names no existing
+  file.
 - Step 0 in a non-interactive session.
 - A risky engineering choice in a non-interactive session.
 - The spec has no acceptance criteria.
@@ -204,11 +215,14 @@ step 7 ends. A resumed run reports the minutes it measured.
       approach other than the recommended one, the summary states the
       chosen approach and what it changes in the design; the design is not
       presented again. The summary's coverage list names the areas above,
-      not `coverage.md`'s. The user's confirmation of the summary is the
+      not `coverage.md`'s, and the grill summary names Home (inferred in
+      item 2 or answered), so the confirmation covers it. The user's
+      confirmation of the summary is the
       spec's approval; a correction to an assumption in that reply is
       applied and does not count against the budget.
    5. **Write the spec.** Pick `<slug>`, a short kebab-case name for the
-      POC. Write Status `approved`, Date, a
+      POC. Write a `# <title>` line (the POC's name; step 7 uses it as the
+      PR title), Status `approved`, Date, a
       `- **Repo:** new <name> <stack>` line when Home is a new repository,
       and the sections Purpose, Scope (`**In:**` and `**Out:**`), Design,
       Decisions (each question and the user's answer, then an
