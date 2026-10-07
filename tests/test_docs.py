@@ -48,3 +48,21 @@ def test_claude_md_gates_plans():
 def test_claude_md_has_no_per_section_design_approval():
     section = " ".join(_claude_md_section("Designing a spec").split())
     assert "no approval pause between design sections" in section
+
+
+def test_docs_wire_ship_fast():
+    adr = "0021-ship-fast-skips-gates.md"
+    assert (REPO / "knowledge" / "decisions" / adr).is_file()
+    index = (REPO / "knowledge" / "decisions" / "README.md").read_text(encoding="utf-8")
+    assert f"]({adr})" in index
+    conv = (REPO / "conventions" / "spec-driven-development.md").read_text(
+        encoding="utf-8"
+    )
+    assert "/ship-fast" in conv and adr in conv
+    for name in ("README.md", "CLAUDE.md"):
+        assert "/ship-fast" in (REPO / name).read_text(encoding="utf-8"), name
+    skill = (REPO / "plugin" / "skills" / "parallel-tasks" / "SKILL.md").read_text(
+        encoding="utf-8"
+    )
+    assert "`/ship` or `/ship-fast`" in skill
+    assert "committed in `/ship` step 3" not in skill

@@ -1,24 +1,24 @@
 ---
 name: parallel-tasks
-description: Use when /ship (or you) implements a plan whose waves, from parallel-plan.py, hold more than one task. Runs each wave's tasks as concurrent subagents, one git worktree per task, then merges them back in task order with --no-ff and runs the full suite after each wave.
+description: Use when /ship or /ship-fast (or you) implements a plan whose waves, from parallel-plan.py, hold more than one task. Runs each wave's tasks as concurrent subagents, one git worktree per task, then merges them back in task order with --no-ff and runs the full suite after each wave.
 argument-hint: [path-to-plan.md]
 ---
 
 # Parallel tasks
 
-Runs one plan's tasks by waves from inside a `/ship` feature worktree. Tasks
+Runs one plan's tasks by waves from inside a `/ship` or `/ship-fast` feature worktree. Tasks
 in a wave share no files and do not depend on each other, so they can be
 built at the same time.
 
 ## Setup
 
-- **Plan:** `$ARGUMENTS`, the plan `/ship` is implementing.
+- **Plan:** `$ARGUMENTS`, the plan `/ship` or `/ship-fast` is implementing.
 - **Script:** `python <this skill's directory>/../../scripts/parallel-plan.py`.
 - `<branch-slug>` is the feature branch name with `/` replaced by `_`;
   `<tmp>` is the OS temp directory; `<plan>` is the plan's repo-relative
-  path (the plan is committed in `/ship` step 3, so every task worktree has
+  path (the plan is committed before this skill runs, so every task worktree has
   the same copy).
-- Every git command here follows `/ship`'s git lock retry rule: a command
+- Every git command here follows the git lock retry rule of `/ship` or `/ship-fast`: a command
   that fails with `Unable to create '...lock': File exists` or
   `cannot lock ref` is retried after 5 seconds, up to 5 times.
 

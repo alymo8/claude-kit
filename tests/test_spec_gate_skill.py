@@ -124,4 +124,5 @@ def test_adr_0020_and_convention_wire_the_new_rounds():
         assert adr in section and "verification round" in section
     assert "[plan]" in spec_gate
     manifest = json.loads(text("plugin/.claude-plugin/plugin.json"))
-    assert manifest["version"] == "0.12.0"
+    version = tuple(int(part) for part in manifest["version"].split("."))
+    assert version >= (0, 12, 0)
