@@ -6,6 +6,7 @@
 
 | Date | Spec | Status |
 |---|---|---|
+| 2026-10-07 | [Scaffold secret scan: gitleaks CLI instead of gitleaks-action](specs/2026-10-07-scaffold-secret-scan-design.md) | approved |
 | 2026-10-07 | [`/ship-fast`: a spec the user drives, and product decisions asked out loud](specs/2026-10-07-ship-fast-user-driven-spec-design.md) | approved |
 | 2026-10-06 | [`/ship-fast`: a light path from spec to PR for hour-sized POCs](specs/2026-10-06-ship-fast-design.md) | approved |
 | 2026-10-02 | [Gates converge: a verification round and a narrower blocking bar](specs/2026-10-02-gate-verification-round-design.md) | approved |
@@ -23,6 +24,7 @@
 
 | Date | Plan | Status |
 |---|---|---|
+| 2026-10-07 | [Scaffold Secret Scan Implementation Plan](plans/2026-10-07-scaffold-secret-scan.md) | approved |
 | 2026-10-07 | [Ship Fast User-Driven Spec Implementation Plan](plans/2026-10-07-ship-fast-user-driven-spec.md) | approved |
 | 2026-10-06 | [Ship Fast Implementation Plan](plans/2026-10-06-ship-fast.md) | approved |
 | 2026-10-02 | [Gates Converge Implementation Plan](plans/2026-10-02-gate-verification-round.md) | approved |
