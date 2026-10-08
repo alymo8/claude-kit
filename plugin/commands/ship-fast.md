@@ -7,8 +7,10 @@ disable-model-invocation: true
 Ship a proof of concept of about an hour fast, with the user deciding what
 it does. `$ARGUMENTS` is a spec path or an idea (see Input). This is the
 light path: no gate runs on the spec or on the task list, there is no formal
-review round, and the run ends at an open pull request with green CI. The
-user reviews and merges it; never merge it yourself. The run may be shown
+review round, and the run ends at an open pull request with green CI and
+the POC running from its kept workspace. The user reviews and merges it;
+never merge it yourself. The workspace is cleaned up only when the user
+asks, after testing (see Cleanup). The run may be shown
 live to a client: phrase every question in product terms.
 
 Invoking `/ship-fast` is the user's approval for every step below,
@@ -307,7 +309,8 @@ step 7 ends. A resumed run reports the minutes it measured.
    ask for. Before each commit run the full suite and lint; commit per task
    with its commit message. Before the first Docker command, record the
    baseline (`docker ps -aq`, `docker images -q`, `docker volume ls -q`,
-   `docker network ls -q`) in a scratch file outside the repo; then label
+   `docker network ls -q`) in `~/.claude/ship-fast-specs/<slug>.docker-baseline.txt`
+   (outside the repo, and still there for a Cleanup in a later session); then label
    every object the task creates `claude-kit.task=<slug>` (compose:
    `-p <slug>`) and build with `docker buildx create --name <slug>`.
 5. **Smoke run.** Use the `run` skill to launch the app and check every
@@ -341,25 +344,46 @@ step 7 ends. A resumed run reports the minutes it measured.
    `gh pr checks --watch --fail-fast`. On red: `gh run view <id> --log-failed`, fix with
    `superpowers:systematic-debugging`, commit, push, count one attempt. If
    there is no workflow file, skip the watch and say so in the report.
-8. **Cleanup.** Leave the feature worktree first (`ExitWorktree` with
-   `keep` if the session entered it with `EnterWorktree`, otherwise change
-   directory). If the task used Docker: stop and remove the containers
-   labelled `claude-kit.task=<slug>` (`docker compose -p <slug> down
-   --volumes --rmi local` for a stack), remove the images, volumes and
-   networks it created or pulled that are not in the step-4 baseline, and
-   `docker buildx rm <slug>`; never run a prune without a
-   `label=claude-kit.task=<slug>` filter. Then
-   `git -C <main-checkout> worktree remove <worktree-path>`,
-   `git -C <main-checkout> worktree prune` and
-   `git -C <main-checkout> branch -D poc/<slug>`. The remote branch stays for
-   the PR; the user deletes it when merging. A handoff an earlier stop
-   wrote on this branch (`.claude/handoffs/poc_<slug>.md`) lives in the
-   feature worktree and goes with `worktree remove`; leave the main
-   checkout's handoff files alone. Delete any scratch files you created
-   outside the repo; the spec under `~/.claude/ship-fast-specs/` is not a
-   scratch file and stays. The repository itself always stays.
+8. **Hand over.** No cleanup runs here: the user tests and presents the
+   POC from this workspace first. Keep the feature worktree, the local
+   branch `poc/<slug>` and any Docker objects. Launch the app from the
+   worktree with the `run` skill, as a background process (or its
+   containers), and leave it running; note its URL or entry command, the
+   command to stop it, and the command to start it again (a background
+   process ends with the session; containers keep running). Stop any other
+   process the smoke run left behind.
 9. **Report.** One message: the PR link; each acceptance criterion with its
    evidence; Decisions (answered, then assumed) and Assumptions; the review
    fixes; the CI result (and, for a new repository, that its first `main`
-   run was red because it had no tests yet); and the wall-clock minutes of
-   steps 2 to 7 (each, and in total).
+   run was red because it had no tests yet); the wall-clock minutes of
+   steps 2 to 7 (each, and in total); and **Try it**: the running app's
+   URL or entry command, how to stop and restart it, and the worktree path.
+   Do not suggest cleaning up in the report. Once the user says they have
+   tested the app or finished presenting it, suggest the Cleanup below in
+   one line, and run it when they agree.
+
+## Cleanup (on request)
+
+Never part of the run: it runs only when the user asks for it, after
+testing the POC, in this session or a later one. Find the worktree with
+`git worktree list` (the one on `poc/<slug>`). If it has uncommitted
+changes or commits not on `origin/poc/<slug>` (the user may have edited
+while testing), list them and ask before removing anything.
+
+Stop the app started in step 8. Leave the feature worktree (`ExitWorktree`
+with `keep` if the session entered it with `EnterWorktree`, otherwise
+change directory). If the task used Docker: stop and remove the containers
+labelled `claude-kit.task=<slug>` (`docker compose -p <slug> down
+--volumes --rmi local` for a stack), remove the images, volumes and
+networks it created or pulled that are not in the step-4 baseline, and
+`docker buildx rm <slug>`; never run a prune without a
+`label=claude-kit.task=<slug>` filter. Then
+`git -C <main-checkout> worktree remove <worktree-path>`,
+`git -C <main-checkout> worktree prune` and
+`git -C <main-checkout> branch -D poc/<slug>`. The remote branch stays for
+the PR; the user deletes it when merging. A handoff an earlier stop wrote
+on this branch (`.claude/handoffs/poc_<slug>.md`) lives in the feature
+worktree and goes with `worktree remove`; leave the main checkout's handoff
+files alone. Delete the step-4 Docker baseline file and any scratch files
+you created outside the repo; the spec under `~/.claude/ship-fast-specs/`
+is not a scratch file and stays. The repository itself always stays.

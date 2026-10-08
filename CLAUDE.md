@@ -146,7 +146,11 @@ No gate runs; it writes a short task list, asks at most 3 product and 3
 engineering questions the task split exposed (plus any risky choice), builds
 independent tasks in parallel, runs one `code-review low --fix` pass and a
 smoke run against the spec's acceptance criteria, and stops at an open PR
-with green CI that I review and merge. Product or risky questions that come
+with green CI that I review and merge, with the POC left running from its
+worktree. It never cleans up on its own: once I say I have tested or
+presented it, it suggests cleanup and runs it on my OK
+([ADR 0023](knowledge/decisions/0023-ship-fast-cleanup-on-request.md)).
+Product or risky questions that come
 up later are asked inline and never end the run. A
 `- **Repo:** new <name> <node|python>` spec header makes it scaffold the
 project and create a private GitHub repo; it never deletes a repo
