@@ -169,8 +169,10 @@ of a full plan, and ends at an open pull request with green CI for the user
 to review and merge
 ([ADR 0021](../knowledge/decisions/0021-ship-fast-skips-gates.md)). Given an
 idea instead of a spec, `/ship-fast` first runs a short interview in which
-the user decides the product, and the user's confirmation approves the spec
-([ADR 0022](../knowledge/decisions/0022-ship-fast-user-driven-spec.md)).
+the user decides the product
+([ADR 0022](../knowledge/decisions/0022-ship-fast-user-driven-spec.md)); the
+user then reads the written spec and approves it, which is the spec's only
+review ([ADR 0024](../knowledge/decisions/0024-ship-fast-user-approves-spec.md)).
 
 ## Self-contained plans
 

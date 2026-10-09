@@ -49,7 +49,8 @@ Specs and plans are Markdown under `docs/superpowers/specs/` and
 `docs/superpowers/plans/`; the `.md` is the only source of truth. **Never open a
 spec or plan (neither the `.md` nor an HTML view) and never render one unless I
 ask**, even when asking me to review it; after writing or updating one, tell me
-the `.md` path only. `/spec-html [path]` renders and opens a view on demand (latest
+the `.md` path only. One exception: `/ship-fast` opens the `.md` of the spec
+it asks me to approve (ADR 0024). `/spec-html [path]` renders and opens a view on demand (latest
 spec/plan when no path is given). Bulk render from inside a repo:
 `python ../plugin/scripts/render-spec.py [spec.md]` (needs `pip install markdown`);
 never copy the renderer into a repo.
@@ -141,7 +142,10 @@ sequence. Invoking it is my approval for every listed spec and its merge, like
 **`/ship-fast [spec.md | idea]` is the light path for an hour-sized POC.**
 Given an idea (or nothing), it first interviews me for the spec: a
 brainstorming design, then product questions with recommended answers (at
-most 7 questions in all); my confirmation approves the spec. Given a spec, it skips that.
+most 7 questions in all), then opens the written spec for me to read and
+approve. Given a spec, it skips the interview and asks for my approval only
+when the spec's Status is not `approved`
+([ADR 0024](knowledge/decisions/0024-ship-fast-user-approves-spec.md)).
 No gate runs; it writes a short task list, asks at most 3 product and 3
 engineering questions the task split exposed (plus any risky choice), builds
 independent tasks in parallel, runs one `code-review low --fix` pass and a
