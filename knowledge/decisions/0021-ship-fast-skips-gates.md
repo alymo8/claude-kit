@@ -1,6 +1,6 @@
 # ADR 0021: `/ship-fast` takes a POC spec to a PR with no gates
 
-- **Status:** accepted; amended by 0022 ([ADR 0022](0022-ship-fast-user-driven-spec.md): spec interview, decisions round, inline questions)
+- **Status:** accepted; amended by 0022 ([ADR 0022](0022-ship-fast-user-driven-spec.md): spec interview, decisions round, inline questions) and 0024 ([ADR 0024](0024-ship-fast-user-approves-spec.md): the user reads and approves the spec)
 - **Date:** 2026-10-06
 
 ## Context

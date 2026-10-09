@@ -19,6 +19,20 @@ def test_no_gates_no_review_round_no_merge():
         assert needle not in SHIP_FAST, needle
 
 
+def test_user_approves_the_spec():
+    # ADR 0024: the written spec starts as draft and the user approves it.
+    for needle in (
+        "Status `draft`",
+        "**Approval.**",
+        "Invoke-Item <path>",
+        'reply "approve"',
+        "Status bullet is not `approved`",
+        "A spec whose Status is not `approved` in a non-interactive session",
+    ):
+        assert needle in SHIP_FAST, needle
+    assert "confirmation of the summary is the" not in SHIP_FAST
+
+
 def test_names_its_pieces():
     for needle in (
         "parallel-plan.py",

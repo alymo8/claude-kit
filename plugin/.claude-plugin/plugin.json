@@ -1,6 +1,6 @@
 {
   "name": "claude-kit",
-  "version": "0.14.1",
+  "version": "0.15.0",
   "license": "MIT",
-  "description": "Workspace conventions as a plugin: /new-project and /adopt-conventions scaffolding, /handoff with session-start injection, /ship autonomous spec-to-merge, context nudge and status line, lean-context skill with an env on/off switch, token report, spec index hook, /spec-html to render and open a spec on demand, worktree audit, supabase-cli skill, audit and audit-deep skills with a citation checker, spec and plan gates, parallel-tasks skill that runs independent plan tasks as concurrent subagents, /ship-many to ship independent specs concurrently, teach skill for multi-session learning workspaces, an opt-in grill skill (CLAUDE_KIT_GRILL=1) that interviews before a spec is written, /ship-fast to interview the user for a POC spec (or take one) and take it to a tested PR with no gates and no merge."
+  "description": "Workspace conventions as a plugin: /new-project and /adopt-conventions scaffolding, /handoff with session-start injection, /ship autonomous spec-to-merge, context nudge and status line, lean-context skill with an env on/off switch, token report, spec index hook, /spec-html to render and open a spec on demand, worktree audit, supabase-cli skill, audit and audit-deep skills with a citation checker, spec and plan gates, parallel-tasks skill that runs independent plan tasks as concurrent subagents, /ship-many to ship independent specs concurrently, teach skill for multi-session learning workspaces, an opt-in grill skill (CLAUDE_KIT_GRILL=1) that interviews before a spec is written, /ship-fast to interview the user for a POC spec (or take one), have the user approve it, and take it to a tested PR with no gates and no merge."
 }

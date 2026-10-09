@@ -1,12 +1,13 @@
 ---
-description: Use for a proof of concept of about an hour - interview the user for the spec (or take an existing one), ask the product decisions out loud, and take it to a tested, smoke-run pull request with green CI, with no gates, no review round and no merge; independent tasks run in parallel
+description: Use for a proof of concept of about an hour - interview the user for the spec (or take an existing one), have the user read and approve it, ask the product decisions out loud, and take it to a tested, smoke-run pull request with green CI, with no gates, no review round and no merge; independent tasks run in parallel
 argument-hint: [spec.md | idea]
 disable-model-invocation: true
 ---
 
 Ship a proof of concept of about an hour fast, with the user deciding what
 it does. `$ARGUMENTS` is a spec path or an idea (see Input). This is the
-light path: no gate runs on the spec or on the task list, there is no formal
+light path: the user reads and approves the spec, no gate runs on the spec
+or on the task list, there is no formal
 review round, and the run ends at an open pull request with green CI and
 the POC running from its kept workspace. The user reviews and merges it;
 never merge it yourself. The workspace is cleaned up only when the user
@@ -15,8 +16,9 @@ live to a client: phrase every question in product terms.
 
 Invoking `/ship-fast` is the user's approval for every step below,
 including creating a private GitHub repository when the spec asks for one.
-Do not ask for confirmation except in step 0, step 3b, a product or risky
-engineering question (see Questions), and the Stop rules. Inside step 0,
+Do not ask for confirmation except in step 0 (its Approval item included),
+step 3b, a product or risky engineering question (see Questions), and the
+Stop rules. Inside step 0,
 `superpowers:brainstorming` and `claude-kit:grill` put their questions to
 the user, within step 0's budget. Anywhere else, where a skill this command
 invokes says "ask" or "wait for the answer", take the path this command
@@ -28,7 +30,8 @@ does that themselves.
 ## Input
 
 - `$ARGUMENTS`, resolved against the current directory, names an existing
-  `.md` file: it is the spec. Skip step 0.
+  `.md` file: it is the spec. Skip step 0 except its item 6 (Approval),
+  which runs when the spec's Status bullet is not `approved`.
 - `$ARGUMENTS` is a single token (no spaces) ending in `.md` that
   names no existing file: that is a stop rule (a mistyped spec path), not an
   idea. Free text that happens to end in `.md` is an idea.
@@ -84,7 +87,8 @@ before the first question), check whether the
 as a deferred tool both count as available); if it is not (for
 example a scripted `claude -p` run), the session is non-interactive. In a
 non-interactive session: step 0 is a stop rule (the interview needs the
-user; pass a spec path). Every product or non-risky engineering question in
+user; pass a spec path), and so is a spec whose Status is not `approved`
+(approve it first). Every product or non-risky engineering question in
 step 3b or later takes its recommended answer, listed as "assumed (not
 asked)" in the task list's `## Decisions` and in the PR body, and the run
 continues. A risky engineering choice is a stop rule, and in step 3b it
@@ -109,13 +113,15 @@ spec to pass on the rerun, in the stop message and in the handoff: for a
 new repository, the in-repository copy once step 1 has committed it, and
 before that the `~/.claude/ship-fast-specs/` path.
 
-The first two stops below happen before any repository or branch exists:
+The first three stops below happen before any repository or branch exists:
 they end the run without a handoff, printing the blocker and the corrected
 invocation (for example `/ship-fast <path to an existing spec.md>`).
 
 - `$ARGUMENTS` is a single token ending in `.md` that names no existing
   file.
 - Step 0 in a non-interactive session.
+- A spec whose Status is not `approved` in a non-interactive session:
+  nobody can approve it.
 - A risky engineering choice in a non-interactive session.
 - The spec has no acceptance criteria.
 - `git fetch origin`, `scaffold.py`, the stack's init command, or
@@ -219,12 +225,12 @@ step 7 ends. A resumed run reports the minutes it measured.
       presented again. The summary's coverage list names the areas above,
       not `coverage.md`'s, and the grill summary names Home (inferred in
       item 2 or answered), so the confirmation covers it. The user's
-      confirmation of the summary is the
-      spec's approval; a correction to an assumption in that reply is
-      applied and does not count against the budget.
+      confirmation of the summary ends the interview; it is not yet the
+      spec's approval (item 6). A correction to an assumption in that reply
+      is applied and does not count against the budget.
    5. **Write the spec.** Pick `<slug>`, a short kebab-case name for the
       POC. Write a `# <title>` line (the POC's name; step 7 uses it as the
-      PR title), Status `approved`, Date, a
+      PR title), Status `draft`, Date, a
       `- **Repo:** new <name> <stack>` line when Home is a new repository,
       and the sections Purpose, Scope (`**In:**` and `**Out:**`), Design,
       Decisions (each question and the user's answer, then an
@@ -234,8 +240,15 @@ step 7 ends. A resumed run reports the minutes it measured.
       `docs/superpowers/specs/` in its main checkout (step 2 commits it on
       the branch); for a new repository, under `~/.claude/ship-fast-specs/`
       (durable across sessions and outside every repository; step 1 copies
-      it in). State the path in one line, do not open it, and continue to
-      step 1 without another pause. No gate runs.
+      it in). State the path in one line and go to item 6.
+   6. **Approval.** The user reads the spec and approves it; this is the
+      spec's only review, and no gate runs. Open the spec's `.md` for the
+      user (`Invoke-Item <path>` on Windows, `open` on macOS, `xdg-open`
+      elsewhere) and ask them to read it and reply "approve" or with the
+      changes they want. Apply changes to the spec, open it again, and ask
+      again; these rounds do not count against the budget. On "approve",
+      set the spec's Status bullet to `approved` and continue to step 1
+      without another pause.
 1. **Repo.** With a `**Repo:** new <name> <stack>` line, run
    `python "${CLAUDE_PLUGIN_ROOT}/scripts/scaffold.py" --name <name> --stack <stack>`
    (fallback if the variable is not expanded:
@@ -258,9 +271,11 @@ step 7 ends. A resumed run reports the minutes it measured.
    branch `poc/<slug>` from `origin/main`, not local `main` (the git
    fallback is `git worktree add <path> -b poc/<slug> origin/main`). If the
    spec is missing from `origin/main` or differs from it, copy it to the
-   same path in the worktree and commit it; then, only if the main
-   checkout's copy is untracked and identical to the committed one, delete
-   it from the main checkout. In an existing repository, run the full test
+   same path in the worktree and commit it; then, if the main checkout's
+   copy is untracked and identical to the committed one, delete it from the
+   main checkout, and if it is tracked and its only change is the Status
+   bullet item 6 set, restore it with `git -C <main-checkout> checkout --
+   <path>`. In an existing repository, run the full test
    suite and lint from the repo's `CLAUDE.md` once; red is a stop rule. For
    a repository created in step 1, skip this baseline run.
 3. **Task list.** Write `docs/superpowers/plans/<YYYY-MM-DD>-<slug>.md`: a

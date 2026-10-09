@@ -1,6 +1,6 @@
 # ADR 0022: `/ship-fast` interviews the user for the spec and asks product decisions
 
-- **Status:** accepted
+- **Status:** accepted; amended by 0024 ([ADR 0024](0024-ship-fast-user-approves-spec.md): the grill summary no longer approves the spec)
 - **Date:** 2026-10-07
 
 ## Context
