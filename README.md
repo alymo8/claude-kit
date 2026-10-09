@@ -107,7 +107,8 @@ is in [`plugin/`](plugin/).
   path for an hour-sized POC: given an idea it first interviews you for the
   spec (at most 7 questions), then runs with no gates, a short task
   list run in parallel where it can be, one quick review and a smoke run,
-  ending at a pull request with green CI that you merge. `/spec-html [path]`
+  ending at a pull request with green CI that you merge (stages:
+  [`docs/ship-fast.md`](docs/ship-fast.md)). `/spec-html [path]`
   renders a spec or plan (the latest one when no path is given) and opens
   its HTML view.
 - **[`knowledge/decisions/`](knowledge/decisions/)** — this repo's own ADRs.
