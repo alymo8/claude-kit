@@ -1,0 +1,222 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Deck title</title>
+<style>
+  :root {
+    --bg: #0b1220;
+    --stage: #ffffff;
+    --ink: #0f172a;
+    --muted: #55607a;
+    --line: #e3e7ef;
+    --soft: #f4f6fb;
+    --accent: #2f5bea;
+    --accent-soft: #e8eefe;
+    --ok: #157f4c;
+    --ok-soft: #e3f5ec;
+    --warn: #a45a00;
+    --warn-soft: #fdf0dd;
+    --bad: #b42318;
+    --bad-soft: #fde8e6;
+    --font: "Segoe UI", system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif;
+    --mono: "Cascadia Code", Consolas, "SFMono-Regular", Menlo, monospace;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; background: var(--bg); overflow: hidden; }
+  body { font-family: var(--font); color: var(--ink); }
+
+  /* Fixed 1600x900 stage, scaled to fit the window */
+  #deck { position: absolute; left: 50%; top: 50%; width: 1600px; height: 900px;
+          transform-origin: center center; }
+  .slide { position: absolute; inset: 0; background: var(--stage); border-radius: 6px;
+           padding: 90px 110px 80px; display: none; flex-direction: column;
+           overflow: hidden; }
+  .slide.active { display: flex; }
+
+  .kicker { font-size: 22px; font-weight: 600; letter-spacing: .14em; text-transform: uppercase;
+            color: var(--accent); margin-bottom: 18px; }
+  h1 { font-size: 84px; line-height: 1.05; font-weight: 700; letter-spacing: -.02em; }
+  h2 { font-size: 58px; line-height: 1.1; font-weight: 700; letter-spacing: -.015em; margin-bottom: 44px; }
+  h3 { font-size: 30px; font-weight: 650; margin-bottom: 12px; }
+  p, li { font-size: 28px; line-height: 1.45; }
+  .lead { font-size: 34px; line-height: 1.4; color: var(--muted); max-width: 1200px; }
+  .muted { color: var(--muted); }
+  ul.clean { list-style: none; }
+  ul.clean li { padding-left: 36px; position: relative; margin-bottom: 18px; }
+  ul.clean li::before { content: ""; position: absolute; left: 4px; top: 16px; width: 12px; height: 12px;
+                        border-radius: 3px; background: var(--accent); }
+  code { font-family: var(--mono); font-size: .9em; background: var(--soft); padding: 2px 8px; border-radius: 6px; }
+
+  .grid { display: grid; gap: 32px; }
+  .g2 { grid-template-columns: 1fr 1fr; }
+  .g3 { grid-template-columns: repeat(3, 1fr); }
+  .card { background: var(--soft); border: 1px solid var(--line); border-radius: 18px; padding: 36px; }
+  .card p { font-size: 26px; color: var(--muted); }
+  .card li { font-size: 24px; margin-bottom: 12px; }
+
+  .badge { display: inline-block; font-size: 20px; font-weight: 700; padding: 6px 16px; border-radius: 999px;
+           margin-bottom: 20px; letter-spacing: .02em; }
+  .b-ok { background: var(--ok-soft); color: var(--ok); }
+  .b-acc { background: var(--accent-soft); color: var(--accent); }
+  .b-warn { background: var(--warn-soft); color: var(--warn); }
+  .b-bad { background: var(--bad-soft); color: var(--bad); }
+
+  .foot { position: absolute; left: 110px; right: 110px; bottom: 34px; display: flex;
+          justify-content: space-between; font-size: 18px; color: #8a93a8; }
+  .time { font-variant-numeric: tabular-nums; }
+
+  .title-slide { background: linear-gradient(135deg, #0f1b3d 0%, #2f5bea 100%); color: #fff;
+                 justify-content: center; }
+  .title-slide .kicker { color: #b9c9ff; }
+  .title-slide .lead { color: #dbe3ff; margin-top: 30px; }
+  .title-slide .foot { color: #b9c9ff; }
+  .title-slide code { background: rgba(255, 255, 255, .16); color: #fff; }
+
+  .flow { display: flex; align-items: stretch; margin-top: 10px; }
+  .node { flex: 1; background: var(--soft); border: 1px solid var(--line); border-radius: 16px; padding: 28px; }
+  .node h3 { font-size: 27px; }
+  .node p { font-size: 22px; color: var(--muted); line-height: 1.4; }
+  .node.hi { background: var(--accent-soft); border-color: #c5d3fb; }
+  .arrow { width: 56px; display: flex; align-items: center; justify-content: center; color: var(--accent);
+           font-size: 40px; font-weight: 700; }
+  .note { margin-top: 36px; font-size: 24px; color: var(--muted); }
+
+  .callout { background: var(--bad-soft); border: 1px solid #f6c9c3; border-radius: 16px; padding: 28px 32px;
+             font-family: var(--mono); font-size: 26px; color: var(--bad); margin-bottom: 36px; }
+  .callout span { font-family: var(--font); font-size: 20px; font-weight: 700; letter-spacing: .1em;
+                  text-transform: uppercase; display: block; margin-bottom: 8px; }
+
+  table { width: 100%; border-collapse: collapse; }
+  td { font-size: 24px; padding: 16px 18px; border-bottom: 1px solid var(--line); vertical-align: top; line-height: 1.35; }
+  td.n { width: 54px; font-weight: 700; color: var(--accent); }
+  td.who { width: 300px; color: var(--muted); }
+  td.out { width: 290px; text-align: right; }
+  td .badge { margin: 0; font-size: 18px; }
+
+  #progress { position: fixed; left: 0; bottom: 0; height: 4px; background: var(--accent); transition: width .2s; }
+  #hint { position: fixed; right: 14px; bottom: 10px; font: 13px var(--font); color: #66708a; }
+  @media print {
+    html, body { overflow: visible; background: #fff; }
+    #deck { position: static; transform: none !important; }
+    .slide { display: flex; position: relative; page-break-after: always; border-radius: 0; }
+    #progress, #hint { display: none; }
+  }
+</style>
+</head>
+<body>
+<div id="deck">
+<!--
+  Layouts: title-slide · g3 cards · flow · callout + ul.clean · numbered table · g2 cards.
+  Each <section class="slide"> needs data-time="m:ss" (its start time); the footer
+  shows it with the slide counter. Replace everything between SLIDES START and
+  SLIDES END; leave the CSS and the script as they are.
+-->
+<!-- SLIDES START -->
+
+  <section class="slide title-slide" data-time="0:00">
+    <div class="kicker">Kicker</div>
+    <h1>Deck title</h1>
+    <p class="lead">One sentence on what this is and who it is for.</p>
+  </section>
+
+  <section class="slide" data-time="0:30">
+    <div class="kicker">Section</div>
+    <h2>Three cards</h2>
+    <div class="grid g3">
+      <div class="card"><span class="badge b-ok">Badge</span><h3>Card title</h3><p>Card text.</p></div>
+      <div class="card"><span class="badge b-acc">Badge</span><h3>Card title</h3><p>Card text.</p></div>
+      <div class="card"><span class="badge b-warn">Badge</span><h3>Card title</h3><p>Card text.</p></div>
+    </div>
+    <p class="note">A one-line note under the cards.</p>
+  </section>
+
+  <section class="slide" data-time="1:30">
+    <div class="kicker">Section</div>
+    <h2>A flow</h2>
+    <div class="flow">
+      <div class="node"><h3>Step</h3><p>What happens.</p></div>
+      <div class="arrow">→</div>
+      <div class="node hi"><h3>Highlighted step</h3><p>What happens.</p></div>
+      <div class="arrow">→</div>
+      <div class="node"><h3>Step</h3><p>What happens.</p></div>
+    </div>
+  </section>
+
+  <section class="slide" data-time="2:30">
+    <div class="kicker">Section</div>
+    <h2>A callout and a list</h2>
+    <div class="callout"><span>Label</span>"A quoted input or example"</div>
+    <ul class="clean">
+      <li><b>Point.</b> Explanation.</li>
+      <li><b>Point.</b> Explanation.</li>
+    </ul>
+  </section>
+
+  <section class="slide" data-time="3:30">
+    <div class="kicker">Section</div>
+    <h2>A numbered table</h2>
+    <table>
+      <tr><td class="n">1</td><td class="who">Who</td><td>What happens</td><td class="out"><span class="badge b-ok">Result</span></td></tr>
+      <tr><td class="n">2</td><td class="who">Who</td><td>What happens</td><td class="out"><span class="badge b-bad">Result</span></td></tr>
+    </table>
+  </section>
+
+  <section class="slide" data-time="4:30">
+    <div class="kicker">Section</div>
+    <h2>Two columns</h2>
+    <div class="grid g2">
+      <div class="card"><h3>Left</h3><ul class="clean"><li>Item</li><li>Item</li></ul></div>
+      <div class="card"><h3>Right</h3><ul class="clean"><li>Item</li><li>Item</li></ul></div>
+    </div>
+  </section>
+
+<!-- SLIDES END -->
+</div>
+<div id="progress"></div>
+<div id="hint">← → to navigate · F for fullscreen</div>
+
+<script>
+  const deck = document.getElementById('deck');
+  const slides = [...document.querySelectorAll('.slide')];
+  const progress = document.getElementById('progress');
+  let i = 0;
+
+  slides.forEach((s, n) => {
+    const foot = document.createElement('div');
+    foot.className = 'foot';
+    const time = s.dataset.time ? '⏱ ' + s.dataset.time : '';
+    foot.innerHTML = '<span class="time">' + time + '</span><span>' + (n + 1) + ' / ' + slides.length + '</span>';
+    s.appendChild(foot);
+  });
+
+  function fit() {
+    const scale = Math.min(window.innerWidth / 1600, window.innerHeight / 900) * 0.96;
+    deck.style.transform = 'translate(-50%, -50%) scale(' + scale + ')';
+  }
+
+  function show(n) {
+    i = Math.max(0, Math.min(slides.length - 1, n));
+    slides.forEach((s, k) => s.classList.toggle('active', k === i));
+    progress.style.width = ((i + 1) / slides.length * 100) + '%';
+    if (location.hash !== '#' + (i + 1)) history.replaceState(null, '', '#' + (i + 1));
+  }
+
+  document.addEventListener('keydown', e => {
+    if (['ArrowRight', 'ArrowDown', 'PageDown', ' ', 'Enter'].includes(e.key)) { e.preventDefault(); show(i + 1); }
+    else if (['ArrowLeft', 'ArrowUp', 'PageUp', 'Backspace'].includes(e.key)) { e.preventDefault(); show(i - 1); }
+    else if (e.key === 'Home') show(0);
+    else if (e.key === 'End') show(slides.length - 1);
+    else if (e.key === 'f' || e.key === 'F') {
+      if (document.fullscreenElement) document.exitFullscreen(); else document.documentElement.requestFullscreen();
+    }
+  });
+  document.addEventListener('click', e => show(e.clientX > window.innerWidth / 2 ? i + 1 : i - 1));
+  window.addEventListener('resize', fit);
+
+  fit();
+  show((parseInt(location.hash.slice(1), 10) || 1) - 1);
+</script>
+</body>
+</html>
