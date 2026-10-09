@@ -186,4 +186,12 @@ def test_description_mentions_ship_fast():
     plugin_json = PLUGIN / ".claude-plugin" / "plugin.json"
     data = json.loads(plugin_json.read_text(encoding="utf-8"))
     assert "/ship-fast" in data["description"]
-    assert data["version"] == "0.15.1"
+    version = tuple(int(part) for part in data["version"].split("."))
+    assert version >= (0, 15, 0)
+
+
+def test_description_mentions_present():
+    plugin_json = PLUGIN / ".claude-plugin" / "plugin.json"
+    data = json.loads(plugin_json.read_text(encoding="utf-8"))
+    assert "/present" in data["description"]
+    assert data["version"] == "0.16.1"

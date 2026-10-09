@@ -1,4 +1,4 @@
-# ADR 0025: `/ship-fast`: the app runs for the user from the smoke run
+# ADR 0026: `/ship-fast`: the app runs for the user from the smoke run
 
 - **Status:** accepted
 - **Date:** 2026-10-08

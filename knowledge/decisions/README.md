@@ -30,4 +30,5 @@ the next number; superseded ones are never deleted.
 | [0022](0022-ship-fast-user-driven-spec.md) | `/ship-fast` interviews the user for the spec and asks product decisions | accepted | 2026-10-07 |
 | [0023](0023-ship-fast-cleanup-on-request.md) | `/ship-fast` hands over a running POC; cleanup waits for the user | accepted | 2026-10-07 |
 | [0024](0024-ship-fast-user-approves-spec.md) | `/ship-fast`: the user reads and approves the spec | accepted | 2026-10-08 |
-| [0025](0025-ship-fast-app-runs-from-smoke-run.md) | `/ship-fast`: the app runs for the user from the smoke run | accepted | 2026-10-08 |
+| [0025](0025-present-skill-bundled-template.md) | `present` skill builds decks from a bundled template and checks every slide | accepted | 2026-10-08 |
+| [0026](0026-ship-fast-app-runs-from-smoke-run.md) | `/ship-fast`: the app runs for the user from the smoke run | accepted | 2026-10-08 |
