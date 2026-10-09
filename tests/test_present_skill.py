@@ -51,6 +51,11 @@ def test_body_defines_the_contract():
         "superseded",
         "every slide",
         "data-time",
+        "Out of scope",
+        "readiness",
+        "Unknown",
+        "The ask",
+        "Never invent an ask",
     ):
         assert phrase in body, phrase
 

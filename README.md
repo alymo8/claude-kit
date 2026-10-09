@@ -113,7 +113,9 @@ is in [`plugin/`](plugin/).
   renders a spec or plan (the latest one when no path is given) and opens
   its HTML view. `/present [repo | spec.md [plan.md]]` (the
   `present` skill) builds a timed, self-contained HTML deck from a repo, spec or
-  plan, with every slide rendered and checked by `check-deck.py`.
+  plan, with every slide rendered and checked by `check-deck.py`. Every deck
+  closes with what was built, what was out of scope, a path-to-production
+  readiness table and the ask.
 - **[`knowledge/decisions/`](knowledge/decisions/)** — this repo's own ADRs.
 - **[`docs/superpowers/`](docs/superpowers/)** — specs and plans for changes to
   the kit itself.
