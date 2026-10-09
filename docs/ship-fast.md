@@ -32,7 +32,7 @@ flowchart LR
 
   subgraph check["3 · Check and open the PR"]
     direction TB
-    smoke["Smoke run"]:::gate
+    smoke["Smoke run<br/>app starts running for you"]:::gate
     rev["AI code review"]:::gate
     pr["Open the PR<br/>CI green"]:::gate
     run(["Run the system"])

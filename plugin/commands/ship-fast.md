@@ -108,7 +108,8 @@ asked)". Only engineering choices taken without asking go under
 
 These are the only reasons to stop. When one fires: write the handoff with
 the `claude-kit:handoff` skill, state the blocker and what you tried, and
-end your turn. Every stop after step 0 also states the absolute path of the
+end your turn. A stop after step 5 launched the app leaves it running and
+gives its stop command. Every stop after step 0 also states the absolute path of the
 spec to pass on the rerun, in the stop message and in the handoff: for a
 new repository, the in-repository copy once step 1 has committed it, and
 before that the `~/.claude/ship-fast-specs/` path.
@@ -328,8 +329,18 @@ step 7 ends. A resumed run reports the minutes it measured.
    (outside the repo, and still there for a Cleanup in a later session); then label
    every object the task creates `claude-kit.task=<slug>` (compose:
    `-p <slug>`) and build with `docker buildx create --name <slug>`.
-5. **Smoke run.** Use the `run` skill to launch the app and check every
-   acceptance criterion that no test covers. Record the evidence for each
+5. **Smoke run.** The user tries the app while the smoke run checks it, so
+   their time is not spent waiting. First, use the `run` skill to launch the
+   app from the worktree as a background process (or its containers): one
+   copy, the only one the run starts. Before any check, post a **Try it
+   now** line: its URL or entry command and the command to stop it (for a
+   CLI app with no server, the entry command alone, for the user to run).
+   Then check, against that same running copy, every
+   acceptance criterion that no test covers. The checks use their own
+   clearly labelled sample data and never edit or delete data the user
+   created. **Restart on fixes:** after every fix commit from here to step 7
+   (a smoke fix, the review fixes, a CI fix), restart that copy on the new
+   code and post one progress line saying so. Record the evidence for each
    (command output, or a screenshot path); write screenshots and sample
    inputs to the scratchpad, not the worktree. A criterion that fails is fixed
    with `superpowers:systematic-debugging` and rechecked, at most 2 times
@@ -338,8 +349,10 @@ step 7 ends. A resumed run reports the minutes it measured.
    `low --fix poc/<slug>` (the branch is the target, diffed against
    `origin/main`, so it covers every commit on it). Then read `git diff`: keep each edit that fixes a
    correctness bug and revert the rest. Re-run the full suite and lint, and
-   commit `<slug>: review fixes` if anything is left.
-7. **PR.** `git push -u origin poc/<slug>`. The PR title is the spec's
+   commit `<slug>: review fixes` if anything is left (that commit restarts
+   the app, as in step 5).
+7. **PR.** `git push -u origin poc/<slug>`. (Each CI fix commit restarts
+   the app, as in step 5.) The PR title is the spec's
    title: the first line outside code fences that starts with `# `, with the
    `# ` prefix and trailing whitespace removed. Run, with the Bash tool (not
    PowerShell), `gh pr create --title '<title>' --body-file <file>`, with
@@ -361,9 +374,10 @@ step 7 ends. A resumed run reports the minutes it measured.
    there is no workflow file, skip the watch and say so in the report.
 8. **Hand over.** No cleanup runs here: the user tests and presents the
    POC from this workspace first. Keep the feature worktree, the local
-   branch `poc/<slug>` and any Docker objects. Launch the app from the
-   worktree with the `run` skill, as a background process (or its
-   containers), and leave it running; note its URL or entry command, the
+   branch `poc/<slug>` and any Docker objects. The app launched in step 5
+   is already running: confirm it serves the branch's final commit
+   (restart it if not, or relaunch it with the `run` skill if it has
+   stopped) and leave it running; note its URL or entry command, the
    command to stop it, and the command to start it again (a background
    process ends with the session; containers keep running). Stop any other
    process the smoke run left behind.
@@ -385,7 +399,7 @@ testing the POC, in this session or a later one. Find the worktree with
 changes or commits not on `origin/poc/<slug>` (the user may have edited
 while testing), list them and ask before removing anything.
 
-Stop the app started in step 8. Leave the feature worktree (`ExitWorktree`
+Stop the app started in step 5. Leave the feature worktree (`ExitWorktree`
 with `keep` if the session entered it with `EnterWorktree`, otherwise
 change directory). If the task used Docker: stop and remove the containers
 labelled `claude-kit.task=<slug>` (`docker compose -p <slug> down
