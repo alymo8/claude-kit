@@ -139,30 +139,11 @@ sequence. Invoking it is my approval for every listed spec and its merge, like
 `/ship`. Use `--dry-run` first to see the waves without launching anything
 ([ADR 0018](knowledge/decisions/0018-ship-many-headless-children.md)).
 
-**`/ship-fast [spec.md | idea]` is the light path for an hour-sized POC.**
-Given an idea (or nothing), it first interviews me for the spec: a
-brainstorming design, then product questions with recommended answers (at
-most 7 questions in all), then opens the written spec for me to read and
-approve. Given a spec, it skips the interview and asks for my approval only
-when the spec's Status is not `approved`
-([ADR 0024](knowledge/decisions/0024-ship-fast-user-approves-spec.md)).
-No gate runs; it writes a short task list, asks at most 3 product and 3
-engineering questions the task split exposed (plus any risky choice), builds
-independent tasks in parallel, runs one `code-review low --fix` pass and a
-smoke run against the spec's acceptance criteria, and stops at an open PR
-with green CI that I review and merge, with the POC left running from its
-worktree. The POC starts running for me at the smoke run, so I can try it
-while the checks, review and CI proceed; fixes restart it
-([ADR 0026](knowledge/decisions/0026-ship-fast-app-runs-from-smoke-run.md)).
-It never cleans up on its own: once I say I have tested or presented it,
-it suggests cleanup and runs it on my OK
-([ADR 0023](knowledge/decisions/0023-ship-fast-cleanup-on-request.md)).
-Product or risky questions that come
-up later are asked inline and never end the run. A
-`- **Repo:** new <name> <node|python>` spec header makes it scaffold the
-project and create a private GitHub repo; it never deletes a repo
-([ADR 0021](knowledge/decisions/0021-ship-fast-skips-gates.md),
-[ADR 0022](knowledge/decisions/0022-ship-fast-user-driven-spec.md)).
+**`/ship-fast [spec.md | idea]` is the light path for an hour-sized POC**
+([command](plugin/commands/ship-fast.md), [overview](docs/ship-fast.md)).
+It interviews me for the spec, which I approve; it skips the gates and
+stops at an open PR with green CI, with the POC running for me to try. I
+merge it myself. It cleans up only when I ask, and never deletes a repo.
 
 ## Developing the kit (this repo)
 
