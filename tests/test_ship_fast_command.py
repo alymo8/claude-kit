@@ -153,3 +153,18 @@ def test_review_fixes_for_edge_paths():
         "the grill summary names Home",
     ):
         assert needle in SHIP_FAST, needle
+
+
+def test_app_runs_from_the_smoke_run():
+    # One copy of the app starts at step 5 for the user and the smoke checks;
+    # fix commits restart it, and step 8 only confirms it is current.
+    steps = SHIP_FAST.split("## Steps", 1)[1]
+    smoke = steps.split("5. **Smoke run.**", 1)[1].split("6. **Quick review.**", 1)[0]
+    hand_over = steps.split("8. **Hand over.**", 1)[1].split("9. **Report.**", 1)[0]
+    first_check = smoke.index("check, against that same running copy")
+    assert smoke.index("**Try it") < first_check
+    assert "one\n   copy, the only one the run starts" in smoke
+    assert "**Restart on fixes:**" in smoke
+    assert "never edit or delete data the user" in smoke
+    assert "The app launched in step 5" in hand_over
+    assert "Launch the app from the" not in hand_over
