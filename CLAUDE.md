@@ -154,7 +154,8 @@ with green CI that I review and merge, with the POC left running from its
 worktree. The POC starts running for me at the smoke run, so I can try it
 while the checks, review and CI proceed; fixes restart it
 ([ADR 0026](knowledge/decisions/0026-ship-fast-app-runs-from-smoke-run.md)).
-It never cleans up on its own: once I say I have tested or presented it, it suggests cleanup and runs it on my OK
+It never cleans up on its own: once I say I have tested or presented it,
+it suggests cleanup and runs it on my OK
 ([ADR 0023](knowledge/decisions/0023-ship-fast-cleanup-on-request.md)).
 Product or risky questions that come
 up later are asked inline and never end the run. A
