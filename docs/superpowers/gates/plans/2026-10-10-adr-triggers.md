@@ -7,6 +7,7 @@
 - **Verdict:** pass-with-decisions
 - **Date:** 2026-10-10
 - **Rounds:** 2 discovery + 0 verification
+- **Decisions approved:** 2026-10-10
 
 ## Plan-introduced decisions
 
