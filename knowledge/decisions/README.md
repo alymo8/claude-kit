@@ -32,3 +32,4 @@ the next number; superseded ones are never deleted.
 | [0024](0024-ship-fast-user-approves-spec.md) | `/ship-fast`: the user reads and approves the spec | accepted | 2026-10-08 |
 | [0025](0025-present-skill-bundled-template.md) | `present` skill builds decks from a bundled template and checks every slide | accepted | 2026-10-08 |
 | [0026](0026-ship-fast-app-runs-from-smoke-run.md) | `/ship-fast`: the app runs for the user from the smoke run | accepted | 2026-10-08 |
+| [0027](0027-adr-triggers.md) | ADR triggers: MUST, SHOULD, NOT REQUIRED, enforced by the spec gate | accepted | 2026-10-10 |
