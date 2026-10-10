@@ -126,3 +126,19 @@ def test_adr_0020_and_convention_wire_the_new_rounds():
     manifest = json.loads(text("plugin/.claude-plugin/plugin.json"))
     version = tuple(int(part) for part in manifest["version"].split("."))
     assert version >= (0, 12, 0)
+
+
+def test_rubric_checks_adr_triggers():
+    rubric = read("rubric.md")
+    start = rubric.index("8. **ADR triggers.**")
+    check = rubric[start : rubric.index("## Severity")]
+    assert rubric.index("7. **Key decisions.**") < start
+    for text in (
+        "knowledge/decisions/",
+        "When to write one",
+        "../conventions/decision-log.md",
+        "open-what",
+        "NOT REQUIRED",
+        "SHOULD match is a `minor` finding",
+    ):
+        assert text in check, text

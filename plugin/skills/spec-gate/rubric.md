@@ -35,6 +35,23 @@ never edit the spec.
    interpretation of the request. These are not findings; the user confirms
    them.
 
+8. **ADR triggers.** Only when the repository has `knowledge/decisions/`
+   (or the grandfathered `docs/decisions/`). For each key decision from
+   check 7, decide whether it matches a MUST trigger under
+   `## When to write one`. Read that section from the decisions directory's
+   `README.md`; if the README has no such section, from
+   `conventions/decision-log.md` in the repository, else from
+   `../conventions/decision-log.md` (the workspace, one level up). If none
+   of the three has the section, skip this check. A decision that matches a
+   NOT REQUIRED item is not a match. If it matches and the spec's Scope In
+   names no new or amended ADR file for it, that is a `blocking` finding of
+   class `open-what`: quote the decision and the trigger it matches. Its
+   fix is to add the ADR file to Scope In and a one-paragraph ADR summary
+   to the Design. A SHOULD match is a `minor` finding that is reported
+   only: never add an ADR to Scope In for it without the user.
+   (In the kit repo, `conventions/decision-log.md` is the workspace
+   convention itself.)
+
 ## Severity
 
 - `blocking`: only when the finding fits one of these six classes, named in
