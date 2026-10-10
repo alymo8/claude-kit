@@ -106,3 +106,27 @@ def test_secret_scan_declares_read_only_permissions():
 
 def test_kit_secret_scan_matches_template():
     assert KIT_SECRET_SCAN.read_bytes() == SECRET_SCAN.read_bytes()
+
+
+CONVENTION = PLUGIN.parent / "conventions" / "decision-log.md"
+DECISIONS_README = PROJECT / "knowledge" / "decisions" / "README.md"
+
+
+def _section(text, heading="## When to write one"):
+    start = text.index(heading)
+    rest = text[start + len(heading) :]
+    end = rest.find("\n## ")
+    return heading + (rest if end == -1 else rest[: end + 1])
+
+
+def test_adr_triggers_match_convention():
+    convention = CONVENTION.read_text(encoding="utf-8")
+    template = DECISIONS_README.read_text(encoding="utf-8")
+    section = _section(convention)
+    assert section == _section(template)
+    for marker in ("**MUST**", "**SHOULD**", "**NOT REQUIRED:**"):
+        assert marker in section
+    assert "significant and meant to stick" not in convention
+    assert "\n## Index\n" in template
+    assert template.index("## When to write one") < template.index("## Index")
+    assert template.index("## Index") < template.index("| # | Title |")

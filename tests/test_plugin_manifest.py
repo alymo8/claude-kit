@@ -194,4 +194,11 @@ def test_description_mentions_present():
     plugin_json = PLUGIN / ".claude-plugin" / "plugin.json"
     data = json.loads(plugin_json.read_text(encoding="utf-8"))
     assert "/present" in data["description"]
-    assert data["version"] == "0.17.0"
+    version = tuple(int(part) for part in data["version"].split("."))
+    assert version >= (0, 17, 0)
+
+
+def test_version_is_0_18_0():
+    plugin_json = PLUGIN / ".claude-plugin" / "plugin.json"
+    data = json.loads(plugin_json.read_text(encoding="utf-8"))
+    assert data["version"] == "0.18.0"

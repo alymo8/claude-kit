@@ -25,7 +25,7 @@ flowchart LR
     brain["Brainstorm<br/>options + trade-offs"]
     dec{{"Human confirms<br/>key decisions + criteria"}}:::you
     spec["Write the spec<br/>what, why, scope"]
-    sgate["Spec gate<br/>independent review"]:::gate
+    sgate["Spec gate<br/>independent review<br/>+ ADR triggers"]:::gate
     sok{{"Human signs off<br/>the spec"}}:::you
     grill["Grill (opt-in)<br/>decisions + coverage"]:::gate
     brain --> dec --> grill --> spec --> sgate --> sok
