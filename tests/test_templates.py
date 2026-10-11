@@ -20,6 +20,8 @@ EXPECTED = [
     ".github/workflows/claude-review.yml",
     ".github/workflows/secret-scan.yml",
     ".github/PULL_REQUEST_TEMPLATE.md",
+    ".github/dependabot.yml",
+    ".github/workflows/README.md",
     "knowledge/README.md",
     "knowledge/decisions/README.md",
     "knowledge/decisions/0000-template.md",
@@ -170,3 +172,43 @@ def test_pull_request_has_no_paths_filter():
                 break
             comments.append(line)
         assert "`paths:`" in "\n".join(comments), path
+
+
+DEPENDABOT = PROJECT / ".github" / "dependabot.yml"
+KIT_DEPENDABOT = PLUGIN.parent / ".github" / "dependabot.yml"
+WORKFLOWS_README = PROJECT / ".github" / "workflows" / "README.md"
+JOB_RE = re.compile(r"^  ([\w-]+):\s*$")
+
+
+def _job_ids(text):
+    ids, in_jobs = [], False
+    for line in _yaml_lines(text):
+        if line.startswith("jobs:"):
+            in_jobs = True
+        elif line and not line[0].isspace():
+            in_jobs = False
+        elif in_jobs and (match := JOB_RE.match(line)):
+            ids.append(match.group(1))
+    return ids
+
+
+def test_dependabot_matches_kit_and_is_monthly_grouped():
+    assert KIT_DEPENDABOT.read_bytes() == DEPENDABOT.read_bytes()
+    text = DEPENDABOT.read_text("utf-8")
+    for needle in ("package-ecosystem: github-actions", "interval: monthly", "groups:"):
+        assert needle in text, needle
+
+
+def test_workflows_readme_names_every_job():
+    readme = WORKFLOWS_README.read_text("utf-8")
+    template_workflows = sorted((PROJECT / ".github" / "workflows").glob("*.yml"))
+    jobs = set()
+    for path in [*template_workflows, *STACK_CIS]:
+        jobs |= set(_job_ids(path.read_text("utf-8")))
+    assert jobs == {"build-test", "gitleaks", "review"}
+    for job in jobs:
+        assert f"`{job}`" in readme, job
+    for path in template_workflows:
+        assert path.name in readme, path.name
+    for needle in ("paths:", "branches/main/protection", "Not included"):
+        assert needle in readme, needle

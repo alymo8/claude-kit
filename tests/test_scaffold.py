@@ -13,6 +13,8 @@ EXPECTED = [
     ".github/workflows/claude-review.yml",
     ".github/workflows/secret-scan.yml",
     ".github/PULL_REQUEST_TEMPLATE.md",
+    ".github/dependabot.yml",
+    ".github/workflows/README.md",
     "knowledge/README.md",
     "knowledge/decisions/README.md",
     "knowledge/decisions/0000-template.md",
