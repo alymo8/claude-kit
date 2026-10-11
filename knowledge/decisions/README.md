@@ -34,3 +34,4 @@ the next number; superseded ones are never deleted.
 | [0026](0026-ship-fast-app-runs-from-smoke-run.md) | `/ship-fast`: the app runs for the user from the smoke run | accepted | 2026-10-08 |
 | [0027](0027-adr-triggers.md) | ADR triggers: MUST, SHOULD, NOT REQUIRED, enforced by the spec gate | accepted | 2026-10-10 |
 | [0028](0028-pinned-actions-and-workflows-readme.md) | Pinned actions, Dependabot, and a workflows README | accepted | 2026-10-10 |
+| [0029](0029-pre-push-lint-hook.md) | Pre-push lint hook in scaffolded repos | accepted | 2026-10-10 |
