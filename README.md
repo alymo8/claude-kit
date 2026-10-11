@@ -98,8 +98,10 @@ is in [`plugin/`](plugin/).
   `powershell -ExecutionPolicy Bypass -File plugin\install.ps1`. It also
   provides two commands: `/new-project <name> <node|python>` scaffolds a new
   repo with every convention in place, and `/adopt-conventions <node|python>`
-  adds the missing pieces to an existing one. `/handoff` writes the
-  per-branch handoff file before you `/clear`. `/ship <spec.md>` takes an
+  adds the missing pieces to an existing one. Scaffolded CI pins every
+  action to a commit SHA, Dependabot bumps the pins monthly, and
+  `.github/workflows/README.md` names the checks to require. `/handoff`
+  writes the per-branch handoff file before you `/clear`. `/ship <spec.md>` takes an
   approved spec all the way to a squash-merged, cleaned-up change on `main`
   without further check-ins; it stops only on the rules listed in the command
   (red CI after three fixes, a review finding that needs a decision, a refused
