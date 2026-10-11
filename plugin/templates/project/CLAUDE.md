@@ -9,6 +9,9 @@ the workspace `CLAUDE.md` one level up.
 
 ## Setup / prerequisites
 
+- Once per clone: `git config core.hooksPath .githooks`. The pre-push hook
+  runs the same lint as CI; `git push --no-verify` skips it once.
+
 <!-- runtimes and versions; required env var NAMES (never values); services that must be running -->
 
 ## Build, run, test
