@@ -101,11 +101,11 @@ is in [`plugin/`](plugin/).
   adds the missing pieces to an existing one. Scaffolded CI pins every
   action to a commit SHA, Dependabot bumps the pins monthly, and
   `.github/workflows/README.md` names the checks to require. `/handoff`
-  writes the per-branch handoff file before you `/clear`. `/ship <spec.md>` takes an
-  approved spec all the way to a squash-merged, cleaned-up change on `main`
-  without further check-ins; it stops only on the rules listed in the command
-  (red CI after three fixes, a review finding that needs a decision, a refused
-  merge, a failed pre-flight). `/ship-fast [spec.md | idea]` is the light
+  writes the per-branch handoff file before you `/clear`. `/ship <spec.md>`
+  takes an approved spec all the way to a squash-merged, cleaned-up change
+  on `main` without further check-ins; it stops only on the rules listed in
+  the command (red CI after three fixes, a review finding that needs a
+  decision, a refused merge, a failed pre-flight). `/ship-fast [spec.md | idea]` is the light
   path for an hour-sized POC: given an idea it first interviews you for the
   spec (at most 7 questions) and opens it for you to approve, then runs
   with no gates, a short task

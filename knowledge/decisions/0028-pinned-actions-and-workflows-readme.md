@@ -24,6 +24,10 @@ to mark required, and that a required check must never be path-filtered on
 
 ## Consequences
 - At most one Dependabot PR a month per repo.
+- In the kit, Dependabot bumps only `.github/workflows`, not the copies
+  under `plugin/templates`. A test requires one pin per action across both,
+  so the kit's Dependabot PR fails until the bump is copied into the
+  templates in the same PR.
 - Adopted repos get the README and Dependabot file when missing, with a
   warning when their own `ci.yml` may not match the README's check names.
 - Already-scaffolded repos are not patched.

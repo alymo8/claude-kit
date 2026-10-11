@@ -164,8 +164,10 @@ def test_pull_request_has_no_paths_filter():
             stripped = line.strip()
             assert not stripped.startswith(("paths:", "paths-ignore:")), path
         index = next(
-            i for i, line in enumerate(lines) if line.strip() == "pull_request:"
+            (i for i, line in enumerate(lines) if line.strip() == "pull_request:"),
+            None,
         )
+        assert index is not None, f"{path} has no pull_request: trigger"
         comments = []
         for line in reversed(lines[:index]):
             if not line.lstrip().startswith("#"):
@@ -212,3 +214,15 @@ def test_workflows_readme_names_every_job():
         assert path.name in readme, path.name
     for needle in ("paths:", "branches/main/protection", "Not included"):
         assert needle in readme, needle
+
+
+def test_each_action_has_one_pin_across_kit_and_templates():
+    # Dependabot only bumps the kit's own .github/workflows; a bump there must
+    # be copied into plugin/templates by hand, or this fails.
+    pins = {}
+    for path in _workflow_files():
+        for line in _yaml_lines(path.read_text("utf-8")):
+            if match := re.search(r"uses: ([\w.-]+/[\w.-]+)@(\S+ # \S+)", line):
+                pins.setdefault(match.group(1), set()).add(match.group(2))
+    drift = {action: refs for action, refs in pins.items() if len(refs) > 1}
+    assert not drift, f"copy the Dependabot bump into plugin/templates: {drift}"
