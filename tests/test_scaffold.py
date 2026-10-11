@@ -13,6 +13,8 @@ EXPECTED = [
     ".github/workflows/claude-review.yml",
     ".github/workflows/secret-scan.yml",
     ".github/PULL_REQUEST_TEMPLATE.md",
+    ".github/dependabot.yml",
+    ".github/workflows/README.md",
     "knowledge/README.md",
     "knowledge/decisions/README.md",
     "knowledge/decisions/0000-template.md",
@@ -236,3 +238,34 @@ def test_adopt_reminder_mentions_handoffs(repo):
     result = run_script(SCRIPT, "--adopt", "--stack", "node", "--dest", str(repo))
     assert result.returncode == 0, result.stderr
     assert ".claude/handoffs/" in result.stdout
+
+
+README_CHECK = "check .github/workflows/README.md: its required check names"
+
+
+def test_new_project_points_at_required_checks(tmp_path):
+    result = run_script(
+        SCRIPT, "--name", "demo", "--stack", "python", "--parent", str(tmp_path)
+    )
+    assert result.returncode == 0, result.stderr
+    assert "mark build-test and gitleaks as required checks" in result.stdout
+
+
+def test_adopt_with_own_ci_warns_about_check_names(repo):
+    ci = repo / ".github" / "workflows" / "ci.yml"
+    ci.parent.mkdir(parents=True)
+    ci.write_text("name: mine\n", encoding="utf-8")
+    result = run_script(SCRIPT, "--adopt", "--stack", "python", "--dest", str(repo))
+    assert result.returncode == 0, result.stderr
+    assert ci.read_text("utf-8") == "name: mine\n"
+    assert (repo / ".github" / "dependabot.yml").exists()
+    assert (repo / ".github" / "workflows" / "README.md").exists()
+    assert README_CHECK in result.stdout
+    out = result.stdout
+    assert out.index(README_CHECK) < out.index("review with `git status`")
+
+
+def test_adopt_without_ci_does_not_warn_about_check_names(repo):
+    result = run_script(SCRIPT, "--adopt", "--stack", "python", "--dest", str(repo))
+    assert result.returncode == 0, result.stderr
+    assert README_CHECK not in result.stdout

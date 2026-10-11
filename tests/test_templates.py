@@ -20,6 +20,8 @@ EXPECTED = [
     ".github/workflows/claude-review.yml",
     ".github/workflows/secret-scan.yml",
     ".github/PULL_REQUEST_TEMPLATE.md",
+    ".github/dependabot.yml",
+    ".github/workflows/README.md",
     "knowledge/README.md",
     "knowledge/decisions/README.md",
     "knowledge/decisions/0000-template.md",
@@ -130,3 +132,97 @@ def test_adr_triggers_match_convention():
     assert "\n## Index\n" in template
     assert template.index("## When to write one") < template.index("## Index")
     assert template.index("## Index") < template.index("| # | Title |")
+
+
+KIT_WORKFLOWS = PLUGIN.parent / ".github" / "workflows"
+STACK_CIS = [TEMPLATES / "stacks" / s / "ci.yml" for s in ("node", "python")]
+PIN_RE = re.compile(r"uses: [\w.-]+/[\w.-]+@[0-9a-f]{40} # v\d+(\.\d+){0,2}$")
+
+
+def _workflow_files():
+    return [
+        *sorted((PROJECT / ".github" / "workflows").glob("*.yml")),
+        *STACK_CIS,
+        *sorted(KIT_WORKFLOWS.glob("*.yml")),
+    ]
+
+
+def test_actions_are_sha_pinned():
+    for path in _workflow_files():
+        lines = _yaml_lines(path.read_text("utf-8"))
+        uses = [line for line in lines if "uses:" in line]
+        for line in uses:
+            assert PIN_RE.search(line), f"{path}: {line}"
+        if any(line.strip() == "steps:" for line in lines):
+            assert uses, f"{path} has steps but no pinned action"
+
+
+def test_pull_request_has_no_paths_filter():
+    for path in [SECRET_SCAN, *STACK_CIS]:
+        lines = path.read_text("utf-8").splitlines()
+        for line in _yaml_lines("\n".join(lines)):
+            stripped = line.strip()
+            assert not stripped.startswith(("paths:", "paths-ignore:")), path
+        index = next(
+            (i for i, line in enumerate(lines) if line.strip() == "pull_request:"),
+            None,
+        )
+        assert index is not None, f"{path} has no pull_request: trigger"
+        comments = []
+        for line in reversed(lines[:index]):
+            if not line.lstrip().startswith("#"):
+                break
+            comments.append(line)
+        assert "`paths:`" in "\n".join(comments), path
+
+
+DEPENDABOT = PROJECT / ".github" / "dependabot.yml"
+KIT_DEPENDABOT = PLUGIN.parent / ".github" / "dependabot.yml"
+WORKFLOWS_README = PROJECT / ".github" / "workflows" / "README.md"
+JOB_RE = re.compile(r"^  ([\w-]+):\s*$")
+
+
+def _job_ids(text):
+    ids, in_jobs = [], False
+    for line in _yaml_lines(text):
+        if line.startswith("jobs:"):
+            in_jobs = True
+        elif line and not line[0].isspace():
+            in_jobs = False
+        elif in_jobs and (match := JOB_RE.match(line)):
+            ids.append(match.group(1))
+    return ids
+
+
+def test_dependabot_matches_kit_and_is_monthly_grouped():
+    assert KIT_DEPENDABOT.read_bytes() == DEPENDABOT.read_bytes()
+    text = DEPENDABOT.read_text("utf-8")
+    for needle in ("package-ecosystem: github-actions", "interval: monthly", "groups:"):
+        assert needle in text, needle
+
+
+def test_workflows_readme_names_every_job():
+    readme = WORKFLOWS_README.read_text("utf-8")
+    template_workflows = sorted((PROJECT / ".github" / "workflows").glob("*.yml"))
+    jobs = set()
+    for path in [*template_workflows, *STACK_CIS]:
+        jobs |= set(_job_ids(path.read_text("utf-8")))
+    assert jobs == {"build-test", "gitleaks", "review"}
+    for job in jobs:
+        assert f"`{job}`" in readme, job
+    for path in template_workflows:
+        assert path.name in readme, path.name
+    for needle in ("paths:", "branches/main/protection", "Not included"):
+        assert needle in readme, needle
+
+
+def test_each_action_has_one_pin_across_kit_and_templates():
+    # Dependabot only bumps the kit's own .github/workflows; a bump there must
+    # be copied into plugin/templates by hand, or this fails.
+    pins = {}
+    for path in _workflow_files():
+        for line in _yaml_lines(path.read_text("utf-8")):
+            if match := re.search(r"uses: ([\w.-]+/[\w.-]+)@(\S+ # \S+)", line):
+                pins.setdefault(match.group(1), set()).add(match.group(2))
+    drift = {action: refs for action, refs in pins.items() if len(refs) > 1}
+    assert not drift, f"copy the Dependabot bump into plugin/templates: {drift}"
