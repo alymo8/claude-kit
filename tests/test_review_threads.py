@@ -162,3 +162,41 @@ def test_main_usage_error_exits_2(capsys):
     assert rt.main(["abc"]) == 2
     assert rt.main(["1", "2"]) == 2
     assert "usage" in capsys.readouterr().err
+
+
+def test_main_pr_not_found_exits_1(pr, monkeypatch, capsys):
+    run_gh = stub_gh(pr)
+
+    def missing(args):
+        if args[:2] == ["api", "graphql"]:
+            return json.dumps({"data": {"repository": {"pullRequest": None}}})
+        return run_gh(args)
+
+    monkeypatch.setattr(rt, "run_gh", missing)
+    assert rt.main(["42"]) == 1
+    assert "PR #42 not found" in capsys.readouterr().err
+
+
+def test_thread_without_comments_dropped(pr):
+    pr["reviewThreads"]["nodes"][2]["comments"]["nodes"] = []
+    ids = [i["thread_id"] for i in by_kind(rt.open_items(pr, "me"), "thread")]
+    assert "T3" not in ids
+
+
+def test_review_without_submitted_at_dropped(pr):
+    pr["reviews"]["nodes"][3]["submittedAt"] = None
+    ids = [i["id"] for i in by_kind(rt.open_items(pr, "carol"), "review")]
+    assert 64 not in ids
+
+
+def test_main_warns_on_reviews_and_comments_next_page(pr, monkeypatch, capsys):
+    pr["reviews"]["pageInfo"]["hasNextPage"] = True
+    pr["comments"]["pageInfo"]["hasNextPage"] = True
+    monkeypatch.setattr(rt, "run_gh", stub_gh(pr))
+    assert rt.main(["42"]) == 0
+    err = capsys.readouterr().err
+    assert "warning: more than 100 reviews; only the first 100 were read" in err
+    assert (
+        "warning: more than 100 conversation comments; only the first 100 were read"
+        in err
+    )

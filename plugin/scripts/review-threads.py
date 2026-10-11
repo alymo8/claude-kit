@@ -185,6 +185,9 @@ def main(argv: list[str] | None = None) -> int:
         sys.stderr.write(str(err))
         return 1
     pr = data["data"]["repository"]["pullRequest"]
+    if pr is None:
+        print(f"error: PR #{number} not found", file=sys.stderr)
+        return 1
     for line in warnings(pr):
         print(line, file=sys.stderr)
     print(

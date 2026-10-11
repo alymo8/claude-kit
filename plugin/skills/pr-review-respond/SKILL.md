@@ -52,8 +52,9 @@ any other change.
 ## 3. Triage
 
 Use `superpowers:receiving-code-review` on every item. For a thread, read
-the code at `path`/`line` first. Triage outdated threads (`outdated: true`)
-against the current code. Each item gets one action:
+the code at `path`/`line` first (`line` is null on an outdated thread: find
+the code from the comment's context). Triage outdated threads
+(`outdated: true`) against the current code. Each item gets one action:
 
 - **fix**: a verified problem.
 - **push back**: the suggestion is technically wrong or out of scope; the
@@ -81,7 +82,9 @@ end with nothing changed.
 
 ## 5. Fix
 
-If there are no **fix** items, skip steps 5 and 6.
+If there are no **fix** items and no unpushed commits from step 1, skip
+steps 5 and 6. With unpushed commits but no **fix** items, run only the
+verification below, then push.
 
 - For each **fix** item, change the code, and add or adjust a test where the
   behaviour changes.
@@ -93,7 +96,8 @@ If there are no **fix** items, skip steps 5 and 6.
 
 ## 6. Push
 
-`git push`. If a pre-push hook refuses the push, treat it as a step-5
+`git push` (`git push -u origin <head>` if the branch has no upstream). If
+a pre-push hook refuses the push, treat it as a step-5
 failure (fix and count the attempt). Never bypass a hook.
 
 ## 7. Reply
