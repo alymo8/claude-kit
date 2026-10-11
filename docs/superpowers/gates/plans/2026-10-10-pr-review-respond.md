@@ -5,6 +5,7 @@
 - **Spec:** docs/superpowers/specs/2026-10-10-pr-review-respond-design.md
 - **Spec SHA-256:** c274ce102811474f554535ef963e959e32781f16af98f07377d28333d1dbcf11
 - **Verdict:** pass-with-decisions
+- **Decisions approved:** 2026-10-10
 - **Date:** 2026-10-10
 - **Rounds:** 2 discovery + 0 verification
 
