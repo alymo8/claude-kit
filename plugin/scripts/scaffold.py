@@ -135,6 +135,10 @@ def scaffold_new(name: str, stack: str, parent: Path) -> Path:
         "then: /init to fill in CLAUDE.md; create the remote when ready "
         "(e.g. `gh repo create --private`)."
     )
+    print(
+        "then: mark build-test and gitleaks as required checks on main "
+        "(see .github/workflows/README.md)."
+    )
     return dest
 
 
@@ -186,6 +190,12 @@ def scaffold_adopt(name: str, stack: str, dest: Path) -> tuple[list[Path], list[
         print(
             "check .gitignore contains: docs/superpowers/**/*.html, .env* "
             "and .claude/handoffs/"
+        )
+    workflows = Path(".github/workflows")
+    if workflows / "README.md" in created and workflows / "ci.yml" in skipped:
+        print(
+            "check .github/workflows/README.md: its required check names "
+            "must match your workflows' job IDs."
         )
     print("review with `git status`, then commit.")
     return created, skipped
