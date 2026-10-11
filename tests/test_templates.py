@@ -16,6 +16,7 @@ EXPECTED = [
     "CLAUDE.md",
     "README.md",
     ".gitignore",
+    ".gitattributes",
     ".github/workflows/ci.yml",
     ".github/workflows/claude-review.yml",
     ".github/workflows/secret-scan.yml",
@@ -39,9 +40,9 @@ def test_project_template_has_exactly_the_expected_files():
     assert found == sorted(EXPECTED)
 
 
-def test_each_stack_has_its_three_files():
+def test_each_stack_has_its_four_files():
     for stack in ("node", "python"):
-        for name in ("ci.yml", "commands.part", "gitignore.part"):
+        for name in ("ci.yml", "commands.part", "gitignore.part", "pre-push"):
             assert (TEMPLATES / "stacks" / stack / name).exists(), f"{stack}/{name}"
 
 

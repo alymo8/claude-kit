@@ -1,0 +1,16 @@
+#!/bin/sh
+# Pre-push lint: runs the lint CI runs, before the push leaves this machine.
+# Enable once per clone: git config core.hooksPath .githooks
+# Skip once: git push --no-verify
+# Lints the working tree: commit or stash edits first for an exact match
+# with what CI sees.
+if [ ! -f pyproject.toml ]; then
+  echo "pre-push: no pyproject.toml yet, lint skipped"
+  exit 0
+fi
+if ! command -v uv >/dev/null 2>&1; then
+  echo "pre-push: uv not found on PATH; install it, or push with --no-verify" >&2
+  exit 1
+fi
+uv run ruff check . || exit 1
+uv run ruff format --check . || exit 1
