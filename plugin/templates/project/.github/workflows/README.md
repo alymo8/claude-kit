@@ -9,6 +9,9 @@
 `../dependabot.yml` opens one grouped pull request a month that bumps the
 pinned actions.
 
+Locally, `.githooks/pre-push` runs the same lint before every push. Enable
+it once per clone with `git config core.hooksPath .githooks`.
+
 ## Making checks required
 
 The required set lives in three places that must change together: the job

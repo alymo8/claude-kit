@@ -1,4 +1,7 @@
+import os
+import shutil
 import subprocess
+import sys
 from pathlib import Path
 
 import pytest
@@ -9,6 +12,8 @@ EXPECTED = [
     "CLAUDE.md",
     "README.md",
     ".gitignore",
+    ".gitattributes",
+    ".githooks/pre-push",
     ".github/workflows/ci.yml",
     ".github/workflows/claude-review.yml",
     ".github/workflows/secret-scan.yml",
@@ -123,7 +128,7 @@ def test_render_files_rejects_unresolved_placeholder(tmp_path, monkeypatch):
     bad_root = tmp_path / "templates"
     (bad_root / "project").mkdir(parents=True)
     (bad_root / "stacks" / "node").mkdir(parents=True)
-    for name in ("ci.yml", "commands.part", "gitignore.part"):
+    for name in ("ci.yml", "commands.part", "gitignore.part", "pre-push"):
         (bad_root / "stacks" / "node" / name).write_text("x\n", encoding="utf-8")
     (bad_root / "project" / "README.md").write_text("{{nope}}\n", encoding="utf-8")
     monkeypatch.setattr(mod, "TEMPLATES", bad_root)
@@ -269,3 +274,134 @@ def test_adopt_without_ci_does_not_warn_about_check_names(repo):
     result = run_script(SCRIPT, "--adopt", "--stack", "python", "--dest", str(repo))
     assert result.returncode == 0, result.stderr
     assert README_CHECK not in result.stdout
+
+
+HOOK = ".githooks/pre-push"
+ENABLED = "hooks: pre-push lint is enabled for this clone (core.hooksPath=.githooks)."
+ADOPT_HOOKS = (
+    "hooks: .githooks/pre-push is staged; enable it with "
+    "`git config core.hooksPath .githooks` (this replaces the current hooks "
+    "setup: .git/hooks or an existing core.hooksPath)."
+)
+
+
+@pytest.mark.parametrize("stack", ["node", "python"])
+def test_new_project_enables_executable_hook(tmp_path, stack):
+    result = run_script(
+        SCRIPT, "--name", "demo", "--stack", stack, "--parent", str(tmp_path)
+    )
+    assert result.returncode == 0, result.stderr
+    dest = tmp_path / "demo"
+    assert git("config", "core.hooksPath", cwd=dest) == ".githooks"
+    assert git("ls-files", "-s", HOOK, cwd=dest).startswith("100755")
+    assert ENABLED in result.stdout
+    assert result.stdout.index("then: mark build-test") < result.stdout.index(ENABLED)
+    assert git("status", "--porcelain", cwd=dest) == ""
+    if sys.platform != "win32":
+        assert os.access(dest / HOOK, os.X_OK)
+
+
+def test_hook_checks_out_lf_with_autocrlf(tmp_path):
+    run_script(SCRIPT, "--name", "demo", "--stack", "python", "--parent", str(tmp_path))
+    clone = tmp_path / "clone"
+    subprocess.run(
+        [
+            "git",
+            "clone",
+            "-q",
+            "-c",
+            "core.autocrlf=true",
+            str(tmp_path / "demo"),
+            str(clone),
+        ],
+        check=True,
+        capture_output=True,
+    )
+    assert b"\r" not in (clone / HOOK).read_bytes()
+
+
+def test_adopt_stages_executable_hook_without_config(repo):
+    result = run_script(SCRIPT, "--adopt", "--stack", "python", "--dest", str(repo))
+    assert result.returncode == 0, result.stderr
+    assert ADOPT_HOOKS in result.stdout
+    out = result.stdout
+    assert out.index("skipped (already present):") < out.index(ADOPT_HOOKS)
+    assert out.index(ADOPT_HOOKS) < out.index("review with `git status`")
+    assert git("diff", "--cached", "--name-only", cwd=repo).splitlines() == [HOOK]
+    assert git("ls-files", "-s", HOOK, cwd=repo).startswith("100755")
+    unset = subprocess.run(
+        ["git", "config", "--local", "core.hooksPath"], cwd=repo, capture_output=True
+    )
+    assert unset.returncode == 1
+    assert "check .gitattributes" not in out
+
+
+def test_adopt_with_own_gitattributes_asks_for_eol_line(repo):
+    (repo / ".gitattributes").write_text("* text=auto\n", encoding="utf-8")
+    result = run_script(SCRIPT, "--adopt", "--stack", "python", "--dest", str(repo))
+    assert result.returncode == 0, result.stderr
+    out = result.stdout
+    check = "check .gitattributes contains: .githooks/* text eol=lf"
+    assert out.index(ADOPT_HOOKS) < out.index(check) < out.index("review with")
+
+
+def test_adopt_with_existing_hook_says_nothing_about_hooks(repo):
+    hook = repo / ".githooks" / "pre-push"
+    hook.parent.mkdir()
+    hook.write_text("#!/bin/sh\n", encoding="utf-8")
+    result = run_script(SCRIPT, "--adopt", "--stack", "python", "--dest", str(repo))
+    assert result.returncode == 0, result.stderr
+    assert "hooks:" not in result.stdout
+    assert hook.read_text("utf-8") == "#!/bin/sh\n"
+
+
+SH = shutil.which("sh")
+needs_sh = pytest.mark.skipif(SH is None, reason="no sh on PATH")
+
+
+def run_hook(tmp_path, stack, manifest=None, tools=None):
+    """Render the stack's hook and run it with sh in a temp dir whose PATH
+    holds only fake tools: {name: exit code}."""
+    mod = load_module(SCRIPT, f"scaffold_hook_{stack}")
+    hook = tmp_path / "pre-push"
+    mod.write_file(hook, mod.render_files("demo", stack, "2026-01-01")[Path(HOOK)])
+    work = tmp_path / "work"
+    bin_dir = work / "bin"
+    bin_dir.mkdir(parents=True)
+    if manifest:
+        (work / manifest).write_text("{}\n", encoding="utf-8")
+    for name, code in (tools or {}).items():
+        mod.write_file(bin_dir / name, f"#!/bin/sh\nexit {code}\n")
+        (bin_dir / name).chmod(0o755)
+    env = {k: v for k, v in os.environ.items() if k.upper() != "PATH"}
+    env["PATH"] = str(bin_dir)
+    return subprocess.run(
+        [SH, str(hook)], cwd=work, env=env, capture_output=True, text=True
+    )
+
+
+@needs_sh
+def test_hook_skips_without_manifest(tmp_path):
+    result = run_hook(tmp_path, "python")
+    assert result.returncode == 0, result.stderr
+    assert "lint skipped" in result.stdout
+
+
+@needs_sh
+def test_hook_fails_without_tool(tmp_path):
+    result = run_hook(tmp_path, "python", "pyproject.toml")
+    assert result.returncode == 1
+    assert "uv not found" in result.stderr
+
+
+@needs_sh
+@pytest.mark.parametrize("code,expected", [(1, 1), (0, 0)])
+def test_hook_follows_lint_result(tmp_path, code, expected):
+    result = run_hook(tmp_path, "python", "pyproject.toml", {"uv": code})
+    assert result.returncode == expected, result.stdout + result.stderr
+
+
+@needs_sh
+def test_node_hook_fails_on_lint_error(tmp_path):
+    result = run_hook(tmp_path, "node", "package.json", {"pnpm": 1})
+    assert result.returncode == 1
