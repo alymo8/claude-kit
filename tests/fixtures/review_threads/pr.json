@@ -1,0 +1,49 @@
+{
+  "number": 42,
+  "url": "https://github.com/o/r/pull/42",
+  "state": "OPEN",
+  "headRefName": "feat/x",
+  "author": {"login": "me"},
+  "reviewThreads": {
+    "pageInfo": {"hasNextPage": false},
+    "nodes": [
+      {"id": "T1", "isResolved": true, "isOutdated": false, "path": "a.py", "line": 1,
+       "comments": {"pageInfo": {"hasNextPage": false}, "nodes": [
+         {"databaseId": 11, "author": {"login": "bob"}, "body": "resolved one", "url": "u11", "createdAt": "2026-10-01T00:00:00Z"}]}},
+      {"id": "T2", "isResolved": false, "isOutdated": false, "path": "a.py", "line": 2,
+       "comments": {"pageInfo": {"hasNextPage": false}, "nodes": [
+         {"databaseId": 21, "author": {"login": "bob"}, "body": "answered", "url": "u21", "createdAt": "2026-10-01T00:00:00Z"},
+         {"databaseId": 22, "author": {"login": "me"}, "body": "done", "url": "u22", "createdAt": "2026-10-01T01:00:00Z"}]}},
+      {"id": "T3", "isResolved": false, "isOutdated": false, "path": "a.py", "line": 3,
+       "comments": {"pageInfo": {"hasNextPage": false}, "nodes": [
+         {"databaseId": 31, "author": {"login": "bob"}, "body": "first", "url": "u31", "createdAt": "2026-10-01T00:00:00Z"},
+         {"databaseId": 32, "author": {"login": "me"}, "body": "reply", "url": "u32", "createdAt": "2026-10-01T01:00:00Z"},
+         {"databaseId": 33, "author": {"login": "bob"}, "body": "not yet", "url": "u33", "createdAt": "2026-10-01T02:00:00Z"}]}},
+      {"id": "T4", "isResolved": false, "isOutdated": true, "path": "b.py", "line": null,
+       "comments": {"pageInfo": {"hasNextPage": false}, "nodes": [
+         {"databaseId": 41, "author": {"login": "bob"}, "body": "old code", "url": "u41", "createdAt": "2026-10-01T00:00:00Z"}]}},
+      {"id": "T5", "isResolved": false, "isOutdated": false, "path": "c.py", "line": 5,
+       "comments": {"pageInfo": {"hasNextPage": false}, "nodes": [
+         {"databaseId": 51, "author": null, "body": "from a deleted account", "url": "u51", "createdAt": "2026-10-01T00:00:00Z"}]}}
+    ]
+  },
+  "reviews": {
+    "pageInfo": {"hasNextPage": false},
+    "nodes": [
+      {"databaseId": 61, "author": {"login": "bob"}, "state": "COMMENTED", "body": "", "url": "u61", "submittedAt": "2026-10-03T00:00:00Z"},
+      {"databaseId": 62, "author": {"login": "bob"}, "state": "COMMENTED", "body": "  \n", "url": "u62", "submittedAt": "2026-10-03T00:00:00Z"},
+      {"databaseId": 63, "author": {"login": "bob"}, "state": "COMMENTED", "body": "old review", "url": "u63", "submittedAt": "2026-10-01T09:00:00Z"},
+      {"databaseId": 64, "author": {"login": "bob"}, "state": "CHANGES_REQUESTED", "body": "new review", "url": "u64", "submittedAt": "2026-10-03T00:00:00Z"},
+      {"databaseId": 65, "author": {"login": "me"}, "state": "COMMENTED", "body": "my review", "url": "u65", "submittedAt": "2026-10-04T00:00:00Z"}
+    ]
+  },
+  "comments": {
+    "pageInfo": {"hasNextPage": false},
+    "nodes": [
+      {"databaseId": 70, "author": {"login": "me"}, "body": "earlier mine", "url": "u70", "createdAt": "2026-10-01T00:00:00Z"},
+      {"databaseId": 71, "author": {"login": "bob"}, "body": "old comment", "url": "u71", "createdAt": "2026-10-01T08:00:00Z"},
+      {"databaseId": 72, "author": {"login": "me"}, "body": "answered all", "url": "u72", "createdAt": "2026-10-02T12:00:00Z"},
+      {"databaseId": 73, "author": {"login": "bob"}, "body": "new comment", "url": "u73", "createdAt": "2026-10-03T01:00:00Z"}
+    ]
+  }
+}
