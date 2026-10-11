@@ -83,8 +83,8 @@ is in [`plugin/`](plugin/).
   - [Session hygiene](conventions/session-hygiene.md) — short sessions, a
     per-branch handoff file, a context meter, lean exploration.
 - **[`plugin/`](plugin/)** — a Claude Code plugin: the `supabase-cli`,
-  `lean-context`, `grill` (opt-in, `CLAUDE_KIT_GRILL=1`), `audit` and
-  `audit-deep` skills (the audits share a citation
+  `lean-context`, `grill` (opt-in, `CLAUDE_KIT_GRILL=1`), `audit`,
+  `audit-deep` and `pr-review-respond` skills (the audits share a citation
   checker, `check-findings.py`), the `teach` skill (copied as is from
   [mattpocock/skills](https://github.com/mattpocock/skills), MIT), the on-demand spec → HTML renderer, the `token-report.py`
   measurement script, a status line, and eight hooks (regenerate the spec/plan
@@ -119,6 +119,10 @@ is in [`plugin/`](plugin/).
   plan, with every slide rendered and checked by `check-deck.py`. Every deck
   closes with what was built, what was out of scope, a path-to-production
   readiness table and the ask.
+  The `pr-review-respond` skill works through the review comments on
+  your open PR: it triages each, shows you the actions and drafted replies
+  for one approval, then fixes, pushes and replies in each thread, and
+  never resolves one.
 - **[`knowledge/decisions/`](knowledge/decisions/)** — this repo's own ADRs.
 - **[`docs/superpowers/`](docs/superpowers/)** — specs and plans for changes to
   the kit itself.

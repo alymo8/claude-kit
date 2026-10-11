@@ -35,3 +35,4 @@ the next number; superseded ones are never deleted.
 | [0027](0027-adr-triggers.md) | ADR triggers: MUST, SHOULD, NOT REQUIRED, enforced by the spec gate | accepted | 2026-10-10 |
 | [0028](0028-pinned-actions-and-workflows-readme.md) | Pinned actions, Dependabot, and a workflows README | accepted | 2026-10-10 |
 | [0029](0029-pre-push-lint-hook.md) | Pre-push lint hook in scaffolded repos | accepted | 2026-10-10 |
+| [0030](0030-pr-review-respond-skill.md) | `pr-review-respond` skill: one approval, in-thread replies, never resolve | accepted | 2026-10-10 |
