@@ -130,3 +130,43 @@ def test_adr_triggers_match_convention():
     assert "\n## Index\n" in template
     assert template.index("## When to write one") < template.index("## Index")
     assert template.index("## Index") < template.index("| # | Title |")
+
+
+KIT_WORKFLOWS = PLUGIN.parent / ".github" / "workflows"
+STACK_CIS = [TEMPLATES / "stacks" / s / "ci.yml" for s in ("node", "python")]
+PIN_RE = re.compile(r"uses: [\w.-]+/[\w.-]+@[0-9a-f]{40} # v\d+(\.\d+){0,2}$")
+
+
+def _workflow_files():
+    return [
+        *sorted((PROJECT / ".github" / "workflows").glob("*.yml")),
+        *STACK_CIS,
+        *sorted(KIT_WORKFLOWS.glob("*.yml")),
+    ]
+
+
+def test_actions_are_sha_pinned():
+    for path in _workflow_files():
+        lines = _yaml_lines(path.read_text("utf-8"))
+        uses = [line for line in lines if "uses:" in line]
+        for line in uses:
+            assert PIN_RE.search(line), f"{path}: {line}"
+        if any(line.strip() == "steps:" for line in lines):
+            assert uses, f"{path} has steps but no pinned action"
+
+
+def test_pull_request_has_no_paths_filter():
+    for path in [SECRET_SCAN, *STACK_CIS]:
+        lines = path.read_text("utf-8").splitlines()
+        for line in _yaml_lines("\n".join(lines)):
+            stripped = line.strip()
+            assert not stripped.startswith(("paths:", "paths-ignore:")), path
+        index = next(
+            i for i, line in enumerate(lines) if line.strip() == "pull_request:"
+        )
+        comments = []
+        for line in reversed(lines[:index]):
+            if not line.lstrip().startswith("#"):
+                break
+            comments.append(line)
+        assert "`paths:`" in "\n".join(comments), path
