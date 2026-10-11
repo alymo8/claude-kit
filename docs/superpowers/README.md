@@ -28,7 +28,7 @@
 | Date | Plan | Status |
 |---|---|---|
 | 2026-10-10 | [ADR Triggers Implementation Plan](plans/2026-10-10-adr-triggers.md) | approved |
-| 2026-10-10 | [Pre-push Lint Hook Implementation Plan](plans/2026-10-10-pre-push-hook.md) | draft |
+| 2026-10-10 | [Pre-push Lint Hook Implementation Plan](plans/2026-10-10-pre-push-hook.md) | approved |
 | 2026-10-10 | [Template CI Hardening Implementation Plan](plans/2026-10-10-template-ci-hardening.md) | approved |
 | 2026-10-07 | [Scaffold Secret Scan Implementation Plan](plans/2026-10-07-scaffold-secret-scan.md) | approved |
 | 2026-10-07 | [Ship Fast User-Driven Spec Implementation Plan](plans/2026-10-07-ship-fast-user-driven-spec.md) | approved |
