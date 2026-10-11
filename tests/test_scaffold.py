@@ -9,6 +9,7 @@ EXPECTED = [
     "CLAUDE.md",
     "README.md",
     ".gitignore",
+    ".gitattributes",
     ".github/workflows/ci.yml",
     ".github/workflows/claude-review.yml",
     ".github/workflows/secret-scan.yml",
@@ -123,7 +124,7 @@ def test_render_files_rejects_unresolved_placeholder(tmp_path, monkeypatch):
     bad_root = tmp_path / "templates"
     (bad_root / "project").mkdir(parents=True)
     (bad_root / "stacks" / "node").mkdir(parents=True)
-    for name in ("ci.yml", "commands.part", "gitignore.part"):
+    for name in ("ci.yml", "commands.part", "gitignore.part", "pre-push"):
         (bad_root / "stacks" / "node" / name).write_text("x\n", encoding="utf-8")
     (bad_root / "project" / "README.md").write_text("{{nope}}\n", encoding="utf-8")
     monkeypatch.setattr(mod, "TEMPLATES", bad_root)

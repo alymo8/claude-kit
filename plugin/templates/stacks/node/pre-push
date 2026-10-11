@@ -1,0 +1,15 @@
+#!/bin/sh
+# Pre-push lint: runs the lint CI runs, before the push leaves this machine.
+# Enable once per clone: git config core.hooksPath .githooks
+# Skip once: git push --no-verify
+# Lints the working tree: commit or stash edits first for an exact match
+# with what CI sees.
+if [ ! -f package.json ]; then
+  echo "pre-push: no package.json yet, lint skipped"
+  exit 0
+fi
+if ! command -v pnpm >/dev/null 2>&1; then
+  echo "pre-push: pnpm not found on PATH; install it, or push with --no-verify" >&2
+  exit 1
+fi
+pnpm lint || exit 1
