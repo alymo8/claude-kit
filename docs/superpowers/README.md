@@ -7,6 +7,7 @@
 | Date | Spec | Status |
 |---|---|---|
 | 2026-10-10 | [ADR triggers: when a decision must, should, or need not get an ADR](specs/2026-10-10-adr-triggers-design.md) | approved |
+| 2026-10-10 | [`pr-review-respond` skill: work through a PR's review comments](specs/2026-10-10-pr-review-respond-design.md) | approved |
 | 2026-10-10 | [Pre-push lint hook in scaffolded repos](specs/2026-10-10-pre-push-hook-design.md) | approved |
 | 2026-10-10 | [Template CI hardening: SHA-pinned actions, Dependabot, and a workflows README](specs/2026-10-10-template-ci-hardening-design.md) | approved |
 | 2026-10-07 | [Scaffold secret scan: gitleaks CLI instead of gitleaks-action](specs/2026-10-07-scaffold-secret-scan-design.md) | approved |
