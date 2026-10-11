@@ -5,6 +5,7 @@
 - **Spec:** docs/superpowers/specs/2026-10-10-pre-push-hook-design.md
 - **Spec SHA-256:** 0e75a11fa817ace0dc3af9246b9b387193d5c08cf6fe73ba69484a7bac99cdd9
 - **Verdict:** pass-with-decisions
+- **Decisions approved:** 2026-10-10
 - **Date:** 2026-10-10
 - **Rounds:** 3 discovery + 0 verification
 
