@@ -7,6 +7,7 @@
 | Date | Spec | Status |
 |---|---|---|
 | 2026-10-10 | [ADR triggers: when a decision must, should, or need not get an ADR](specs/2026-10-10-adr-triggers-design.md) | approved |
+| 2026-10-10 | [Template CI hardening: SHA-pinned actions, Dependabot, and a workflows README](specs/2026-10-10-template-ci-hardening-design.md) | approved |
 | 2026-10-07 | [Scaffold secret scan: gitleaks CLI instead of gitleaks-action](specs/2026-10-07-scaffold-secret-scan-design.md) | approved |
 | 2026-10-07 | [`/ship-fast`: a spec the user drives, and product decisions asked out loud](specs/2026-10-07-ship-fast-user-driven-spec-design.md) | approved |
 | 2026-10-06 | [`/ship-fast`: a light path from spec to PR for hour-sized POCs](specs/2026-10-06-ship-fast-design.md) | approved |
