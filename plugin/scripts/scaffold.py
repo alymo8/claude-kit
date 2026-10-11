@@ -8,10 +8,14 @@ New mode renders plugin/templates/ into PARENT/NAME (PARENT defaults to the
 workspace directory that contains the kit checkout's `plugin/` folder, i.e. the
 kit checkout's own root — new projects land beside the other repos there), then
 runs `git init -b main` and one commit.
+It records `.githooks/pre-push` as executable and sets
+`core.hooksPath=.githooks`, which enables the pre-push lint hook.
 It refuses a non-empty destination. Adopt mode writes only the files that do not
 already exist in DEST (default: the current directory, which must be a git work
-tree) and never commits. Neither mode creates a GitHub repository or a stack
-manifest (package.json / pyproject.toml): run the framework's own init for that.
+tree) and never commits. It stages `.githooks/pre-push` as executable when it
+creates it, and never sets git config. Neither mode creates a GitHub repository
+or a stack manifest (package.json / pyproject.toml): run the framework's own init
+for that.
 
 Exit codes: 0 success; 1 refusal (message on stderr); 2 usage.
 """
@@ -32,6 +36,8 @@ INDEXER = PLUGIN_ROOT / "scripts" / "spec-index.py"
 STACKS = ("node", "python")
 PLACEHOLDER_RE = re.compile(r"\{\{[a-z_]+\}\}")
 CI_PATH = Path(".github/workflows/ci.yml")
+HOOK_PATH = Path(".githooks/pre-push")
+GITATTRIBUTES = Path(".gitattributes")
 NEXT_STEPS = {
     "node": (
         "next: `pnpm init` (or a framework starter), ensure package.json has a "
@@ -56,18 +62,23 @@ def render_files(name: str, stack: str, today: str) -> dict[Path, str]:
         .read_text("utf-8")
         .rstrip("\n"),
     }
-    root = TEMPLATES / "project"
-    files: dict[Path, str] = {}
-    for src in sorted(p for p in root.rglob("*") if p.is_file()):
-        rel = src.relative_to(root)
-        source = stack_dir / "ci.yml" if rel == CI_PATH else src
-        text = source.read_text(encoding="utf-8")
+
+    def render(text: str, rel: Path) -> str:
         for key, value in values.items():
             text = text.replace("{{" + key + "}}", value)
         leftover = PLACEHOLDER_RE.search(text)
         if leftover:
             raise ValueError(f"unresolved placeholder {leftover.group(0)} in {rel}")
-        files[rel] = text
+        return text
+
+    root = TEMPLATES / "project"
+    files: dict[Path, str] = {}
+    for src in sorted(p for p in root.rglob("*") if p.is_file()):
+        rel = src.relative_to(root)
+        source = stack_dir / "ci.yml" if rel == CI_PATH else src
+        files[rel] = render(source.read_text(encoding="utf-8"), rel)
+    hook = (stack_dir / "pre-push").read_text(encoding="utf-8")
+    files[HOOK_PATH] = render(hook, HOOK_PATH)
     return files
 
 
@@ -79,6 +90,11 @@ def write_file(path: Path, text: str) -> None:
 def write_files(dest: Path, files: dict[Path, str]) -> None:
     for rel, text in files.items():
         write_file(dest / rel, text)
+
+
+def make_executable(path: Path) -> None:
+    """Set the executable bits (no effect on Windows)."""
+    path.chmod(path.stat().st_mode | 0o111)
 
 
 def git(*args: str, cwd: Path) -> subprocess.CompletedProcess[str]:
@@ -98,10 +114,13 @@ def commit_all(dest: Path, message: str) -> None:
             "-c",
             "user.email=claude-kit@localhost",
         ]
+    make_executable(dest / HOOK_PATH)
     for args in (
         ["init", "-q", "-b", "main"],
         ["add", "-A"],
+        ["update-index", "--chmod=+x", HOOK_PATH.as_posix()],
         [*identity, "commit", "-q", "-m", message],
+        ["config", "core.hooksPath", ".githooks"],
     ):
         result = git(*args, cwd=dest)
         if result.returncode != 0:
@@ -139,6 +158,7 @@ def scaffold_new(name: str, stack: str, parent: Path) -> Path:
         "then: mark build-test and gitleaks as required checks on main "
         "(see .github/workflows/README.md)."
     )
+    print("hooks: pre-push lint is enabled for this clone (core.hooksPath=.githooks).")
     return dest
 
 
@@ -197,6 +217,18 @@ def scaffold_adopt(name: str, stack: str, dest: Path) -> tuple[list[Path], list[
             "check .github/workflows/README.md: its required check names "
             "must match your workflows' job IDs."
         )
+    if HOOK_PATH in created:
+        make_executable(dest / HOOK_PATH)
+        staged = git("add", "--chmod=+x", HOOK_PATH.as_posix(), cwd=dest)
+        if staged.returncode != 0:
+            raise SystemExit(f"error: git add failed: {staged.stderr.strip()}")
+        print(
+            "hooks: .githooks/pre-push is staged; enable it with "
+            "`git config core.hooksPath .githooks` (this replaces the current "
+            "hooks setup: .git/hooks or an existing core.hooksPath)."
+        )
+        if GITATTRIBUTES in skipped:
+            print("check .gitattributes contains: .githooks/* text eol=lf")
     print("review with `git status`, then commit.")
     return created, skipped
 
