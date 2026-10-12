@@ -6,6 +6,7 @@
 
 | Date | Spec | Status |
 |---|---|---|
+| 2026-10-12 | [Capture learnings when a feature is finished](specs/2026-10-12-capture-learnings-design.md) | approved |
 | 2026-10-10 | [ADR triggers: when a decision must, should, or need not get an ADR](specs/2026-10-10-adr-triggers-design.md) | approved |
 | 2026-10-10 | [`pr-review-respond` skill: work through a PR's review comments](specs/2026-10-10-pr-review-respond-design.md) | approved |
 | 2026-10-10 | [Pre-push lint hook in scaffolded repos](specs/2026-10-10-pre-push-hook-design.md) | approved |
