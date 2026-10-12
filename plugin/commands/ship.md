@@ -128,7 +128,9 @@ A command still failing after that is handled like any other failed command.
 6. **Review.** Use `superpowers:requesting-code-review` on `origin/main..HEAD`,
    then `superpowers:receiving-code-review`. Fix every finding you can verify;
    commit, re-run tests, push. A finding that needs a decision is a stop rule.
-7. **PR.** The PR title is the spec's **title**: the first line outside code
+7. **PR.** First run the `claude-kit:capture-learnings` skill. If it made a
+   commit, run the full test suite and lint from `CLAUDE.md`, then
+   `git push`. The PR title is the spec's **title**: the first line outside code
    fences that starts with `# `, with the `# ` prefix and trailing whitespace
    removed (backticks and punctuation kept). Run, with the Bash tool (not
    PowerShell, whose native-argument quoting drops `"` and mangles non-ASCII),
@@ -149,8 +151,11 @@ A command still failing after that is handled like any other failed command.
    conflict in `docs/superpowers/README.md` is resolved by running
    `python "${CLAUDE_PLUGIN_ROOT}/scripts/spec-index.py" docs/superpowers`, with
    the fallback `~/.claude/skills/claude-kit/scripts/spec-index.py`, then
-   `git add docs/superpowers/README.md`, never by hand; other files as
-   before), then `git rebase --continue`, re-run
+   `git add docs/superpowers/README.md`, never by hand; a conflict in a
+   file from the `Capture learnings` commit keeps one copy of each
+   duplicate entry, and an ADR whose number `origin/main` already uses is
+   renumbered to the next free one, with its file name and index row;
+   other files as before), then `git rebase --continue`, re-run
    tests, `git push --force-with-lease`, return to step 8. Then
    `gh pr merge --squash --delete-branch`. Run from a worktree this exits
    non-zero *after* merging, because it cannot check out `main` here; confirm
@@ -196,5 +201,5 @@ A command still failing after that is handled like any other failed command.
     `docker buildx ls` has no `<slug>`.
 12. **Report.** One message: the PR link, the squash commit on `main`, the
     verification output from step 10, whether local `main` was fast-forwarded
-    (and why not, if not), the review findings you fixed, and anything left out
-    and why.
+    (and why not, if not), the review findings you fixed, the Learnings
+    summary from step 7, and anything left out and why.

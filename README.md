@@ -84,7 +84,8 @@ is in [`plugin/`](plugin/).
     per-branch handoff file, a context meter, lean exploration.
 - **[`plugin/`](plugin/)** — a Claude Code plugin: the `supabase-cli`,
   `lean-context`, `grill` (opt-in, `CLAUDE_KIT_GRILL=1`), `audit`,
-  `audit-deep` and `pr-review-respond` skills (the audits share a citation
+  `audit-deep`, `pr-review-respond` and `capture-learnings` skills (the
+  audits share a citation
   checker, `check-findings.py`), the `teach` skill (copied as is from
   [mattpocock/skills](https://github.com/mattpocock/skills), MIT), the on-demand spec → HTML renderer, the `token-report.py`
   measurement script, a status line, and eight hooks (regenerate the spec/plan

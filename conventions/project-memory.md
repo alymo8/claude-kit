@@ -63,6 +63,19 @@ churn is expensive and brevity is a feature, not a nicety.
 - Workspace-wide preferences live in the workspace `CLAUDE.md` one level up; the
   project file records only what is *specific to this repo*.
 
+## Capturing learnings
+
+A memory file improves only if what a feature taught gets written down. When
+a feature or change finishes, before its branch merges, the
+`claude-kit:capture-learnings` skill collects the session's learnings and
+writes each to its home: repo commands, gotchas and conventions to this file
+(or to `knowledge/` once this file would pass 100 lines); durable findings to
+the [knowledge layer](knowledge-layer.md); decisions to an ADR in the
+[decision log](decision-log.md); the user's preferences about how Claude
+works to auto-memory, never a tracked file. The learnings land in the
+feature's PR. `/ship` and `/ship-fast` run the skill at their PR step; for a
+manual finish, run it yourself. The skill holds the full routing rules.
+
 ## Definition of done
 
 - A checked-in `CLAUDE.md` exists at the repo root.

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import re
+
 from helpers import PLUGIN
 
 SHIP_FAST = (PLUGIN / "commands" / "ship-fast.md").read_text(encoding="utf-8")
@@ -168,3 +170,20 @@ def test_app_runs_from_the_smoke_run():
     assert "never edit or delete data the user" in smoke
     assert "The app launched in step 5" in hand_over
     assert "Launch the app from the" not in hand_over
+
+
+def _step(n):
+    match = re.search(rf"^{n}\. (.*?)(?=^\d+\. |^## |\Z)", SHIP_FAST, re.M | re.S)
+    assert match, n
+    return " ".join(match.group(1).split())
+
+
+def test_learnings_are_captured_before_the_push():
+    step = _step(7)
+    assert "claude-kit:capture-learnings" in step
+    learn = step.index("claude-kit:capture-learnings")
+    assert learn < step.index("git push -u origin poc/<slug>")
+
+
+def test_report_lists_learnings():
+    assert "Learnings summary from step 7" in _step(9)
