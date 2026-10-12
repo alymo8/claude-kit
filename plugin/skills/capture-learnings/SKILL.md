@@ -28,14 +28,16 @@ not ask the user to confirm them.
    destination first, and update an existing entry instead of adding a
    duplicate. On a rerun or resume this drops what an earlier run wrote,
    so nothing new means no commit. Zero learnings is a valid result: write
-   nothing and return `none`.
+   nothing and return `none`. Run `git fetch origin` first and read each
+   destination on `origin/main` too (`git show origin/main:<path>`): a
+   parallel run may already have merged the same learning there.
 3. **Route** each kept learning by kind:
 
    | Kind | Destination |
    |---|---|
    | Repo command, gotcha, or convention | The repo's root `CLAUDE.md`, under the matching heading of the kit's project template: Setup / prerequisites; Build, run, test; Conventions; Gotchas. If the file lacks that heading, append it at the end of the file. |
    | Durable finding about the domain or the code | `knowledge/<topic>.md` (the existing file on the topic, else a new one), linked from `CLAUDE.md` only if every session needs it. |
-   | A decision with alternatives that a later change could reopen | A new ADR under `knowledge/decisions/`, in the format of the repo's `knowledge/decisions/0000-template.md` (else its `knowledge/decisions/README.md`, else its newest ADR), with the repo's next number. If `knowledge/decisions/README.md` has an index table, add the ADR's index row. |
+   | A decision with alternatives that a later change could reopen | A new ADR under `knowledge/decisions/`, in the format of the repo's `knowledge/decisions/0000-template.md` (else its `knowledge/decisions/README.md`, else its newest ADR), numbered one above the highest number in `knowledge/decisions/` on either HEAD or `origin/main`. If `knowledge/decisions/README.md` has an index table, add the ADR's index row. |
    | A preference about how Claude should work that holds beyond this repo | Auto-memory: the session's memory directory and its `MEMORY.md` index, following the session's memory instructions. Never a tracked file. |
 
    Fallbacks:
@@ -43,9 +45,11 @@ not ask the user to confirm them.
      their headings.
    - `CLAUDE.md` would have more than 100 lines after the addition (a file
      already over that limit always qualifies): put the entry in
-     `knowledge/` and link it from `CLAUDE.md` instead.
-   - The repo has no `knowledge/` folder: put durable findings in
-     `CLAUDE.md` under `## Gotchas`.
+     `knowledge/` and link it from `CLAUDE.md` instead. If the repo has no
+     `knowledge/` folder, create `knowledge/<topic>.md` for the overflow
+     only; this rule wins over the next one.
+   - The repo has no `knowledge/` folder (and `CLAUDE.md` stays within the
+     limit): put durable findings in `CLAUDE.md` under `## Gotchas`.
    - The repo has no `knowledge/decisions/` folder, or the branch is a
      `poc/` branch (a `/ship-fast` POC, where ADRs are not required): write
      no ADR; list the decision in the summary as `not written:`.
@@ -67,3 +71,8 @@ not ask the user to confirm them.
      starting `not written:`;
    - when nothing was written: `none`, then each dropped candidate with
      the step-2 rule that dropped it.
+
+   If the branch already has a `Capture learnings` commit from an earlier
+   run, start the summary with that commit's entries (from `git show`),
+   each starting `already written:`, so a resumed run's report still lists
+   them.

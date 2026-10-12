@@ -95,3 +95,21 @@ def test_mines_subagent_reports_and_handoff():
     text = flat()
     assert "subagent" in text
     assert ".claude/handoffs/" in text
+
+
+def test_adr_number_accounts_for_origin_main():
+    text = flat()
+    assert "git fetch origin" in text
+    assert "`origin/main`" in text
+    assert "highest number" in text
+
+
+def test_overflow_creates_knowledge_when_missing():
+    text = flat()
+    assert "create `knowledge/<topic>.md` for the overflow" in text
+
+
+def test_resume_reports_earlier_learnings():
+    text = flat()
+    assert "already has a `Capture learnings` commit" in text
+    assert "already written:" in text

@@ -151,8 +151,11 @@ A command still failing after that is handled like any other failed command.
    conflict in `docs/superpowers/README.md` is resolved by running
    `python "${CLAUDE_PLUGIN_ROOT}/scripts/spec-index.py" docs/superpowers`, with
    the fallback `~/.claude/skills/claude-kit/scripts/spec-index.py`, then
-   `git add docs/superpowers/README.md`, never by hand; other files as
-   before), then `git rebase --continue`, re-run
+   `git add docs/superpowers/README.md`, never by hand; a conflict in a
+   file from the `Capture learnings` commit keeps one copy of each
+   duplicate entry, and an ADR whose number `origin/main` already uses is
+   renumbered to the next free one, with its file name and index row;
+   other files as before), then `git rebase --continue`, re-run
    tests, `git push --force-with-lease`, return to step 8. Then
    `gh pr merge --squash --delete-branch`. Run from a worktree this exits
    non-zero *after* merging, because it cannot check out `main` here; confirm

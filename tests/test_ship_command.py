@@ -155,3 +155,9 @@ def test_learnings_commit_is_tested_before_push():
 
 def test_report_lists_learnings():
     assert "Learnings summary from step 7" in _step(12)
+
+
+def test_rebase_dedupes_learnings_and_renumbers_adrs():
+    step = _step(9)
+    assert "Capture learnings" in step
+    assert "duplicate" in step and "renumber" in step
