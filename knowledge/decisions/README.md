@@ -36,3 +36,4 @@ the next number; superseded ones are never deleted.
 | [0028](0028-pinned-actions-and-workflows-readme.md) | Pinned actions, Dependabot, and a workflows README | accepted | 2026-10-10 |
 | [0029](0029-pre-push-lint-hook.md) | Pre-push lint hook in scaffolded repos | accepted | 2026-10-10 |
 | [0030](0030-pr-review-respond-skill.md) | `pr-review-respond` skill: one approval, in-thread replies, never resolve | accepted | 2026-10-10 |
+| [0031](0031-capture-learnings-at-feature-finish.md) | Capture learnings when a feature finishes, in its PR | accepted | 2026-10-12 |
