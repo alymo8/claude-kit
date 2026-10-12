@@ -159,3 +159,5 @@ ruff check plugin tests; ruff format --check plugin tests
 Hook edits (`plugin/hooks/`) need a new session or `/reload-plugins`; `SKILL.md`
 and command edits are live (the plugin is loaded in place through a junction,
 ADR 0005). Never run `plugin/install.ps1` from a test without `-SkillsDir <tmp>`.
+Known gotchas (pytest output, worktree guard, line endings, gates):
+[knowledge/kit-dev-gotchas.md](knowledge/kit-dev-gotchas.md).
