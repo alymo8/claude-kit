@@ -105,8 +105,10 @@ Only once both checks pass (or I have explicitly waived them) should you begin.
 Then build in an isolated worktree using `superpowers:using-git-worktrees`, after
 pulling the latest `main` so the worktree branches from up-to-date code.
 
-**A feature is not finished until its workspace is gone.** When the work is merged
-(or I have explicitly abandoned it), use `superpowers:finishing-a-development-branch`
+**A feature is not finished until its workspace is gone.** Before the branch merges,
+run the `claude-kit:capture-learnings` skill so the feature's learnings land in its
+PR. When the work is merged (or I have explicitly abandoned it), use
+`superpowers:finishing-a-development-branch`
 to integrate and clean up: the worktree removed and pruned, the branch deleted
 locally and on the remote, and any scratch files created outside the repo deleted.
 Docker is part of the workspace. Before a task first uses Docker, make its objects

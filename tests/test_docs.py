@@ -88,3 +88,17 @@ def test_docs_wire_ship_fast_interview():
         text = (REPO / name).read_text(encoding="utf-8")
         paragraphs = _paragraphs_with(text, "/ship-fast")
         assert any("interview" in p for p in paragraphs), name
+
+
+def test_learnings_capture_is_part_of_finishing():
+    claude = (REPO / "CLAUDE.md").read_text(encoding="utf-8")
+    para = claude.split(
+        "**A feature is not finished until its workspace is gone.**", 1
+    )[1]
+    para = para.split("\n\n", 1)[0]
+    assert "claude-kit:capture-learnings" in para
+    convention = (REPO / "conventions" / "project-memory.md").read_text(
+        encoding="utf-8"
+    )
+    assert "## Capturing learnings" in convention
+    assert "capture-learnings" in convention.split("## Capturing learnings", 1)[1]
