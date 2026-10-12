@@ -128,7 +128,9 @@ A command still failing after that is handled like any other failed command.
 6. **Review.** Use `superpowers:requesting-code-review` on `origin/main..HEAD`,
    then `superpowers:receiving-code-review`. Fix every finding you can verify;
    commit, re-run tests, push. A finding that needs a decision is a stop rule.
-7. **PR.** The PR title is the spec's **title**: the first line outside code
+7. **PR.** First run the `claude-kit:capture-learnings` skill. If it made a
+   commit, run the full test suite and lint from `CLAUDE.md`, then
+   `git push`. The PR title is the spec's **title**: the first line outside code
    fences that starts with `# `, with the `# ` prefix and trailing whitespace
    removed (backticks and punctuation kept). Run, with the Bash tool (not
    PowerShell, whose native-argument quoting drops `"` and mangles non-ASCII),
@@ -196,5 +198,5 @@ A command still failing after that is handled like any other failed command.
     `docker buildx ls` has no `<slug>`.
 12. **Report.** One message: the PR link, the squash commit on `main`, the
     verification output from step 10, whether local `main` was fast-forwarded
-    (and why not, if not), the review findings you fixed, and anything left out
-    and why.
+    (and why not, if not), the review findings you fixed, the Learnings
+    summary from step 7, and anything left out and why.

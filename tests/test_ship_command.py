@@ -138,3 +138,20 @@ def test_plan_writer_answers_the_spec_records_plan_questions():
     step = _step(3)
     assert "## Plan questions" in step
     assert "docs/superpowers/gates/<spec file name>" in step
+
+
+def test_learnings_are_captured_before_the_pr():
+    step = _step(7)
+    assert "claude-kit:capture-learnings" in step
+    assert step.index("claude-kit:capture-learnings") < step.index("gh pr create")
+
+
+def test_learnings_commit_is_tested_before_push():
+    step = _step(7)
+    learn = step.index("claude-kit:capture-learnings")
+    assert learn < step.index("full test suite") < step.index("git push")
+    assert step.index("git push") < step.index("gh pr create")
+
+
+def test_report_lists_learnings():
+    assert "Learnings summary from step 7" in _step(12)
