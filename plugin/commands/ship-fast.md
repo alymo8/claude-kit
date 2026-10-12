@@ -351,9 +351,11 @@ step 7 ends. A resumed run reports the minutes it measured.
    correctness bug and revert the rest. Re-run the full suite and lint, and
    commit `<slug>: review fixes` if anything is left (that commit restarts
    the app, as in step 5).
-7. **PR.** `git push -u origin poc/<slug>`. (Each CI fix commit restarts
-   the app, as in step 5.) The PR title is the spec's
-   title: the first line outside code fences that starts with `# `, with the
+7. **PR.** First run the `claude-kit:capture-learnings` skill, then
+   `git push -u origin poc/<slug>` (it carries any learnings commit, which
+   changes no app code and needs no restart). (Each CI fix commit restarts
+   the app, as in step 5.) The PR title is the spec's title: the first
+   line outside code fences that starts with `# `, with the
    `# ` prefix and trailing whitespace removed. Run, with the Bash tool (not
    PowerShell), `gh pr create --title '<title>' --body-file <file>`, with
    the title written out literally inside single quotes and each `'` in it
@@ -383,10 +385,11 @@ step 7 ends. A resumed run reports the minutes it measured.
    process the smoke run left behind.
 9. **Report.** One message: the PR link; each acceptance criterion with its
    evidence; Decisions (answered, then assumed) and Assumptions; the review
-   fixes; the CI result (and, for a new repository, that its first `main`
-   run was red because it had no tests yet); the wall-clock minutes of
-   steps 2 to 7 (each, and in total); and **Try it**: the running app's
-   URL or entry command, how to stop and restart it, and the worktree path.
+   fixes; the Learnings summary from step 7; the CI result (and, for a new
+   repository, that its first `main` run was red because it had no tests
+   yet); the wall-clock minutes of steps 2 to 7 (each, and in total); and
+   **Try it**: the running app's URL or entry command, how to stop and
+   restart it, and the worktree path.
    Do not suggest cleaning up in the report. Once the user says they have
    tested the app or finished presenting it, suggest the Cleanup below in
    one line, and run it when they agree.
