@@ -30,7 +30,7 @@
 
 | Date | Plan | Status |
 |---|---|---|
-| 2026-10-13 | [Kit map Implementation Plan](plans/2026-10-13-kit-map.md) | draft |
+| 2026-10-13 | [Kit map Implementation Plan](plans/2026-10-13-kit-map.md) | approved |
 | 2026-10-12 | [Capture learnings at feature finish Implementation Plan](plans/2026-10-12-capture-learnings.md) | approved |
 | 2026-10-10 | [ADR Triggers Implementation Plan](plans/2026-10-10-adr-triggers.md) | approved |
 | 2026-10-10 | [`pr-review-respond` Skill Implementation Plan](plans/2026-10-10-pr-review-respond.md) | approved |

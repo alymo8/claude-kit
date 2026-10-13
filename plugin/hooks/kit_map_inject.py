@@ -18,7 +18,8 @@ import re
 import sys
 from pathlib import Path
 
-ROW_RE = re.compile(r"^\|\s*\[([^\]]+)\]\(([^)#\s]+\.md)\)\s*\|")
+# The link target is a bare file name: no folders, so it stays in conventions/.
+ROW_RE = re.compile(r"^\|\s*\[([^\]]+)\]\(([^)#\s/\\]+\.md)\)\s*\|")
 SECTION = "## The playbooks"
 
 

@@ -168,3 +168,13 @@ def test_lean_context_pointers_name_playbook_via_kit_map():
     )
     assert POINTER in skill
     assert "`conventions/session-hygiene.md` in the kit" not in skill
+
+
+def test_rows_outside_conventions_are_ignored(tmp_path):
+    readme = "## The playbooks\n\n| [Up](../up.md) | x |\n| [Real](real.md) | y |\n"
+    kit = make_kit(tmp_path, readme)
+    (kit / "up.md").write_text("x", encoding="utf-8")
+    (kit / "conventions" / "real.md").write_text("x", encoding="utf-8")
+    text = context(run(kit / "plugin" / "hooks" / HOOK.name))
+    assert "- Real: " in text
+    assert "Up" not in text
