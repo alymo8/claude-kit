@@ -155,3 +155,16 @@ def test_registered_on_session_start_without_matcher():
     kit = groups[lean + 1]
     assert "hooks/kit_map_inject.py" in kit["hooks"][0]["command"]
     assert "matcher" not in kit
+
+
+POINTER = "the session-hygiene playbook (path in the kit map)"
+
+
+def test_lean_context_pointers_name_playbook_via_kit_map():
+    lean = PLUGIN / "hooks" / "lean_context_inject.py"
+    assert POINTER in run_script(lean, stdin="{}", env=clean_env()).stdout
+    skill = (PLUGIN / "skills" / "lean-context" / "SKILL.md").read_text(
+        encoding="utf-8"
+    )
+    assert POINTER in skill
+    assert "`conventions/session-hygiene.md` in the kit" not in skill

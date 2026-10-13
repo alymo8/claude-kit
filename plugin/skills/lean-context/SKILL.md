@@ -42,4 +42,4 @@ Measured across 67 sessions: Bash was 82% of tool output, and cat, sed, grep,
 ls and find sweeps were most of that. Re-reads of the same file were rare; the
 waste was output carried for hundreds of turns, which the restart cap addresses.
 Reading narrowly for its own sake trades quality for tokens the cap already
-saves (ADR 0011). Details: `conventions/session-hygiene.md` in the kit.
+saves (ADR 0011). Details: the session-hygiene playbook (path in the kit map).
