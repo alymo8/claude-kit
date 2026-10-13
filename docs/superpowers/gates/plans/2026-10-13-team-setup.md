@@ -7,6 +7,7 @@
 - **Verdict:** pass-with-decisions
 - **Date:** 2026-10-13
 - **Rounds:** 4 discovery + 0 verification (3 rounds, then 1 more after the spec was re-gated)
+- **Decisions approved:** 2026-10-13
 
 ## Plan-introduced decisions
 
