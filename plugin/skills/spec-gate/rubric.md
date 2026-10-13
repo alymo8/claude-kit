@@ -40,10 +40,10 @@ never edit the spec.
    check 7, decide whether it matches a MUST trigger under
    `## When to write one`. Read that section from the decisions directory's
    `README.md`; if the README has no such section, from
-   `conventions/decision-log.md` in the repository, else from
-   `../conventions/decision-log.md` (the workspace, one level up). If none
-   of the three has the section, skip this check. A decision that matches a
-   NOT REQUIRED item is not a match. If it matches and the spec's Scope In
+   `conventions/decision-log.md` in the repository, else from the
+   decision-log path given in the dispatch prompt (skip this source when it
+   says `none`). If none of the three has the section, skip this check. A
+   decision that matches a NOT REQUIRED item is not a match. If it matches and the spec's Scope In
    names no new or amended ADR file for it, that is a `blocking` finding of
    class `open-what`: quote the decision and the trigger it matches. Its
    fix is to add the ADR file to Scope In and a one-paragraph ADR summary

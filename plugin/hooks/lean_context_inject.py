@@ -15,7 +15,8 @@ import sys
 RULE = (
     "Token discipline: the cost of a session is context size times turn count. "
     "Before exploring or running anything with long output, use the "
-    "`claude-kit:lean-context` skill. Details: conventions/session-hygiene.md."
+    "`claude-kit:lean-context` skill. Details: the session-hygiene playbook "
+    "(path in the kit map)."
 )
 
 
