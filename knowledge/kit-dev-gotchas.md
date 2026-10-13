@@ -26,6 +26,20 @@ Things that cost time in past runs and are not obvious from the code.
   git commands aimed at another worktree. Use literal absolute paths, one
   plain command per call, the Edit tool for file edits, and
   `git -C <worktree>` from subagents working in task worktrees.
+- A heredoc fed to `python` inside a longer command line is refused even
+  when it does not mention git. Write the script to the scratchpad with
+  the Write tool and run `python <scratchpad>/script.py <args>`.
+- A feature worktree made with `git worktree add -b feat/<slug> <path>
+  origin/main` tracks `origin/main`, so `handoff.py state` reports
+  "upstream: origin/main". The first push must be
+  `git push -u origin feat/<slug>`.
+
+## Hooks
+
+- Claude Code injects at most 10,000 characters of a hook's
+  `additionalContext`. Above that, only a preview reaches the session.
+  Keep a size test with a margin (`workspace_rules_inject.py` is capped at
+  9,500 and injects about 9,000 today).
 
 ## Main checkout
 
@@ -48,6 +62,10 @@ Things that cost time in past runs and are not obvious from the code.
   stay inside the spec's Scope In files pass; an answer that touches a
   file outside Scope In (a new test in another test file) is flagged.
   Keep answers inside Scope In to avoid the stop.
+- Grep a spec for private repo names before gating it, not only before
+  pushing. Scope Out lines about personal memory or other projects are
+  where names slip in. Rewording a spec afterwards changes its hash and
+  forces a re-gate, and then a plan re-gate.
 - Take a new ADR's number from `origin/main`
   (`git ls-tree --name-only origin/main knowledge/decisions/`), not local
   `main`. Renumbering after the spec gate changes the spec hash and forces
