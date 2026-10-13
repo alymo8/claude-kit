@@ -38,8 +38,12 @@ can settle do not block: they are handed to the plan.
    > Review the design spec at `<spec>` in the repository at `<repo root>`.
    > Read `<rubric.md>` first and follow it exactly. Return only the output
    > format it defines.
+   > The kit's decision-log playbook is at `<path>`.
 
-   Do not pass it any conversation, summary or plan.
+   `<path>` is the decision-log playbook's absolute path from the kit
+   map in this session's context, or `none` when no kit map is present (the
+   reviewer gets no session-start output). Do not pass it any conversation,
+   summary or plan.
 3. **Fix.** Before applying this round's fixes, copy the spec to the
    scratchpad as `<name>.before-round-<N>.md`. For each `[blocking]` finding:
    - If fixing it needs a scope, product or behaviour choice that the spec
