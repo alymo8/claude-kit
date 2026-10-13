@@ -88,9 +88,9 @@ is in [`plugin/`](plugin/).
   audits share a citation
   checker, `check-findings.py`), the `teach` skill (copied as is from
   [mattpocock/skills](https://github.com/mattpocock/skills), MIT), the on-demand spec → HTML renderer, the `token-report.py`
-  measurement script, a status line, and eight hooks (regenerate the spec/plan
+  measurement script, a status line, and nine hooks (regenerate the spec/plan
   index after edits and at every stop; report leftover worktrees, inject the
-  branch handoff, inject the lean-context rule unless `CLAUDE_KIT_LEAN_CONTEXT=0`, inject the grill rule when `CLAUDE_KIT_GRILL=1`,
+  branch handoff, inject the lean-context rule unless `CLAUDE_KIT_LEAN_CONTEXT=0`, inject the kit map unless `CLAUDE_KIT_KIT_MAP=0`, inject the grill rule when `CLAUDE_KIT_GRILL=1`,
   and nudge past a context threshold at the right moments;
   snapshot git state at session end). Install once per machine with `plugin\install.ps1` — it junctions
   `~/.claude/skills/claude-kit` to this folder so edits are live, and adds the

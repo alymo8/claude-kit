@@ -9,7 +9,8 @@ Projects follow the six conventions in [`conventions/`](conventions/) (knowledge
 layer, decision log, spec-driven development, engineering practices, project
 memory, session hygiene). Read the relevant file before applying it. Scale them to
 the project: full strength once a project has more than one contributor, outlives a
-weekend, or makes choices worth remembering; lighter for throwaway work.
+weekend, or makes choices worth remembering; lighter for throwaway work. In a child
+repo, the kit map injected at session start gives these files' absolute paths.
 
 ## Verify key decisions with me, and agree on criteria upfront
 

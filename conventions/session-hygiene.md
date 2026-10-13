@@ -33,7 +33,9 @@ at 150k, by 65%.
    `claude-kit:lean-context` skill). Understanding is not waste; the restart
    cap limits how long it is carried (ADR 0011). The rule is on by default;
    `CLAUDE_KIT_LEAN_CONTEXT=0` plus a `Skill(claude-kit:lean-context)` deny
-   switches it off (ADR 0014).
+   switches it off (ADR 0014). The kit map, injected at session start, gives the
+   absolute paths of these playbooks and the kit's ADRs from any repo;
+   `CLAUDE_KIT_KIT_MAP=0` switches it off (ADR 0032).
 4. **Make growth visible.** The status line shows context size at zero cost; a
    nudge at 300k tokens (then every 100k) says when to hand off.
 
