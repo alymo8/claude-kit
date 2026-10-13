@@ -44,7 +44,11 @@ in every repo, wherever the repo is cloned.
 - `CLAUDE.md`: one sentence under "How we work" saying that in a child repo the
   kit map gives these files' absolute paths.
 - `knowledge/decisions/0032-kit-map-inject.md` (new): the ADR.
-- `knowledge/decisions/README.md`: an index row for 0032.
+- `knowledge/decisions/README.md`: an index row for 0032, and 0027's row
+  status becomes "accepted; amended by 0032".
+- `knowledge/decisions/0027-adr-triggers.md`: Status becomes
+  "accepted; amended by 0032", because its decision names the
+  one-level-up decision-log fallback this change replaces.
 - `README.md`: the hook count goes from eight to nine, and the hook list gains
   "inject the kit map unless `CLAUDE_KIT_KIT_MAP=0`".
 - `plugin/.claude-plugin/plugin.json`: version 0.22.0 becomes 0.23.0, and the
@@ -74,8 +78,10 @@ in every repo, wherever the repo is cloned.
    `~/.claude/skills/claude-kit` junction (or symlink) to the real `plugin/`
    folder, whose parent is the kit root. The root is valid only if
    `<root>/conventions/README.md` exists; otherwise the hook prints nothing.
-3. **Playbooks.** Parse the table in `conventions/README.md`: each row whose
-   first cell is `[<Name>](<file>.md)` gives one playbook. Only rows whose file
+3. **Playbooks.** Parse the table under `## The playbooks` in
+   `conventions/README.md`; other rows are skipped silently. Each row whose
+   first cell is a Markdown link to a `.md` file gives one playbook, named by
+   the link text exactly as written. Only rows whose file
    exists under `conventions/` are listed. Zero rows still prints the map
    without a playbook list.
 4. **Output.** One JSON object, as the other SessionStart hooks print, with
@@ -101,7 +107,8 @@ in every repo, wherever the repo is cloned.
 ### Ad-hoc pointers
 
 - `lean_context_inject.py` RULE ends `Details: the session-hygiene playbook (path in the kit map).`
-- `lean-context/SKILL.md` line 45 says the same.
+- In `lean-context/SKILL.md`, the sentence that names
+  `conventions/session-hygiene.md` "in the kit" says the same.
 - `spec-gate/rubric.md` check 8 reads the section from the decisions README,
   else `conventions/decision-log.md` in the repository, else the decision-log
   path given in the dispatch prompt (skipped when that says `none`). The
@@ -120,7 +127,7 @@ Decision: a SessionStart hook injects a kit map of absolute paths; playbooks are
 read on demand. Alternatives rejected: `@` imports (token cost every session,
 still tied to folder layout), copying into children (drift, unadopted repos), a
 Read allow rule (declined; prompts accepted). The spec-gate reviewer receives the decision-log path in its dispatch prompt in
-place of the `../conventions/` fallback. With the map switched off, the
+place of the `../conventions/` fallback; this amends ADR 0027. With the map switched off, the
 lean-context pointer names the playbook without a path; that is accepted.
 Consequence: one more always-on
 SessionStart injection of about 250 to 400 tokens, switchable with `CLAUDE_KIT_KIT_MAP=0`.
@@ -149,9 +156,12 @@ In `tests/test_kit_map_inject.py`, using `helpers.run_script` and `clean_env`:
   `<tmp>/kit/plugin/hooks/` with no `<tmp>/kit/conventions/`; running it gives
   exit 0 and empty stdout.
 - **Through a link:** create `<tmp>/link` pointing at the real `plugin/` folder
-  (a junction via `mklink /J` on Windows, `os.symlink` elsewhere; skip if it
-  cannot be created) and run `<tmp>/link/hooks/kit_map_inject.py`; the injected
-  kit root is the real kit root.
+  (on Windows a junction via `subprocess.run(["cmd", "/c", "mklink", "/J",
+  link, target])`, elsewhere `os.symlink`; skip if the command exits non-zero
+  or raises `OSError`) and run `<tmp>/link/hooks/kit_map_inject.py`; the
+  injected kit root is the real kit root. Teardown removes only the link
+  itself (`os.rmdir` for the junction, `os.unlink` for the symlink), never a
+  recursive delete, which would follow the link into the real `plugin/`.
 - **Size:** `additionalContext` is at most 1,500 characters.
 - **Registered:** `hooks.json` has a `SessionStart` command containing
   `hooks/kit_map_inject.py`.
