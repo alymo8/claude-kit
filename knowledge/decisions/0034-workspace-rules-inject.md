@@ -22,6 +22,8 @@ and the kit map (ADR 0032) but none of the workspace rules.
 - Requiring every repo to live under the kit checkout.
 
 ## Consequences
-About 2k to 2.5k tokens (under 12,000 characters) per session, in repos
+About 2k to 2.5k tokens (about 9,000 characters) per session, in repos
 outside the kit folder only. There the rules arrive as hook context rather
-than as a `CLAUDE.md`.
+than as a `CLAUDE.md`. Claude Code truncates hook context above 10,000
+characters, so a test caps the injected text at 9,500: growing the workspace
+part of `CLAUDE.md` past that means trimming it or splitting the rules.

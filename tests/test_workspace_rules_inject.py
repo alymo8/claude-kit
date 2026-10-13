@@ -102,7 +102,9 @@ def test_whole_file_when_no_kit_dev_section(tmp_path):
 
 
 def test_size_cap(tmp_path):
-    assert len(context(run(CLAUDE_PROJECT_DIR=str(tmp_path)))) <= 12_000
+    # Claude Code truncates hook context above 10,000 characters to a preview,
+    # so keep a margin; trim the workspace part of CLAUDE.md if this fails.
+    assert len(context(run(CLAUDE_PROJECT_DIR=str(tmp_path)))) <= 9_500
 
 
 def test_registered_after_kit_map_without_matcher():
