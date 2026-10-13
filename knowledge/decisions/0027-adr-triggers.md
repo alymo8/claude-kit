@@ -1,6 +1,6 @@
 # ADR 0027: ADR triggers: MUST, SHOULD, NOT REQUIRED
 
-- **Status:** accepted
+- **Status:** accepted; amended by 0032 ([ADR 0032](0032-kit-map-inject.md): the decision-log fallback comes from the dispatch prompt)
 - **Date:** 2026-10-10
 
 ## Context
