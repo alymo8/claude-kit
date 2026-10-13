@@ -56,7 +56,7 @@ kit folder, a setup guide, and moves the three rules into `CLAUDE.md`.
 - `knowledge/decisions/0034-workspace-rules-inject.md` (new).
 - `knowledge/decisions/0035-process-rules-in-claude-md.md` (new).
 - `knowledge/decisions/README.md`: index rows for 0033, 0034 and 0035; 0005's row
-  status becomes "accepted; amended by 0033".
+  status becomes "accepted; amended by 0033" (its title is unchanged).
 - `knowledge/decisions/0005-kit-is-a-skills-dir-plugin.md`: Status becomes
   "accepted; amended by 0033".
 - `plugin/.claude-plugin/plugin.json`: version 0.23.0 becomes 0.24.0; the

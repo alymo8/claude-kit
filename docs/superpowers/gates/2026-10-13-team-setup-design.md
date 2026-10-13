@@ -1,10 +1,10 @@
 # Gate: Team setup: a teammate on any OS works the way the kit's owner does
 
 - **Spec:** docs/superpowers/specs/2026-10-13-team-setup-design.md
-- **Spec SHA-256:** f3e3129d6262435cfdd7522f51af463cd4c45f5c6a9939e0863eb5fc53eedc68
+- **Spec SHA-256:** c5c8e52859b7b259455bc84617dcc651f98f7687d3bd64f4f2417c0458fc8caf
 - **Verdict:** pass
 - **Date:** 2026-10-13
-- **Rounds:** 2 discovery + 0 verification
+- **Rounds:** 1 discovery + 0 verification (re-gate after a wording fix; the previous run took 2 discovery rounds)
 
 ## Key decisions
 
@@ -26,7 +26,13 @@
 - round 2 [minor] README execution-policy note: the README scope item says it moves to `docs/setup.md`.
 - (first gate run, same day) The ERROR text names the `--python` value; private repo names come from `gh repo list --visibility private`; ADR 0035 was added for the moved rules; an existing install continues to the status line and superpowers steps; the hook header names `<root>`; the token estimate was corrected.
 
+- re-gate [blocking, found by the plan gate] A private repo name in Scope Out: reworded as "personal memories about other projects"; the unpushed spec commit was rewritten.
+- re-gate round 1 [minor] ADR 0005 index title: Scope In says the title is unchanged.
+
 ## Plan questions
+
+- Where does the manual live check run? From the main checkout after merge, not from the feature worktree. (Success criteria)
+- Does the switch table read each default from its source file (for example `context_nudge.py`)? (Setup guide)
 
 - Does the `CLAUDE_KIT_*` docs scan read only git-tracked text files, skipping stale `__pycache__` bytecode? (Testing)
 - What syntax floor does `install.py` keep (no 3.10+ syntax at module level), so that an older `python3` still reaches the version error? (Installer)
