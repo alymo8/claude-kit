@@ -10,7 +10,7 @@ the next number; superseded ones are never deleted.
 | [0002](0002-spec-html-is-local-view.md) | Spec/plan HTML is a local view, never committed | superseded by 0010 | 2026-09-14 |
 | [0003](0003-specs-under-docs-superpowers.md) | Specs and plans live under `docs/superpowers/` | accepted | 2026-09-14 |
 | [0004](0004-adrs-under-knowledge-decisions.md) | ADRs live under `knowledge/decisions/` | accepted | 2026-09-14 |
-| [0005](0005-kit-is-a-skills-dir-plugin.md) | Kit is a skills-dir Claude Code plugin in `plugin/`, installed by junction | accepted | 2026-09-14 |
+| [0005](0005-kit-is-a-skills-dir-plugin.md) | Kit is a skills-dir Claude Code plugin in `plugin/`, installed by junction | accepted; amended by 0033 | 2026-09-14 |
 | [0006](0006-kit-main-gate.md) | Kit `main` gate: CI on every push; PRs for feature work | accepted | 2026-09-14 |
 | [0007](0007-hooks-are-python-exit-zero.md) | Hook handlers are Python scripts that always exit 0 | accepted | 2026-09-14 |
 | [0008](0008-handoff-is-gitignored-per-branch.md) | Session handoff files are gitignored, per branch, per work tree | accepted | 2026-09-18 |
@@ -38,3 +38,6 @@ the next number; superseded ones are never deleted.
 | [0030](0030-pr-review-respond-skill.md) | `pr-review-respond` skill: one approval, in-thread replies, never resolve | accepted | 2026-10-10 |
 | [0031](0031-capture-learnings-at-feature-finish.md) | Capture learnings when a feature finishes, in its PR | accepted | 2026-10-12 |
 | [0032](0032-kit-map-inject.md) | Kit map injected at session start | accepted | 2026-10-13 |
+| [0033](0033-cross-platform-installer.md) | Cross-platform Python installer | accepted | 2026-10-13 |
+| [0034](0034-workspace-rules-inject.md) | Workspace rules injected outside the kit folder | accepted | 2026-10-13 |
+| [0035](0035-process-rules-in-claude-md.md) | Process rules move from personal memory into `CLAUDE.md` | accepted | 2026-10-13 |

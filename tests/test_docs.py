@@ -102,3 +102,75 @@ def test_learnings_capture_is_part_of_finishing():
     )
     assert "## Capturing learnings" in convention
     assert "capture-learnings" in convention.split("## Capturing learnings", 1)[1]
+
+
+def test_claude_md_has_rules_moved_from_memory():
+    text = " ".join((REPO / "CLAUDE.md").read_text(encoding="utf-8").split())
+    for phrase in (
+        "never suggests deleting",
+        "Never write the names of private repos",
+        "fold it into an existing flow step",
+    ):
+        assert phrase in text, phrase
+    kit_dev = text.split("## Developing the kit", 1)[1]
+    assert "Never write the names of private repos" in kit_dev
+    assert "fold it into an existing flow step" in kit_dev
+
+
+def test_team_setup_adrs_indexed():
+    decisions = REPO / "knowledge" / "decisions"
+    index = (decisions / "README.md").read_text(encoding="utf-8")
+    for name in (
+        "0033-cross-platform-installer.md",
+        "0034-workspace-rules-inject.md",
+        "0035-process-rules-in-claude-md.md",
+    ):
+        assert (decisions / name).is_file(), name
+        assert f"]({name})" in index, name
+    row = next(line for line in index.splitlines() if "0005-kit-is" in line)
+    assert "amended by 0033" in row
+    adr = (decisions / "0005-kit-is-a-skills-dir-plugin.md").read_text("utf-8")
+    assert "amended by 0033" in adr
+
+
+def _tracked_plugin_text():
+    """Every tracked text file under plugin/ (binary files are skipped)."""
+    out = subprocess.run(
+        ["git", "ls-files", "plugin"],
+        cwd=REPO,
+        capture_output=True,
+        text=True,
+        check=True,
+    ).stdout
+    for line in out.splitlines():
+        try:
+            yield (REPO / line).read_text(encoding="utf-8")
+        except (UnicodeDecodeError, FileNotFoundError):
+            continue
+
+
+def test_setup_guide_exists_and_is_linked():
+    assert (REPO / "docs" / "setup.md").is_file()
+    readme = (REPO / "README.md").read_text(encoding="utf-8")
+    assert "](docs/setup.md)" in readme
+
+
+def test_setup_guide_lists_every_env_switch():
+    guide = (REPO / "docs" / "setup.md").read_text(encoding="utf-8")
+    names = set()
+    for text in _tracked_plugin_text():
+        names |= set(re.findall(r"CLAUDE_KIT_[A-Z][A-Z_]*", text))
+    names.add("CLAUDE_KIT_WORKSPACE_RULES")
+    missing = sorted(name for name in names if name not in guide)
+    assert not missing, missing
+
+
+def test_setup_guide_names_prerequisites_and_installer():
+    guide = (REPO / "docs" / "setup.md").read_text(encoding="utf-8")
+    assert "superpowers@claude-plugins-official" in guide
+    assert "install.py" in guide
+    assert "ExecutionPolicy" in guide
+    readme = (REPO / "README.md").read_text(encoding="utf-8")
+    assert "ExecutionPolicy" not in readme
+    assert "ten hooks" in readme
+    assert "CLAUDE_KIT_WORKSPACE_RULES=0" in readme

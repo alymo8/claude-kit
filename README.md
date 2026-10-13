@@ -88,15 +88,16 @@ is in [`plugin/`](plugin/).
   audits share a citation
   checker, `check-findings.py`), the `teach` skill (copied as is from
   [mattpocock/skills](https://github.com/mattpocock/skills), MIT), the on-demand spec → HTML renderer, the `token-report.py`
-  measurement script, a status line, and nine hooks (regenerate the spec/plan
+  measurement script, a status line, and ten hooks (regenerate the spec/plan
   index after edits and at every stop; report leftover worktrees, inject the
-  branch handoff, inject the lean-context rule unless `CLAUDE_KIT_LEAN_CONTEXT=0`, inject the kit map unless `CLAUDE_KIT_KIT_MAP=0`, inject the grill rule when `CLAUDE_KIT_GRILL=1`,
+  branch handoff, inject the lean-context rule unless `CLAUDE_KIT_LEAN_CONTEXT=0`, inject the kit map unless `CLAUDE_KIT_KIT_MAP=0`, inject the workspace rules in repos outside the kit folder unless `CLAUDE_KIT_WORKSPACE_RULES=0`, inject the grill rule when `CLAUDE_KIT_GRILL=1`,
   and nudge past a context threshold at the right moments;
-  snapshot git state at session end). Install once per machine with `plugin\install.ps1` — it junctions
-  `~/.claude/skills/claude-kit` to this folder so edits are live, and adds the
-  kit's status line to `~/.claude/settings.json` when none is configured. If
-  PowerShell refuses to run the script (execution policy), use
-  `powershell -ExecutionPolicy Bypass -File plugin\install.ps1`. It also
+  snapshot git state at session end). Install once per machine, on any OS,
+  with `python plugin/install.py` (see the [setup guide](docs/setup.md)) —
+  it checks the prerequisites, links `~/.claude/skills/claude-kit` to this
+  folder (a junction on Windows, a symlink elsewhere) so edits are live, and
+  adds the kit's status line to `~/.claude/settings.json` when none is
+  configured. It also
   provides two commands: `/new-project <name> <node|python>` scaffolds a new
   repo with every convention in place, and `/adopt-conventions <node|python>`
   adds the missing pieces to an existing one. Scaffolded CI pins every
