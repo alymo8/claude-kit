@@ -40,6 +40,14 @@
         "hooks": [
           {
             "type": "command",
+            "command": "python \"${CLAUDE_PLUGIN_ROOT}/hooks/workspace_rules_inject.py\""
+          }
+        ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
             "command": "python \"${CLAUDE_PLUGIN_ROOT}/hooks/grill_inject.py\""
           }
         ]
