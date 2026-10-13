@@ -112,6 +112,8 @@ PR. When the work is merged (or I have explicitly abandoned it), use
 `superpowers:finishing-a-development-branch`
 to integrate and clean up: the worktree removed and pruned, the branch deleted
 locally and on the remote, and any scratch files created outside the repo deleted.
+Clean-up never deletes a repository and never suggests deleting one; the repo's
+owner does that.
 Docker is part of the workspace. Before a task first uses Docker, make its objects
 identifiable. Record the IDs that already exist (`docker ps -aq`, `images -q`,
 `volume ls -q`, `network ls -q`) in a scratch file outside the repo. Label what the
@@ -158,7 +160,18 @@ ruff check plugin tests; ruff format --check plugin tests
 ```
 
 Hook edits (`plugin/hooks/`) need a new session or `/reload-plugins`; `SKILL.md`
-and command edits are live (the plugin is loaded in place through a junction,
-ADR 0005). Never run `plugin/install.ps1` from a test without `-SkillsDir <tmp>`.
+and command edits are live (the plugin is loaded in place through a junction or
+symlink, ADR 0005). Never run `plugin/install.py` (or its wrapper
+`plugin/install.ps1`) from a test without a temporary `--skills-dir`
+(`-SkillsDir`).
+
+- This repo is public. Never write the names of private repos or a machine's
+  username into tracked files; refer to them generically ("a project repo") and
+  use `%USERPROFILE%` or `<repo-root>` in paths. Grep the diff for them before
+  committing.
+- When a new behaviour should recur (say, at the end of each session), first
+  fold it into an existing flow step, such as `/ship`'s clean-up; propose
+  session-end automation only as an alternative.
+
 Known gotchas (pytest output, worktree guard, line endings, gates):
 [knowledge/kit-dev-gotchas.md](knowledge/kit-dev-gotchas.md).
