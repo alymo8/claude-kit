@@ -131,3 +131,46 @@ def test_team_setup_adrs_indexed():
     assert "amended by 0033" in row
     adr = (decisions / "0005-kit-is-a-skills-dir-plugin.md").read_text("utf-8")
     assert "amended by 0033" in adr
+
+
+def _tracked_plugin_text():
+    """Every tracked text file under plugin/ (binary files are skipped)."""
+    out = subprocess.run(
+        ["git", "ls-files", "plugin"],
+        cwd=REPO,
+        capture_output=True,
+        text=True,
+        check=True,
+    ).stdout
+    for line in out.splitlines():
+        try:
+            yield (REPO / line).read_text(encoding="utf-8")
+        except (UnicodeDecodeError, FileNotFoundError):
+            continue
+
+
+def test_setup_guide_exists_and_is_linked():
+    assert (REPO / "docs" / "setup.md").is_file()
+    readme = (REPO / "README.md").read_text(encoding="utf-8")
+    assert "](docs/setup.md)" in readme
+
+
+def test_setup_guide_lists_every_env_switch():
+    guide = (REPO / "docs" / "setup.md").read_text(encoding="utf-8")
+    names = set()
+    for text in _tracked_plugin_text():
+        names |= set(re.findall(r"CLAUDE_KIT_[A-Z][A-Z_]*", text))
+    names.add("CLAUDE_KIT_WORKSPACE_RULES")
+    missing = sorted(name for name in names if name not in guide)
+    assert not missing, missing
+
+
+def test_setup_guide_names_prerequisites_and_installer():
+    guide = (REPO / "docs" / "setup.md").read_text(encoding="utf-8")
+    assert "superpowers@claude-plugins-official" in guide
+    assert "install.py" in guide
+    assert "ExecutionPolicy" in guide
+    readme = (REPO / "README.md").read_text(encoding="utf-8")
+    assert "ExecutionPolicy" not in readme
+    assert "ten hooks" in readme
+    assert "CLAUDE_KIT_WORKSPACE_RULES=0" in readme
