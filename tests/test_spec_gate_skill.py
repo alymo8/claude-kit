@@ -136,9 +136,16 @@ def test_rubric_checks_adr_triggers():
     for text in (
         "knowledge/decisions/",
         "When to write one",
-        "../conventions/decision-log.md",
+        "decision-log path given in the dispatch prompt",
         "open-what",
         "NOT REQUIRED",
         "SHOULD match is a `minor` finding",
     ):
         assert text in check, text
+
+
+def test_dispatch_prompt_carries_decision_log_path():
+    skill = read("SKILL.md")
+    step = skill[skill.index("2. **Review round.**") : skill.index("3. **Fix.**")]
+    assert "> The kit's decision-log playbook is at `<path>`." in step
+    assert "or `none` when no kit map is present" in step
