@@ -21,7 +21,7 @@ the next number; superseded ones are never deleted.
 | [0013](0013-ship-never-works-in-local-main.md) | `/ship` never works in or depends on the local `main` checkout | accepted | 2026-09-29 |
 | [0014](0014-lean-context-env-switch.md) | Lean context is switched by an env var, on by default | accepted | 2026-09-29 |
 | [0015](0015-spec-gate-replaces-full-read.md) | A spec gate replaces the user's full read of a spec | accepted | 2026-09-30 |
-| [0016](0016-plan-gate-signs-off-on-new-decisions-only.md) | A plan gate, with sign-off only on decisions the plan adds | accepted | 2026-09-30 |
+| [0016](0016-plan-gate-signs-off-on-new-decisions-only.md) | A plan gate, with sign-off only on decisions the plan adds | accepted; amended by 0036 | 2026-09-30 |
 | [0017](0017-parallel-plan-tasks.md) | Independent plan tasks run as concurrent subagents | accepted | 2026-10-01 |
 | [0018](0018-ship-many-headless-children.md) | `/ship-many` runs independent specs as headless `/ship` children | accepted | 2026-10-01 |
 | [0019](0019-spec-grill-opt-in.md) | An opt-in grill runs between the design and the spec | accepted | 2026-10-01 |
@@ -32,7 +32,7 @@ the next number; superseded ones are never deleted.
 | [0024](0024-ship-fast-user-approves-spec.md) | `/ship-fast`: the user reads and approves the spec | accepted | 2026-10-08 |
 | [0025](0025-present-skill-bundled-template.md) | `present` skill builds decks from a bundled template and checks every slide | accepted | 2026-10-08 |
 | [0026](0026-ship-fast-app-runs-from-smoke-run.md) | `/ship-fast`: the app runs for the user from the smoke run | accepted | 2026-10-08 |
-| [0027](0027-adr-triggers.md) | ADR triggers: MUST, SHOULD, NOT REQUIRED, enforced by the spec gate | accepted; amended by 0032 | 2026-10-10 |
+| [0027](0027-adr-triggers.md) | ADR triggers: MUST, SHOULD, NOT REQUIRED, enforced by the spec gate | accepted; amended by 0032, 0036 | 2026-10-10 |
 | [0028](0028-pinned-actions-and-workflows-readme.md) | Pinned actions, Dependabot, and a workflows README | accepted | 2026-10-10 |
 | [0029](0029-pre-push-lint-hook.md) | Pre-push lint hook in scaffolded repos | accepted | 2026-10-10 |
 | [0030](0030-pr-review-respond-skill.md) | `pr-review-respond` skill: one approval, in-thread replies, never resolve | accepted | 2026-10-10 |
@@ -41,3 +41,4 @@ the next number; superseded ones are never deleted.
 | [0033](0033-cross-platform-installer.md) | Cross-platform Python installer | accepted | 2026-10-13 |
 | [0034](0034-workspace-rules-inject.md) | Workspace rules injected outside the kit folder | accepted | 2026-10-13 |
 | [0035](0035-process-rules-in-claude-md.md) | Process rules move from personal memory into `CLAUDE.md` | accepted | 2026-10-13 |
+| [0036](0036-ship-auto-approves-plan-decisions.md) | `/ship` approves the plan gate's decisions itself | accepted | 2026-10-16 |

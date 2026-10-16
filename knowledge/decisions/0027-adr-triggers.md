@@ -1,6 +1,6 @@
 # ADR 0027: ADR triggers: MUST, SHOULD, NOT REQUIRED
 
-- **Status:** accepted; amended by 0032 ([ADR 0032](0032-kit-map-inject.md): the decision-log fallback comes from the dispatch prompt)
+- **Status:** accepted; amended by 0032 ([ADR 0032](0032-kit-map-inject.md): the decision-log fallback comes from the dispatch prompt), 0036 ([ADR 0036](0036-ship-auto-approves-plan-decisions.md): under `/ship`, MUST-trigger plan decisions get their ADR written by `/ship`)
 - **Date:** 2026-10-10
 
 ## Context
@@ -27,3 +27,4 @@ projects other than the kit ADRs stopped being written.
 - `/ship-fast` POCs are exempt: they skip the gates (ADR 0024).
 - The plan gate does not check ADRs; decisions a plan adds still reach the
   user through the plan gate's sign-off (ADR 0016).
+- Under `/ship`, ADR 0036 amends that: `/ship` approves the plan's decisions itself and writes the ADR for any that hit a MUST trigger.

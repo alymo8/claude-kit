@@ -58,10 +58,11 @@ Things that cost time in past runs and are not obvious from the code.
 
 - Answering a spec gate's `## Plan questions` in the plan can make an
   answer a plan-introduced decision, so the plan gate returns
-  `pass-with-decisions` and `/ship` stops for a one-line OK. Answers that
+  `pass-with-decisions`, and `/ship` approves the decision itself and lists
+  it in the PR's `Plan decisions (auto-approved)` section. Answers that
   stay inside the spec's Scope In files pass; an answer that touches a
   file outside Scope In (a new test in another test file) is flagged.
-  Keep answers inside Scope In to avoid the stop.
+  Keep answers inside Scope In to keep that list short.
 - Grep a spec for private repo names before gating it, not only before
   pushing. Scope Out lines about personal memory or other projects are
   where names slip in. Rewording a spec afterwards changes its hash and
