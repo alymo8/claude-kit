@@ -15,6 +15,10 @@ Things that cost time in past runs and are not obvious from the code.
   included, and does not skip code spans: a link-shaped example such as a
   bracketed name followed by a parenthesised `file.md` fails it. Describe
   the shape in prose instead.
+- In `tests/test_ship_command.py`, `_step(n)` collapses whitespace but
+  `_stops()` returns the raw section, so a phrase that wraps across lines
+  in `ship.md` fails an `in _stops()` assertion. Normalise first:
+  `" ".join(_stops().split())`.
 - Appending to a CRLF file with a bash heredoc mixes line endings, and
   `ruff format --check` then flags the file. Run `ruff format <file>`.
 
@@ -61,8 +65,11 @@ Things that cost time in past runs and are not obvious from the code.
   `pass-with-decisions`, and `/ship` approves the decision itself and lists
   it in the PR's `Plan decisions (auto-approved)` section. Answers that
   stay inside the spec's Scope In files pass; an answer that touches a
-  file outside Scope In (a new test in another test file) is flagged.
-  Keep answers inside Scope In to keep that list short.
+  file outside Scope In (a new test in another test file) is flagged, and
+  so is an answer that settles behaviour the spec left open, even inside
+  Scope In (which PR heading a user-approved list gets). Keep answers
+  inside Scope In, and resolve behaviour questions in the spec before
+  gating it, to keep that list short.
 - Grep a spec for private repo names before gating it, not only before
   pushing. Scope Out lines about personal memory or other projects are
   where names slip in. Rewording a spec afterwards changes its hash and
