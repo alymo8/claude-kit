@@ -75,7 +75,7 @@ def test_step_three_resumes_an_existing_plan_by_its_spec_line():
     step = _step(3)
     assert "**Spec:**" in step
     assert "decisions not approved" in step
-    assert "never approval" in step
+    assert "never approval" not in step
 
 
 def test_step_four_verifies_the_plan_record():
@@ -86,8 +86,49 @@ def test_step_four_verifies_the_plan_record():
 def test_plan_gate_is_a_stop_rule():
     stops = _stops().lower()
     assert "plan gate" in stops
-    assert "pass-with-decisions" in stops
+    assert "`fail`" in stops
     assert "decisions approved" in stops
+
+
+def test_stop_rule_fires_on_irreversible_decisions():
+    stops = " ".join(_stops().lower().split())  # phrases may wrap across lines
+    assert "irreversible" in stops
+    assert "decisions not approved" in stops
+    assert "only irreversible plan-introduced decisions need the user" in stops
+    assert "returns `pass-with-decisions` or `fail`" not in stops
+    assert "approves the spec, not decisions a plan adds later" not in stops
+
+
+def test_step_three_auto_approves_decisions():
+    step = _step(3)
+    assert "- **Decisions approved:** <today>" in step
+    assert "- **Approved by:** /ship (auto)" in step
+    assert "Ruling:" in step
+    assert "irreversible" in step
+
+
+def test_step_three_does_not_edit_the_plan_for_adrs():
+    step = _step(3)
+    assert "MUST trigger" in step
+    assert "Do not edit the plan" in step
+
+
+def test_step_three_sub_steps_stay_inside_step_three():
+    step = _step(3)
+    for label in ("(3a)", "(3b)", "(3c)", "(3d)", "(3e)"):
+        assert label in step
+    assert "**Plan gate:**" in step and "**Implement.**" not in step
+
+
+def test_pr_lists_auto_approved_decisions():
+    step = _step(7)
+    assert "Plan decisions (auto-approved)" in step
+    assert "- **Approved by:** /ship (auto)" in step
+    assert "`Plan decisions` otherwise" in step
+
+
+def test_report_lists_auto_approved_decisions():
+    assert "Plan decisions (auto-approved)" in _step(12)
 
 
 def test_pr_links_the_plan_gate_record():
