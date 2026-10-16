@@ -639,6 +639,16 @@ def test_verify_plan_record_survives_ticks_and_approval(root):
     assert result.returncode == 0
 
 
+def test_verify_plan_record_accepts_auto_approval(root):
+    plan = plan_gated(root, "pass-with-decisions", approved=True)
+    record = root / "docs" / "superpowers" / "gates" / "plans" / plan.name
+    text = record.read_text(encoding="utf-8")
+    record.write_text(text + "- **Approved by:** /ship (auto)\n", encoding="utf-8")
+    result = run_script(SCRIPT, "--verify-record", str(plan), "--root", str(root))
+    assert result.returncode == 0
+    assert result.stdout.startswith("ok:")
+
+
 # Back-test loosenings: shapes sound existing plans use that the rules misread.
 
 
