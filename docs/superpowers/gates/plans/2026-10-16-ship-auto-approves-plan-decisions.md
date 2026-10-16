@@ -5,6 +5,7 @@
 - **Spec:** docs/superpowers/specs/2026-10-16-ship-auto-approves-plan-decisions-design.md
 - **Spec SHA-256:** 3f66a46faabb7dd25c6ae5715f6130af37c5aec8decc3cb2c0c4e2c2b399e6a2
 - **Verdict:** pass-with-decisions
+- **Decisions approved:** 2026-10-16
 - **Date:** 2026-10-16
 - **Rounds:** 2 discovery + 0 verification
 
