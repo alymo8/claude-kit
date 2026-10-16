@@ -145,8 +145,9 @@ spec did not settle, and the user approves that list in one line. `fail`:
 the open items go to the user as questions. The gate writes
 `docs/superpowers/gates/plans/<plan file name>` with both the plan's hash
 (Status line and checkbox ticks excluded) and its spec's hash, so editing
-either makes the record stale. Under `/ship`, anything but `pass` stops the
-run.
+either makes the record stale. Under `/ship`, `/ship` approves a
+`pass-with-decisions` itself unless a decision is irreversible, and a `fail`
+stops the run.
 
 ## Parallel plan tasks
 
