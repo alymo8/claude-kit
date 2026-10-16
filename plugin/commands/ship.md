@@ -33,12 +33,14 @@ These are the only reasons to stop. When one fires: write the handoff with the
   least one plan-introduced decision is irreversible (step 3 defines it).
   Report the record's Plan-introduced decisions and Open items as questions
   (if the gate stopped at `P4-spec-gated` and wrote no record, report that
-  reason and that the spec must pass `claude-kit:spec-gate`). Only
-  irreversible plan-introduced decisions need the user. When the user
-  answers: on approval, add `- **Decisions approved:** <today>` to the record
-  and set the plan's Status to `approved`; otherwise update the plan (or the
-  spec, which is gated again) and rerun the plan gate. Commit, and continue
-  `/ship` from step 4.
+  reason and that the spec must pass `claude-kit:spec-gate`). Besides a
+  `fail`'s Open items, only irreversible plan-introduced decisions need the
+  user. A record with a `Stopped on irreversible` line stops again on every
+  resumed run until the user answers: rerunning `/ship` is not an answer.
+  When the user answers: on approval, do (3c) and (3d), add
+  `- **Decisions approved:** <today>` to the record and set the plan's Status
+  to `approved`; otherwise update the plan (or the spec, which is gated again)
+  and rerun the plan gate. Commit, and continue `/ship` from step 4.
 - The PR title does not match the spec's title after one fix in step 7.
 
 ## Git lock retry
@@ -84,8 +86,10 @@ A command still failing after that is handled like any other failed command.
    spec (the newest by file name if several match). If there is one, run
    `python "${CLAUDE_PLUGIN_ROOT}/scripts/spec-lint.py" --verify-record <plan>`.
    On `ok:`, go to step 4. On `decisions not approved`, do not rerun the gate:
-   handle the record as for `pass-with-decisions` below, from (3a). On any other reason, run the plan gate (below) on
-   the existing plan. If there is no plan, use `superpowers:writing-plans` to
+   if the record has a `Stopped on irreversible` line, the plan-gate stop
+   rule fires; otherwise handle the record as for `pass-with-decisions`
+   below, from (3a). On any other reason, run the plan gate (below) on the
+   existing plan. If there is no plan, use `superpowers:writing-plans` to
    write `docs/superpowers/plans/<YYYY-MM-DD>-<slug>.md` from the spec. Where
    the spec leaves a choice open, prefer one the spec, its ADRs or the
    existing code already imply, so a routine plan passes without stopping.
@@ -108,17 +112,18 @@ A command still failing after that is handled like any other failed command.
    rewrite published git history, or change something outside the
    repository that reverting the PR cannot undo (an external service, a
    published package, another repo); when unsure, treat it as irreversible.
-   If any decision is irreversible, commit the plan and its record, then the
-   plan-gate stop rule fires.
+   If any decision is irreversible, add
+   `- **Stopped on irreversible:** <today>` below the record's `Verdict`
+   line (it changes no hash), commit the plan and its record if they
+   changed, then the plan-gate stop rule fires.
    (3b) Otherwise add, below the record's `Verdict` line,
    `- **Decisions approved:** <today>` and then
    `- **Approved by:** /ship (auto)`, and set the plan's Status to
    `approved` (neither changes a hash).
    (3c) For each approved decision that hits a MUST trigger of the
    decision-log playbook (the trigger list in the repo's decisions README,
-   else `conventions/decision-log.md`, else `../conventions/decision-log.md`,
-   as ADR 0027 reads them), write its
-   ADR file and its decisions README row now. Do not edit the plan: any plan
+   else the decision-log playbook path from the kit map, ADRs 0027 and
+   0032), write its ADR file and its decisions README row now. Do not edit the plan: any plan
    edit changes its hash and makes the record stale. A repo with no ADR
    folder and no trigger list skips this.
    (3d) Write a `Ruling:` ledger line naming the record and the number of

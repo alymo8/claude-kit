@@ -16,9 +16,13 @@ decisions to the user.
   `- **Decisions approved:** <date>` plus `- **Approved by:** /ship (auto)`.
 - An irreversible decision still stops the run: data not regenerable from the
   repo, rewritten published history, or an external change a PR revert cannot
-  undo. When unsure, a decision counts as irreversible.
+  undo. When unsure, a decision counts as irreversible. The stop writes
+  `- **Stopped on irreversible:** <date>` in the record, so a rerun of
+  `/ship` stops again instead of judging the decision afresh; only the user's
+  answer clears it.
 - A decision that hits a decision-log MUST trigger gets its ADR written by
-  `/ship` on the feature branch, without editing the plan.
+  `/ship` on the feature branch, without editing the plan, whether `/ship` or
+  the user approved it.
 - A plan gate `fail` still stops the run.
 - Running the plan gate by hand is unchanged: it still asks the user.
 

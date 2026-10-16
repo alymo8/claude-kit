@@ -127,6 +127,25 @@ def test_pr_lists_auto_approved_decisions():
     assert "`Plan decisions` otherwise" in step
 
 
+def test_rerun_does_not_reapprove_a_stopped_record():
+    step = _step(3)
+    stops = " ".join(_stops().split())
+    assert "- **Stopped on irreversible:** <today>" in step
+    assert "Stopped on irreversible" in stops
+    assert "rerunning `/ship` is not an answer" in stops
+
+
+def test_user_approval_still_writes_adrs():
+    stops = " ".join(_stops().split())
+    assert "on approval, do (3c) and (3d)" in stops
+
+
+def test_adr_trigger_list_uses_the_kit_map():
+    step = _step(3)
+    assert "../conventions/decision-log.md" not in step
+    assert "kit map" in step
+
+
 def test_report_lists_auto_approved_decisions():
     assert "Plan decisions (auto-approved)" in _step(12)
 
