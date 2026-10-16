@@ -1,6 +1,6 @@
 # ADR 0016: A plan gate, with sign-off only on decisions the plan adds
 
-- **Status:** accepted
+- **Status:** accepted; amended by 0036 ([ADR 0036](0036-ship-auto-approves-plan-decisions.md): under `/ship`, plan-introduced decisions are approved automatically unless irreversible)
 - **Date:** 2026-09-30
 
 ## Context

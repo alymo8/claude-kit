@@ -67,7 +67,7 @@ spec in full ([ADR 0015](knowledge/decisions/0015-spec-gate-replaces-full-read.m
 `pass` goes straight to the execution choice; `pass-with-decisions` needs my
 one-line OK on the decisions it lists first; I do not read the plan
 ([ADR 0016](knowledge/decisions/0016-plan-gate-signs-off-on-new-decisions-only.md)).
-`/ship` gates its own plan and stops on any plan-introduced decision.
+`/ship` gates its own plan and approves the decisions it lists itself, stopping only on a `fail` or an irreversible decision ([ADR 0036](knowledge/decisions/0036-ship-auto-approves-plan-decisions.md)).
 
 Plans must be self-contained: whoever executes one has none of our conversation
 context. Apply every bullet under "Self-contained plans" in

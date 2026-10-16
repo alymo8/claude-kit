@@ -28,12 +28,16 @@ These are the only reasons to stop. When one fires: write the handoff with the
   step 9 says how to tell them apart.
 - `git fetch origin` fails in step 1.
 - The spec gate fails in step 0. Report the gate record's Open items.
-- The plan gate in step 3 returns `pass-with-decisions` or `fail`, or a
-  resumed run finds the plan record at `decisions not approved`. Report the
-  record's Plan-introduced decisions and Open items as questions (if the gate
-  stopped at `P4-spec-gated` and wrote no record, report that reason and that
-  the spec must pass `claude-kit:spec-gate`). `/ship` approves the spec, not
-  decisions a plan adds later. When the user answers: on approval, add
+- The plan gate in step 3 returns `fail`; or it returns `pass-with-decisions`
+  (or a resumed run finds the plan record at `decisions not approved`) and at
+  least one plan-introduced decision is irreversible (step 3 defines it).
+  Report the record's Plan-introduced decisions and Open items as questions
+  (if the gate stopped at `P4-spec-gated` and wrote no record, report that
+  reason and that the spec must pass `claude-kit:spec-gate`). Besides a
+  `fail`'s Open items, only irreversible plan-introduced decisions need the
+  user. A record with a `Stopped on irreversible` line stops again on every
+  resumed run until the user answers: rerunning `/ship` is not an answer.
+  When the user answers: on approval, do (3c) and (3d), add
   `- **Decisions approved:** <today>` to the record and set the plan's Status
   to `approved`; otherwise update the plan (or the spec, which is gated again)
   and rerun the plan gate. Commit, and continue `/ship` from step 4.
@@ -82,9 +86,10 @@ A command still failing after that is handled like any other failed command.
    spec (the newest by file name if several match). If there is one, run
    `python "${CLAUDE_PLUGIN_ROOT}/scripts/spec-lint.py" --verify-record <plan>`.
    On `ok:`, go to step 4. On `decisions not approved`, do not rerun the gate:
-   the plan-gate stop rule fires (rerunning `/ship` is never approval; only
-   the user's answer is). On any other reason, run the plan gate (below) on
-   the existing plan. If there is no plan, use `superpowers:writing-plans` to
+   if the record has a `Stopped on irreversible` line, the plan-gate stop
+   rule fires; otherwise handle the record as for `pass-with-decisions`
+   below, from (3a). On any other reason, run the plan gate (below) on the
+   existing plan. If there is no plan, use `superpowers:writing-plans` to
    write `docs/superpowers/plans/<YYYY-MM-DD>-<slug>.md` from the spec. Where
    the spec leaves a choice open, prefer one the spec, its ADRs or the
    existing code already imply, so a routine plan passes without stopping.
@@ -97,10 +102,34 @@ A command still failing after that is handled like any other failed command.
    earlier tasks is shared files gets `**Depends on:** none`. **Plan gate:** run the `claude-kit:plan-gate`
    skill on the plan, steps 1–6 (step 7 is not shown). On `pass`, set the
    plan's Status to `approved`, commit the plan and its record
-   (`docs/superpowers/gates/plans/<plan file name>`), and continue. On
-   `pass-with-decisions` or `fail`, commit the plan and its record (the plan
-   only, if the gate stopped at `P4-spec-gated`), then the plan-gate stop rule
-   fires.
+   (`docs/superpowers/gates/plans/<plan file name>`), and continue.
+   On `fail`, commit the plan and its record (the plan only, if the gate
+   stopped at `P4-spec-gated`), then the plan-gate stop rule fires. On
+   `pass-with-decisions`:
+   (3a) Read the record's `## Plan-introduced decisions`. A decision is
+   **irreversible** when carrying it out would delete, overwrite or migrate
+   data not regenerable from the repo (user files, databases, remote state),
+   rewrite published git history, or change something outside the
+   repository that reverting the PR cannot undo (an external service, a
+   published package, another repo); when unsure, treat it as irreversible.
+   If any decision is irreversible, add
+   `- **Stopped on irreversible:** <today>` below the record's `Verdict`
+   line (it changes no hash), commit the plan and its record if they
+   changed, then the plan-gate stop rule fires.
+   (3b) Otherwise add, below the record's `Verdict` line,
+   `- **Decisions approved:** <today>` and then
+   `- **Approved by:** /ship (auto)`, and set the plan's Status to
+   `approved` (neither changes a hash).
+   (3c) For each approved decision that hits a MUST trigger of the
+   decision-log playbook (the trigger list in the repo's decisions README,
+   else the decision-log playbook path from the kit map, ADRs 0027 and
+   0032), write its ADR file and its decisions README row now. Do not edit the plan: any plan
+   edit changes its hash and makes the record stale. A repo with no ADR
+   folder and no trigger list skips this.
+   (3d) Write a `Ruling:` ledger line naming the record and the number of
+   decisions approved.
+   (3e) Commit the plan, its record and any ADRs from (3c), and continue to
+   step 4.
 4. **Implement.** Before implementing, `spec-lint.py --verify-record <plan>`
    on the plan from step 3 must print `ok:`; otherwise return to step 3. Then
    run `python "${CLAUDE_PLUGIN_ROOT}/scripts/parallel-plan.py" waves <plan>`
@@ -139,7 +168,12 @@ A command still failing after that is handled like any other failed command.
    Single quotes keep backticks and `$` literal, and a literal command passes
    worktree-isolation guards, which refuse command substitution. The body has:
    Summary, links to the spec, the plan and the plan gate record
-   (`docs/superpowers/gates/plans/<plan file name>`), Verification (the exact
+   (`docs/superpowers/gates/plans/<plan file name>`), a section that lists
+   verbatim each entry of the plan record's `## Plan-introduced decisions`
+   (omit it when that list is `none`), titled
+   `Plan decisions (auto-approved)` when the record has
+   `- **Approved by:** /ship (auto)` and `Plan decisions` otherwise,
+   Verification (the exact
    commands and their results), and the attribution line the session requires.
    Then compare `gh pr view --json title` with the title; on a mismatch run
    `gh pr edit --title '<title>'` (same quoting) once and compare again. A
@@ -201,5 +235,6 @@ A command still failing after that is handled like any other failed command.
     `docker buildx ls` has no `<slug>`.
 12. **Report.** One message: the PR link, the squash commit on `main`, the
     verification output from step 10, whether local `main` was fast-forwarded
-    (and why not, if not), the review findings you fixed, the Learnings
-    summary from step 7, and anything left out and why.
+    (and why not, if not), the review findings you fixed, the
+    `Plan decisions (auto-approved)` (or `Plan decisions`) list from step 7, if
+    any, the Learnings summary from step 7, and anything left out and why.
