@@ -6,6 +6,7 @@
 
 | Date | Spec | Status |
 |---|---|---|
+| 2026-10-16 | [`/ship` approves the plan gate's decisions itself](specs/2026-10-16-ship-auto-approves-plan-decisions-design.md) | approved |
 | 2026-10-13 | [Kit map: make the kit's playbooks and ADRs reachable from child repos](specs/2026-10-13-kit-map-design.md) | approved |
 | 2026-10-13 | [Team setup: a teammate on any OS works the way the kit's owner does](specs/2026-10-13-team-setup-design.md) | approved |
 | 2026-10-12 | [Capture learnings when a feature is finished](specs/2026-10-12-capture-learnings-design.md) | approved |
