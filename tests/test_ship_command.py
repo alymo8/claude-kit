@@ -221,3 +221,55 @@ def test_rebase_dedupes_learnings_and_renumbers_adrs():
     step = _step(9)
     assert "Capture learnings" in step
     assert "duplicate" in step and "renumber" in step
+
+
+def _raw_step(n):
+    match = re.search(rf"^{n}\. (.*?)(?=^\d+\. |\Z)", SHIP, re.M | re.S)
+    assert match, n
+    return match.group(1)
+
+
+def _quoted(n):
+    lines = [line.strip() for line in _raw_step(n).splitlines()]
+    return " ".join(" ".join(x[1:] for x in lines if x.startswith(">")).split())
+
+
+def _unquoted(n):
+    lines = [line.strip() for line in _raw_step(n).splitlines()]
+    return " ".join(" ".join(x for x in lines if not x.startswith(">")).split())
+
+
+def test_step_three_dispatches_a_plan_subagent():
+    assert "general-purpose subagent" in _step(3)
+    prompt = _quoted(3)
+    for needle in (
+        "superpowers:writing-plans",
+        "claude-kit:plan-gate",
+        "steps 1–6",
+        "Verdict:",
+        "Record:",
+    ):
+        assert needle in prompt, needle
+
+
+def test_step_three_does_not_write_the_plan_itself():
+    assert "superpowers:writing-plans" not in _unquoted(3)
+
+
+def test_step_four_always_implements_in_subagents():
+    step = _step(4)
+    assert "superpowers:subagent-driven-development" in step
+    assert "claude-kit:parallel-tasks" in step
+    assert "non-zero" in step and "not a stop rule" in step
+    assert "executing-plans" not in step
+    assert "finishing-a-development-branch" in step and "not run" in step
+
+
+def test_step_six_reuses_step_four_final_review():
+    step = _step(6)
+    assert "final whole-branch review" in step
+    assert "superpowers:requesting-code-review" in step
+
+
+def test_ship_never_names_executing_plans():
+    assert "executing-plans" not in SHIP
