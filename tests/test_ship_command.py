@@ -283,3 +283,14 @@ def test_decision_findings_stop_even_inside_sdd():
 
 def test_rerunning_the_plan_gate_goes_through_step_three():
     assert "through step 3's subagent" in " ".join(_stops().split())
+
+
+def test_cleanup_reports_docker_disk_line():
+    step = _step(11)
+    assert "scripts/docker-disk.py" in step
+    assert step.index("docker buildx rm <slug>") < step.index("docker-disk.py")
+    assert "its verdict is not a stop rule" in step
+    assert "If the task used Docker, then run" in step
+    assert "Never run a prune without a" in step
+    assert "never remove anything in the baseline" in step
+    assert "docker disk:" in _step(12)
