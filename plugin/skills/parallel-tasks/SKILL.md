@@ -21,18 +21,32 @@ built at the same time.
 - Every git command here follows the git lock retry rule of `/ship` or `/ship-fast`: a command
   that fails with `Unable to create '...lock': File exists` or
   `cannot lock ref` is retried after 5 seconds, up to 5 times.
+- **Caller.** The caller is `/ship` when this session's run was started by
+  `/ship` or `/claude-kit:ship`; otherwise (`/ship-fast` or a manual run) it
+  is any other caller. SDD means `superpowers:subagent-driven-development`.
+  SDD and `superpowers:executing-plans` share one ledger workspace, so the
+  ledger step 1 sets up is the one SDD's task loop writes to.
 
 ## Steps
 
 1. **Setup.** Do `superpowers:executing-plans`' setup once: its ledger
    workspace, reading the plan and spec, and its pre-flight scan.
 2. **Waves.** Run the script: `parallel-plan.py waves <plan>`. If it exits
-   non-zero, write a `Ruling:` ledger line with its messages and implement
-   the remaining tasks one at a time with `superpowers:executing-plans`.
+   non-zero, write a `Ruling:` ledger line with its messages. Then, when the
+   caller is `/ship`, run the remaining tasks one at a time through
+   `superpowers:subagent-driven-development`'s task loop (one implementer
+   subagent per task, its task review and fix rounds, and its
+   `Task N: complete` ledger line) in the feature worktree; for any other
+   caller, implement them one at a time with `superpowers:executing-plans`,
+   as today.
 3. **Each wave, in order**, skipping every task that already has a
    `Task N: complete` ledger line (a resumed run picks up where it stopped):
-   - **One task:** implement it in the feature worktree exactly as
-     `executing-plans` does (TDD, its commit, its `complete` ledger line).
+   - **One task:** when the caller is `/ship`, run it through
+     `superpowers:subagent-driven-development`'s task loop (one implementer
+     subagent, its task review and fix rounds, and its `Task N: complete`
+     ledger line) in the feature worktree; for any other caller, implement
+     it in the feature worktree exactly as `executing-plans` does (TDD, its
+     commit, its `complete` ledger line), as today.
    - **Several tasks:** for each task N:
      - **Leftovers first.** If a `<feature-branch>-task-N` branch exists from
        an interrupted run, it counts as merged only when its tip appears as
@@ -69,9 +83,12 @@ built at the same time.
      `Task N: complete (merged <task branch> at <merge sha7>, tests: <reported result>)`
      to the ledger. A merge conflict means a `**Files:**` list was
      incomplete: resolve it keeping both changes and write a `Ruling:` ledger
-     line. A failed task's branch is not merged; after the merges, implement
-     that task inline in the feature worktree from the merged HEAD, and write
-     its `complete` line after its commit.
+     line. A failed task's branch is not merged; after the merges, when the
+     caller is `/ship`, run that task through
+     `superpowers:subagent-driven-development`'s task loop in the feature
+     worktree from the merged HEAD; for any other caller, implement it inline
+     in the feature worktree from the merged HEAD, as today. Either way,
+     write its `complete` line after its commit.
    - **After the wave:** run the full test suite and lint. Red is debugged
      with `superpowers:systematic-debugging`, fixed and committed. Then
      remove the wave's task worktrees (`git worktree remove --force`) and
