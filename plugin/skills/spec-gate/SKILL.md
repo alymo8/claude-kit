@@ -133,10 +133,12 @@ can settle do not block: they are handed to the plan.
      findings fixed.", plus "K plan questions handed to the plan." when K is
      more than 0. Then the key decisions as a list, then "OK to mark it
      approved?". On yes, set the spec's Status bullet to `approved` (the hash
-     ignores that line, so the record stays valid).
+     ignores that line, so the record stays valid). The reply confirming it
+     ends with this line, the spec's repo-relative path filled in: "Next: run
+     `/clear`, then `/claude-kit:ship docs/superpowers/specs/<file>`."
    - **fail:** "Gate failed." Then each Open item as a direct question with
      the options and your recommendation. After the user answers, update the
      spec and run the gate again from step 1.
 
-When `/ship` runs this skill, it skips step 7's question: invoking `/ship` is
-the approval.
+When `/ship` runs this skill, it skips step 7's question and prints nothing:
+invoking `/ship` is the approval.

@@ -149,3 +149,12 @@ def test_dispatch_prompt_carries_decision_log_path():
     step = skill[skill.index("2. **Review round.**") : skill.index("3. **Fix.**")]
     assert "> The kit's decision-log playbook is at `<path>`." in step
     assert "or `none` when no kit map is present" in step
+
+
+def test_pass_message_sends_the_user_to_a_fresh_ship_session():
+    body = read("SKILL.md")
+    step7 = body.split("7. **Report to the user.**", 1)[1]
+    passed = step7.split("**pass:**", 1)[1].split("**fail:**", 1)[0]
+    passed = " ".join(passed.split())
+    assert "/clear" in passed
+    assert "/claude-kit:ship docs/superpowers/specs/" in passed
