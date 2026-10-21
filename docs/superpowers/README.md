@@ -34,6 +34,7 @@
 
 | Date | Plan | Status |
 |---|---|---|
+| 2026-10-21 | [Docker Desktop disk upkeep on Windows Implementation Plan](plans/2026-10-21-docker-disk-upkeep.md) | draft |
 | 2026-10-20 | [`/ship` keeps its main session lean Implementation Plan](plans/2026-10-20-lean-ship-orchestrator.md) | approved |
 | 2026-10-16 | [`/ship` approves the plan gate's decisions itself Implementation Plan](plans/2026-10-16-ship-auto-approves-plan-decisions.md) | approved |
 | 2026-10-13 | [Kit map Implementation Plan](plans/2026-10-13-kit-map.md) | approved |
