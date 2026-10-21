@@ -159,8 +159,13 @@ into waves: tasks in a wave share no file (from their Create, Modify and Test
 bullets) and depend on no task in the same wave. Under `/ship`, a wave with
 more than one task runs through `claude-kit:parallel-tasks`: one subagent and
 git worktree per task, merged back in task order
-([ADR 0017](../knowledge/decisions/0017-parallel-plan-tasks.md)). The plan
-gate checks the line with rule `P10-depends`.
+([ADR 0017](../knowledge/decisions/0017-parallel-plan-tasks.md)); every
+other task under `/ship` runs through
+`superpowers:subagent-driven-development`
+([ADR 0037](../knowledge/decisions/0037-lean-ship-orchestrator.md)). Under
+`/ship`, a fresh subagent writes the plan and runs the plan gate on it, and
+`/ship` acts on the verdict. The plan gate checks the line with rule
+`P10-depends`.
 
 ## Fast path for POCs
 
