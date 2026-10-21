@@ -124,7 +124,9 @@ the worktree: stop and remove the task's containers (`docker compose -p <slug> d
 created or pulled that are not in the baseline, and remove its builder
 (`docker buildx rm <slug>`, which drops that build cache). Never run a prune
 (`docker system|volume|image|container|network|builder prune`) without a
-`label=claude-kit.task=<slug>` filter, and never remove anything in the baseline.
+`label=claude-kit.task=<slug>` filter, and never remove anything in the baseline. The clean-up also runs
+`plugin/scripts/docker-disk.py` (it reports only on Windows) and reports its line;
+compaction is only on demand, via `/docker-compact` (ADR 0038).
 The kit's session-start hook reports leftover worktrees and branches; treat that as
 a to-do, but **never delete anything with unmerged commits or uncommitted changes
 without asking me first.** The normal end of a working session on a feature is

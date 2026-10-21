@@ -67,6 +67,20 @@ Set these under `env` in `~/.claude/settings.json`.
 | `CLAUDE_KIT_NUDGE_AT` | 300000 | context tokens at which the first `/handoff` nudge fires |
 | `CLAUDE_KIT_NUDGE_STEP` | 100000 | tokens between later nudges |
 
+## Docker Desktop on Windows
+
+Docker Desktop keeps its data in `%LOCALAPPDATA%\Docker\wsl\disk\docker_data.vhdx`.
+The file grows as Docker writes and does not shrink when data is deleted,
+unless the distro is sparse. The one-time fix is to quit Docker Desktop, then
+run `wsl --manage docker-desktop --set-sparse true`. Optionally cap the build
+cache in Docker Desktop, Settings, Docker Engine:
+`"builder": {"gc": {"enabled": true, "defaultKeepStorage": "5GB"}}`. The kit
+never changes these settings itself.
+
+`python plugin/scripts/docker-disk.py` shows the state, and `/ship`'s clean-up
+prints it when a task used Docker. `/docker-compact` reclaims space that has
+already built up: it asks first, stops Docker and needs one UAC prompt.
+
 ## How changes ship
 
 The flow is in the [README](../README.md): brainstorm, spec, spec gate,

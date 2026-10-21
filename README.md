@@ -116,7 +116,9 @@ is in [`plugin/`](plugin/).
   ending at a pull request with green CI that you merge (stages:
   [`docs/ship-fast.md`](docs/ship-fast.md)). `/spec-html [path]`
   renders a spec or plan (the latest one when no path is given) and opens
-  its HTML view. `/present [repo | spec.md [plan.md]]` (the
+  its HTML view. `/docker-compact` reclaims unused space in
+  Docker Desktop's virtual disk on Windows, after asking (see
+  [`docs/setup.md`](docs/setup.md#docker-desktop-on-windows)). `/present [repo | spec.md [plan.md]]` (the
   `present` skill) builds a timed, self-contained HTML deck from a repo, spec or
   plan, with every slide rendered and checked by `check-deck.py`. Every deck
   closes with what was built, what was out of scope, a path-to-production
