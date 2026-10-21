@@ -1,6 +1,6 @@
 # Docker Desktop disk upkeep on Windows
 
-- **Status:** approved
+- **Status:** implemented
 - **Date:** 2026-10-21
 
 ## Purpose
