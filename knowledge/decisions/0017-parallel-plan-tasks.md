@@ -1,6 +1,6 @@
 # ADR 0017: Independent plan tasks run as concurrent subagents
 
-- **Status:** accepted
+- **Status:** accepted; amended by 0037 ([ADR 0037](0037-lean-ship-orchestrator.md): under `/ship`, one-task waves and inline fallbacks run through SDD's task loop)
 - **Date:** 2026-10-01
 
 ## Context

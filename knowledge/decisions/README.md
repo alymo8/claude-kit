@@ -22,7 +22,7 @@ the next number; superseded ones are never deleted.
 | [0014](0014-lean-context-env-switch.md) | Lean context is switched by an env var, on by default | accepted | 2026-09-29 |
 | [0015](0015-spec-gate-replaces-full-read.md) | A spec gate replaces the user's full read of a spec | accepted | 2026-09-30 |
 | [0016](0016-plan-gate-signs-off-on-new-decisions-only.md) | A plan gate, with sign-off only on decisions the plan adds | accepted; amended by 0036 | 2026-09-30 |
-| [0017](0017-parallel-plan-tasks.md) | Independent plan tasks run as concurrent subagents | accepted | 2026-10-01 |
+| [0017](0017-parallel-plan-tasks.md) | Independent plan tasks run as concurrent subagents | accepted; amended by 0037 | 2026-10-01 |
 | [0018](0018-ship-many-headless-children.md) | `/ship-many` runs independent specs as headless `/ship` children | accepted | 2026-10-01 |
 | [0019](0019-spec-grill-opt-in.md) | An opt-in grill runs between the design and the spec | accepted | 2026-10-01 |
 | [0020](0020-gates-end-with-verification.md) | Gates end with a verification round; blocking is a fixed set of classes | accepted | 2026-10-02 |
@@ -42,3 +42,4 @@ the next number; superseded ones are never deleted.
 | [0034](0034-workspace-rules-inject.md) | Workspace rules injected outside the kit folder | accepted | 2026-10-13 |
 | [0035](0035-process-rules-in-claude-md.md) | Process rules move from personal memory into `CLAUDE.md` | accepted | 2026-10-13 |
 | [0036](0036-ship-auto-approves-plan-decisions.md) | `/ship` approves the plan gate's decisions itself | accepted | 2026-10-16 |
+| [0037](0037-lean-ship-orchestrator.md) | `/ship`'s main session coordinates; subagents write the plan and the code | accepted | 2026-10-20 |
