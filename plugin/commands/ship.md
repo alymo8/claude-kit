@@ -274,7 +274,11 @@ A command still failing after that is handled like any other failed command.
     the task created or pulled that are not in the step-4 baseline; and
     `docker buildx rm <slug>`. Never run a prune without a
     `label=claude-kit.task=<slug>` filter, and never remove anything in the
-    baseline. Run every git command as
+    baseline. If the task used Docker, then run
+    `python "${CLAUDE_PLUGIN_ROOT}/scripts/docker-disk.py"` (fallback
+    `~/.claude/skills/claude-kit/scripts/docker-disk.py`) and keep its
+    `docker disk:` line for the report; it changes nothing and never prompts,
+    and its verdict is not a stop rule. Run every git command as
     `git -C <main-checkout> ...`; none of them changes that checkout's files or
     branch: `worktree remove <worktree-path>`, `worktree prune`,
     `branch -D feat/<slug>`, `push origin --delete feat/<slug>` (the merge's
@@ -297,5 +301,6 @@ A command still failing after that is handled like any other failed command.
     (and why not, if not), the review findings you fixed (from whichever
     review ran in step 4 or step 6), the
     `Plan decisions (auto-approved)` (or `Plan decisions`) list from step 7, if
-    any, the Learnings summary from step 7, and anything left out and why
+    any, the Learnings summary from step 7, the `docker disk:` line from
+    step 11 if the task used Docker, and anything left out and why
     (including SDD's rulings and any findings it parked or deferred).
