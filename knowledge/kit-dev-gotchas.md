@@ -19,6 +19,10 @@ Things that cost time in past runs and are not obvious from the code.
   `_stops()` returns the raw section, so a phrase that wraps across lines
   in `ship.md` fails an `in _stops()` assertion. Normalise first:
   `" ".join(_stops().split())`.
+- `_step(n)` in `tests/test_ship_command.py` splits `ship.md` on every
+  line that starts at column 0 with `<digits>. `. Prose added inside a step
+  (sub-items included) stays indented 3 spaces (4 for steps 10–12), or
+  every later step's tests break. Plans that edit `ship.md` should say so.
 - Appending to a CRLF file with a bash heredoc mixes line endings, and
   `ruff format --check` then flags the file. Run `ruff format <file>`.
 
