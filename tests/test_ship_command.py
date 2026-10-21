@@ -273,3 +273,13 @@ def test_step_six_reuses_step_four_final_review():
 
 def test_ship_never_names_executing_plans():
     assert "executing-plans" not in SHIP
+
+
+def test_decision_findings_stop_even_inside_sdd():
+    step = _step(4)
+    assert "scope, product or behaviour decision" in step
+    assert "stop rule" in step.split("scope, product or behaviour decision", 1)[1]
+
+
+def test_rerunning_the_plan_gate_goes_through_step_three():
+    assert "through step 3's subagent" in " ".join(_stops().split())

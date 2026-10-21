@@ -40,7 +40,8 @@ These are the only reasons to stop. When one fires: write the handoff with the
   When the user answers: on approval, do (3c) and (3d), add
   `- **Decisions approved:** <today>` to the record and set the plan's Status
   to `approved`; otherwise update the plan (or the spec, which is gated again)
-  and rerun the plan gate. Commit, and continue `/ship` from step 4.
+  and rerun the plan gate through step 3's subagent dispatch. Commit, and
+  continue `/ship` from step 4.
 - The PR title does not match the spec's title after one fix in step 7.
 
 ## Git lock retry
@@ -181,7 +182,10 @@ A command still failing after that is handled like any other failed command.
    run; an SDD stop reason that is not a `/ship` stop rule is settled with a
    `Ruling:` ledger line; a ruling on an irreversible, destructive or
    security-sensitive action never carries the action out unless the spec
-   requires it: it declines the action and records why. SDD's closing
+   requires it: it declines the action and records why. A task-review or
+   final-review finding that needs a scope, product or behaviour decision
+   the spec does not settle is never settled by a ruling: it is a stop rule,
+   as in step 6. SDD's closing
    `superpowers:finishing-a-development-branch` is not run: step 11 does the
    clean-up. After each task SDD marks complete, the main session runs the
    full test suite and lint from `CLAUDE.md` with quiet output and confirms

@@ -181,3 +181,14 @@ def test_cli_ship_lists_only_ship_sessions(tmp_path):
         assert value in out.stdout, value
     assert out.stdout.strip().splitlines()[-1].startswith("median")
     assert "restart simulation" not in out.stdout
+
+
+def test_render_ship_keeps_large_values_in_separate_columns():
+    mod = load_module(SCRIPT, "token_report")
+    rows = [
+        mod.ShipRow("abcdef12", "2026-10-20", 12_345_678, 6_000_000, 391_000),
+        mod.ShipRow("bbbbbbbb", "2026-10-19", 1_900_000, 100, 1_000),
+    ]
+    lines = mod.render_ship(rows).splitlines()
+    assert all(len(line.split()) == 6 for line in lines[2:]), lines
+    assert lines[3].split()[2:] == ["12,345,678", "6,000,000", "18,345,678", "391,000"]

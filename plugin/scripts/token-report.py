@@ -245,9 +245,14 @@ def render_ship(rows: list[ShipRow]) -> str:
 
     def line(sid: str, date: str, values: list[float]) -> str:
         main, subagents, total, peak = (round(v) for v in values)
-        return f"{sid:<8}  {date:<10}{main:>8,}{subagents:>11,}{total:>11,}{peak:>11,}"
+        cells = f"{main:>12,}  {subagents:>12,}  {total:>12,}  {peak:>10,}"
+        return f"{sid:<8}  {date:<10}  {cells}"
 
-    out = ["id        date          main  subagents      total   peak ctx"]
+    out = [
+        "cost = input + 1.25 x cache writes + 0.1 x cache reads + 5 x output",
+        f"{'id':<8}  {'date':<10}  {'main':>12}  {'subagents':>12}  {'total':>12}"
+        f"  {'peak ctx':>10}",
+    ]
     for row in sorted(rows, key=lambda r: (r.date, r.sid)):
         values = [row.main, row.subagents, row.total, row.peak]
         out.append(line(row.sid, row.date, values))
