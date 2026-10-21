@@ -40,7 +40,8 @@ These are the only reasons to stop. When one fires: write the handoff with the
   When the user answers: on approval, do (3c) and (3d), add
   `- **Decisions approved:** <today>` to the record and set the plan's Status
   to `approved`; otherwise update the plan (or the spec, which is gated again)
-  and rerun the plan gate. Commit, and continue `/ship` from step 4.
+  and rerun the plan gate through step 3's subagent dispatch. Commit, and
+  continue `/ship` from step 4.
 - The PR title does not match the spec's title after one fix in step 7.
 
 ## Git lock retry
@@ -89,18 +90,53 @@ A command still failing after that is handled like any other failed command.
    if the record has a `Stopped on irreversible` line, the plan-gate stop
    rule fires; otherwise handle the record as for `pass-with-decisions`
    below, from (3a). On any other reason, run the plan gate (below) on the
-   existing plan. If there is no plan, use `superpowers:writing-plans` to
-   write `docs/superpowers/plans/<YYYY-MM-DD>-<slug>.md` from the spec. Where
-   the spec leaves a choice open, prefer one the spec, its ADRs or the
-   existing code already imply, so a routine plan passes without stopping.
-   Answer every question under the `## Plan questions` section of the spec's
-   gate record (`docs/superpowers/gates/<spec file name>`) in the task it
-   affects (none if the section is missing). Do not offer an execution choice. Then add a `**Depends on:**` line under each
-   task's `**Files:**` block: `none`, or the earlier tasks whose results it
-   uses (`Task 1, Task 3`). Shared files need not be listed
-   (`parallel-plan.py` orders them anyway), so a task whose only link to
-   earlier tasks is shared files gets `**Depends on:** none`. **Plan gate:** run the `claude-kit:plan-gate`
-   skill on the plan, steps 1–6 (step 7 is not shown). On `pass`, set the
+   existing plan.
+   Whenever step 3 would write a plan or run the plan gate (no plan exists,
+   or `--verify-record` on the existing plan prints neither `ok:` nor
+   `decisions not approved`), `/ship` does neither itself: it dispatches one
+   **new** general-purpose subagent on the session's own model (no `model`
+   override), with no conversation, summary or other context, and only this
+   prompt (absolute paths):
+
+   > In the git worktree at `<feature worktree root>`, the approved spec is
+   > `<spec>` and its gate record is `<spec gate record>`. Existing plan:
+   > `<plan>` (or `none`).
+   >
+   > If the existing plan is `none`, write the implementation plan for the
+   > spec using the `superpowers:writing-plans` skill, saved as
+   > `docs/superpowers/plans/<YYYY-MM-DD>-<slug>.md`. Where the spec leaves a
+   > choice open, prefer one the spec, its ADRs or the existing code already
+   > imply. Answer every question under `## Plan questions` in the spec gate
+   > record in the task it affects (none if the section is missing). Add a
+   > `**Depends on:**` line under each task's `**Files:**` block: `none`, or
+   > the earlier tasks whose results it uses (`Task 1, Task 3`); a task whose
+   > only link to earlier tasks is shared files gets `none`. Do not write a
+   > new plan over an existing one; the plan gate's own fixes to it are
+   > expected.
+   >
+   > Then run the `claude-kit:plan-gate` skill on the plan, steps 1–6 only (do
+   > not run step 7 and do not ask anything). Do not commit and do not offer
+   > an execution choice. Return exactly three lines: `Plan: <repo-relative
+   > path>`, `Verdict: pass | pass-with-decisions | fail`, and `Record:
+   > <repo-relative path of the plan gate record>` (`Record: none` when the
+   > gate stopped at `P4-spec-gated` and wrote no record).
+
+   In that prompt, `<feature worktree root>` is the absolute path of the
+   feature worktree from step 2 (never the main checkout); `<spec>`,
+   `<spec gate record>` (`docs/superpowers/gates/<spec file name>`) and
+   `<plan>` are absolute paths inside it.
+   Check the result: in that worktree, the plan file exists, its `**Spec:**`
+   line names the spec, and the reported verdict matches the record's
+   `Verdict` line (for `Record: none`: the plan exists and no record was
+   written). Before the first dispatch with an existing plan, copy that plan
+   and its record (if any) to the scratchpad. On a failed check, delete any
+   plan file and record the subagent created, restore an existing plan it was
+   given and that plan's existing record from those copies, and dispatch it
+   once more with the same prompt; a second failure is debugged with
+   `superpowers:systematic-debugging`, not a stop rule.
+   **Plan gate:** from here `/ship` acts on the reported verdict, reading the
+   Plan-introduced decisions and Open items from the record file, and makes
+   every commit itself. On `pass`, set the
    plan's Status to `approved`, commit the plan and its record
    (`docs/superpowers/gates/plans/<plan file name>`), and continue.
    On `fail`, commit the plan and its record (the plan only, if the gate
@@ -135,12 +171,27 @@ A command still failing after that is handled like any other failed command.
    run `python "${CLAUDE_PLUGIN_ROOT}/scripts/parallel-plan.py" waves <plan>`
    (fallback if the variable is not expanded:
    `~/.claude/skills/claude-kit/scripts/parallel-plan.py`). If the script
-   exits non-zero, write a `Ruling:` ledger line with its messages and use
-   `superpowers:executing-plans` with `superpowers:test-driven-development`,
-   in this session: this is not a stop rule, because the plan is still
-   executable one task at a time. Else, if every wave has one task, use
-   `executing-plans` the same way. Otherwise use `claude-kit:parallel-tasks`
-   with `<plan>` as its argument. The plan's review
+   exits non-zero, write a `Ruling:` ledger line with its messages, then
+   implement with `superpowers:subagent-driven-development` on the plan;
+   this is not a stop rule, because the plan is still executable one task at
+   a time. Else, if every wave has one task, use
+   `superpowers:subagent-driven-development`. Otherwise use
+   `claude-kit:parallel-tasks` with `<plan>` as its argument (under `/ship`
+   its inline paths use SDD's task loop). `/ship`'s override applies to SDD
+   as to every skill: no question, menu or checkpoint inside it pauses the
+   run; an SDD stop reason that is not a `/ship` stop rule is settled with a
+   `Ruling:` ledger line; a ruling on an irreversible, destructive or
+   security-sensitive action never carries the action out unless the spec
+   requires it: it declines the action and records why. A task-review or
+   final-review finding that needs a scope, product or behaviour decision
+   the spec does not settle is never settled by a ruling: it is a stop rule,
+   as in step 6. SDD's closing
+   `superpowers:finishing-a-development-branch` is not run: step 11 does the
+   clean-up. After each task SDD marks complete, the main session runs the
+   full test suite and lint from `CLAUDE.md` with quiet output and confirms
+   the task's commit is on the branch; a red suite is debugged and fixed in
+   the main session with `superpowers:systematic-debugging` (not by resuming
+   the implementer) before the next task. The plan's review
    checkpoints are progress notes, not pauses. A failing test or an unclear
    instruction is debugged with `superpowers:systematic-debugging`, not
    escalated. Before every commit run the full test suite and lint from
@@ -154,9 +205,17 @@ A command still failing after that is handled like any other failed command.
    (retry every 15 s until it appears), then `gh run watch <id> --exit-status`.
    On red: `gh run view <id> --log-failed`, use `superpowers:systematic-debugging`,
    fix, commit, push, count one attempt.
-6. **Review.** Use `superpowers:requesting-code-review` on `origin/main..HEAD`,
-   then `superpowers:receiving-code-review`. Fix every finding you can verify;
-   commit, re-run tests, push. A finding that needs a decision is a stop rule.
+6. **Review.** If this session received, during step 4 of this run, the
+   report of the final whole-branch review that step 4's skill runs (SDD's
+   final review or `parallel-tasks`' final review), do not run
+   `superpowers:requesting-code-review`: the findings that review fixed are
+   the review findings for the PR and the report. Otherwise (for example a
+   run resumed in another session that found every task complete and did not
+   reach a final review), use `superpowers:requesting-code-review` on
+   `origin/main..HEAD`, then `superpowers:receiving-code-review`. Fix every
+   finding you can verify; commit, re-run tests, push. A finding that needs a
+   scope, product or behaviour decision the spec does not settle is a stop
+   rule, whichever review raised it.
 7. **PR.** First run the `claude-kit:capture-learnings` skill. If it made a
    commit, run the full test suite and lint from `CLAUDE.md`, then
    `git push`. The PR title is the spec's **title**: the first line outside code
@@ -235,6 +294,8 @@ A command still failing after that is handled like any other failed command.
     `docker buildx ls` has no `<slug>`.
 12. **Report.** One message: the PR link, the squash commit on `main`, the
     verification output from step 10, whether local `main` was fast-forwarded
-    (and why not, if not), the review findings you fixed, the
+    (and why not, if not), the review findings you fixed (from whichever
+    review ran in step 4 or step 6), the
     `Plan decisions (auto-approved)` (or `Plan decisions`) list from step 7, if
-    any, the Learnings summary from step 7, and anything left out and why.
+    any, the Learnings summary from step 7, and anything left out and why
+    (including SDD's rulings and any findings it parked or deferred).

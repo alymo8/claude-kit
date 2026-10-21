@@ -62,3 +62,33 @@ def test_docs_wire_parallel_tasks():
     assert (REPO / "knowledge" / "decisions" / adr).is_file()
     index = (REPO / "knowledge" / "decisions" / "README.md").read_text(encoding="utf-8")
     assert f"]({adr})" in index
+
+
+SDD = "superpowers:subagent-driven-development"
+
+
+def _flat(text):
+    return " ".join(text.split())
+
+
+def test_one_task_wave_uses_sdd_under_ship():
+    part = body().split("**One task:**", 1)[1].split("**Several tasks:**", 1)[0]
+    part = _flat(part)
+    assert "`/ship`" in part and SDD in part
+    assert "any other caller" in part
+
+
+def test_failed_task_fallback_uses_sdd_under_ship():
+    text = body()
+    part = text.split("A failed task's branch is not merged", 1)[1]
+    part = _flat(part.split("**After the wave:**", 1)[0])
+    assert "`/ship`" in part and SDD in part
+    assert "any other caller" in part
+
+
+def test_non_zero_script_fallback_uses_sdd_under_ship():
+    part = body().split("2. **Waves.**", 1)[1].split("3. **Each wave", 1)[0]
+    part = _flat(part)
+    assert "non-zero" in part
+    assert "`/ship`" in part and SDD in part
+    assert "any other caller" in part
