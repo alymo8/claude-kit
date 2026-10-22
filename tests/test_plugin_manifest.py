@@ -41,6 +41,7 @@ def test_commands_exist_with_frontmatter():
         "ship-many": "scripts/parallel-plan.py",
         "ship-fast": "scripts/scaffold.py",
         "spec-html": "scripts/open-spec.py",
+        "docker-compact": "scripts/docker-disk.py",
     }
     for name, script in expected.items():
         text = (PLUGIN / "commands" / f"{name}.md").read_text(encoding="utf-8")
@@ -128,6 +129,7 @@ def test_side_effecting_commands_are_user_only():
         "new-project",
         "adopt-conventions",
         "spec-html",
+        "docker-compact",
     }
     for name in user_only | {"handoff"}:
         text = (PLUGIN / "commands" / f"{name}.md").read_text(encoding="utf-8")
@@ -204,10 +206,10 @@ def test_description_mentions_pr_review_respond():
     assert "pr-review-respond" in data["description"]
 
 
-def test_version_is_0_26_0():
+def test_version_is_0_27_0():
     plugin_json = PLUGIN / ".claude-plugin" / "plugin.json"
     data = json.loads(plugin_json.read_text(encoding="utf-8"))
-    assert data["version"] == "0.26.0"
+    assert data["version"] == "0.27.0"
 
 
 def test_description_mentions_cross_platform_installer():
@@ -221,3 +223,9 @@ def test_description_mentions_kit_map():
     plugin_json = PLUGIN / ".claude-plugin" / "plugin.json"
     data = json.loads(plugin_json.read_text(encoding="utf-8"))
     assert "kit map" in data["description"]
+
+
+def test_description_mentions_docker_compact():
+    plugin_json = PLUGIN / ".claude-plugin" / "plugin.json"
+    data = json.loads(plugin_json.read_text(encoding="utf-8"))
+    assert "/docker-compact" in data["description"]

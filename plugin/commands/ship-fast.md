@@ -409,7 +409,11 @@ labelled `claude-kit.task=<slug>` (`docker compose -p <slug> down
 --volumes --rmi local` for a stack), remove the images, volumes and
 networks it created or pulled that are not in the step-4 baseline, and
 `docker buildx rm <slug>`; never run a prune without a
-`label=claude-kit.task=<slug>` filter. Then
+`label=claude-kit.task=<slug>` filter. If the task used Docker, then run
+`python "${CLAUDE_PLUGIN_ROOT}/scripts/docker-disk.py"` (fallback
+`~/.claude/skills/claude-kit/scripts/docker-disk.py`) and put its
+`docker disk:` line in your clean-up reply; it changes nothing and never
+prompts. Then
 `git -C <main-checkout> worktree remove <worktree-path>`,
 `git -C <main-checkout> worktree prune` and
 `git -C <main-checkout> branch -D poc/<slug>`. The remote branch stays for

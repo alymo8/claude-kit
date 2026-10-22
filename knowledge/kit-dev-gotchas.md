@@ -42,6 +42,17 @@ Things that cost time in past runs and are not obvious from the code.
   "upstream: origin/main". The first push must be
   `git push -u origin feat/<slug>`.
 
+## Scripts on Windows
+
+- Python's stdout is cp1252 when piped on Windows, so printing a path
+  with characters outside cp1252 raises `UnicodeEncodeError`. A script
+  that prints filesystem paths calls `sys.stdout.reconfigure(encoding="utf-8")`
+  first, as `docker-disk.py` does. Do not use `errors="replace"`: it turns
+  non-ASCII into `?`, which hides it from callers that check for it.
+- Docker Desktop's resource saver stops the `docker-desktop` distro when
+  idle, so `docker-disk.py` prints `used ?` (it never starts the distro).
+  To compare its numbers by hand, run `docker info` first to wake it.
+
 ## Hooks
 
 - Claude Code injects at most 10,000 characters of a hook's

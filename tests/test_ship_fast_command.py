@@ -187,3 +187,11 @@ def test_learnings_are_captured_before_the_push():
 
 def test_report_lists_learnings():
     assert "Learnings summary from step 7" in _step(9)
+
+
+def test_cleanup_reports_docker_disk_line():
+    cleanup = " ".join(SHIP_FAST.split("## Cleanup (on request)", 1)[1].split())
+    assert "scripts/docker-disk.py" in cleanup
+    assert cleanup.index("docker buildx rm <slug>") < cleanup.index("docker-disk.py")
+    assert "never run a prune without a" in cleanup
+    assert "If the task used Docker" in cleanup[cleanup.index("never run a prune") :]
