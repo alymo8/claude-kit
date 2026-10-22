@@ -49,3 +49,15 @@ def test_temp_folder_deleted_and_no_prune():
     assert "Remove-Item" in FLAT
     assert "whether or not diskpart succeeded" in FLAT
     assert "prune" not in TEXT.lower()
+
+
+def test_diskpart_argument_list_is_one_quoted_string():
+    assert r'-ArgumentList "/s `"$env:TEMP\dcompact\compact.txt`""' in FLAT
+
+
+def test_non_ascii_check_precedes_the_ask():
+    check = FLAT.index("outside ASCII")
+    assert check < FLAT.index("Ask the user before anything else")
+    assert check < FLAT.index("wsl --shutdown")
+    assert check < FLAT.index("Set-Content")
+    assert "run diskpart by hand" in FLAT

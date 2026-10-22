@@ -67,9 +67,12 @@ def find_disk(localappdata: str | None) -> Path | None:
     return None
 
 
-def read_disk(path: Path) -> tuple[int, bool]:
-    """File size and whether the NTFS sparse attribute is set."""
-    st = _stat(path)
+def read_disk(path: Path) -> tuple[int, bool] | None:
+    """File size and whether the NTFS sparse attribute is set, None if unreadable."""
+    try:
+        st = _stat(path)
+    except OSError:
+        return None
     attrs = getattr(st, "st_file_attributes", 0)
     return st.st_size, attrs & stat.FILE_ATTRIBUTE_SPARSE_FILE != 0
 
@@ -89,7 +92,7 @@ def running_distros(out: bytes) -> list[str]:
     """Distro names from ``wsl -l --running -q`` (UTF-16-LE or UTF-8)."""
     encoding = "utf-16-le" if b"\x00" in out else "utf-8"
     text = out.decode(encoding, errors="ignore")
-    text = text.replace("\x00", "").replace("﻿", "")
+    text = text.replace("\x00", "").replace("\ufeff", "")
     return [line.strip() for line in text.splitlines() if line.strip()]
 
 
@@ -99,7 +102,7 @@ def parse_df_used(text: str) -> int | None:
     if len(lines) < 2:
         return None
     cols = lines[1].split()
-    if len(cols) < 3 or not cols[2].isdigit():
+    if len(cols) < 3 or not cols[2].isdecimal():
         return None
     return int(cols[2])
 
@@ -158,6 +161,10 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Docker Desktop disk status.")
     parser.add_argument("--path", action="store_true", help="print the disk path only")
     args = parser.parse_args(argv)
+    try:
+        sys.stdout.reconfigure(encoding="utf-8")
+    except (AttributeError, ValueError):
+        pass
 
     windows = sys.platform == "win32"
     disk = find_disk(os.environ.get("LOCALAPPDATA")) if windows else None
@@ -168,10 +175,11 @@ def main(argv: list[str] | None = None) -> int:
     if not windows:
         print("docker disk: skipped (not Windows)")
         return 0
-    if disk is None:
+    info = read_disk(disk) if disk is not None else None
+    if info is None:
         print("docker disk: skipped (no Docker Desktop disk found)")
         return 0
-    file, sparse = read_disk(disk)
+    file, sparse = info
     used = used_bytes()
     docker = docker_bytes()
     print(status_line(file, used, docker, sparse))

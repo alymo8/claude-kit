@@ -18,6 +18,9 @@ does not apply and stop. Run every command below in PowerShell.
      `used ?`, say the `docker-desktop` distro was not running, so used space
      is unknown), then go on to step 2: the user decides.
    - Run the script again with `--path` and keep the printed disk path.
+   - If the disk path has a character outside ASCII, stop now, before
+     anything is stopped, and tell the user to run diskpart by hand with the
+     four lines under step 6 (diskpart reads the script as ASCII).
 2. **Ask the user before anything else.** Compacting stops Docker Desktop and
    every container, and needs one UAC prompt. Wait for a clear yes. A no ends
    the command with nothing changed.
@@ -28,9 +31,7 @@ does not apply and stop. Run every command below in PowerShell.
    run `wsl --shutdown`.
 5. If the line said `not sparse`, ask a separate yes/no question. On yes, run
    `wsl --manage docker-desktop --set-sparse true`.
-6. If the disk path has a character outside ASCII, stop here and tell the
-   user to run diskpart by hand with the four lines below (diskpart reads the
-   script as ASCII). Otherwise create the folder `%TEMP%\dcompact`
+6. Create the folder `%TEMP%\dcompact`
    (`New-Item -ItemType Directory -Force "$env:TEMP\dcompact"`) and write
    `compact.txt` in it with `Set-Content -Encoding ascii` (ASCII, no BOM),
    with these lines:
@@ -46,8 +47,10 @@ does not apply and stop. Run every command below in PowerShell.
 7. Note the file size with `(Get-Item <disk path>).Length`. Then, in one
    PowerShell call, run:
    ```
-   try { $p = Start-Process diskpart -ArgumentList '/s', "$env:TEMP\dcompact\compact.txt" -Verb RunAs -Wait -PassThru -ErrorAction Stop; $p.ExitCode } catch { 'declined' }
+   try { $p = Start-Process diskpart -ArgumentList "/s `"$env:TEMP\dcompact\compact.txt`"" -Verb RunAs -Wait -PassThru -ErrorAction Stop; $p.ExitCode } catch { 'declined' }
    ```
+   The single quoted `-ArgumentList` string keeps a `%TEMP%` path with a
+   space in one piece (Windows PowerShell 5.1 does not quote list elements).
    A `declined` result means the UAC prompt was declined and nothing was
    compacted. `ExitCode` 0 is success; any other code, or an empty result, is
    a failure.

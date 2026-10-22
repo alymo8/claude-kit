@@ -275,3 +275,39 @@ def test_path_flag(mod, monkeypatch, tmp_path, capsys):
     monkeypatch.setattr(mod.sys, "platform", "linux")
     assert mod.main(["--path"]) == 0
     assert capsys.readouterr().out == ""
+
+
+def test_df_used_non_ascii_digit_is_none(mod):
+    assert mod.parse_df_used(DF.decode().replace("3435973837", "²")) is None
+
+
+def test_stat_oserror_is_no_disk(mod, monkeypatch, tmp_path, capsys):
+    windows(monkeypatch, mod, tmp_path)
+    fake_run(monkeypatch, mod, {})
+
+    def deny(path):
+        raise PermissionError("denied")
+
+    monkeypatch.setattr(mod, "_stat", deny)
+    assert mod.main([]) == 0
+    assert (
+        capsys.readouterr().out.strip()
+        == "docker disk: skipped (no Docker Desktop disk found)"
+    )
+
+
+def test_path_output_survives_cp1252_stdout(mod, monkeypatch, tmp_path):
+    import io
+
+    monkeypatch.setattr(mod.sys, "platform", "win32")
+    local = tmp_path / "日本"
+    path = local / "Docker" / "wsl" / "disk" / "docker_data.vhdx"
+    path.parent.mkdir(parents=True)
+    path.write_bytes(b"")
+    monkeypatch.setenv("LOCALAPPDATA", str(local))
+    raw = io.BytesIO()
+    out = io.TextIOWrapper(raw, encoding="cp1252", errors="strict", newline="")
+    monkeypatch.setattr(mod.sys, "stdout", out)
+    assert mod.main(["--path"]) == 0
+    out.flush()
+    assert raw.getvalue().decode("utf-8").strip() == str(path)
