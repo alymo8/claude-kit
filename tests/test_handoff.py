@@ -113,7 +113,7 @@ def test_snapshot_creates_file_with_state_and_prompts(repo, mod, monkeypatch):
     assert b"\r\n" not in path.read_bytes()
 
 
-def test_snapshot_refreshes_only_state_and_written(repo, mod, monkeypatch):
+def test_snapshot_refreshes_state_and_keeps_written(repo, mod, monkeypatch):
     monkeypatch.setattr(mod, "pr_url", lambda cwd, upstream: None)
     path = mod.handoff_path(repo)
     path.parent.mkdir(parents=True)
@@ -128,9 +128,27 @@ def test_snapshot_refreshes_only_state_and_written(repo, mod, monkeypatch):
     assert "Keep me." in text and "Keep me too." in text
     assert "- branch: stale" not in text
     assert "- branch: main" in text
-    assert "2026-01-01T00:00" not in text
-    assert "by session-end snapshot" in text
+    # Written keeps the body's age, so an old task is not revived as fresh.
+    assert (
+        "- **Written:** 2026-01-01T00:00 by /handoff\n- **State refreshed:** " in text
+    )
     assert "ignored when file exists" not in text
+
+
+def test_snapshot_replaces_its_refresh_line(repo, mod, monkeypatch):
+    monkeypatch.setattr(mod, "pr_url", lambda cwd, upstream: None)
+    path = mod.handoff_path(repo)
+    path.parent.mkdir(parents=True)
+    path.write_text(
+        "# Handoff: main\n\n- **Written:** 2026-01-01T00:00 by /handoff\n\n"
+        "## State\n- branch: stale\n",
+        encoding="utf-8",
+    )
+    mod.snapshot(repo, [])
+    mod.snapshot(repo, [])
+    text = path.read_text(encoding="utf-8")
+    assert text.count("- **State refreshed:** ") == 1
+    assert text.count("- **Written:** ") == 1
 
 
 def test_cli_path_and_state(repo):

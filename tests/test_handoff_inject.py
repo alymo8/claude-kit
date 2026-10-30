@@ -55,6 +55,15 @@ def test_skips_stale_handoff(repo):
     assert load_module(HOOK, "inject").render(repo, NOW) == ""
 
 
+def test_ages_by_written_not_by_state_refresh(repo):
+    path = write_handoff(repo, "main", NOW - timedelta(days=30))
+    refreshed = f"- **State refreshed:** {NOW:%Y-%m-%dT%H:%M} by session-end snapshot"
+    text = path.read_text(encoding="utf-8")
+    text = text.replace("by /handoff\n", f"by /handoff\n{refreshed}\n")
+    path.write_text(text, encoding="utf-8", newline="\n")
+    assert load_module(HOOK, "inject").render(repo, NOW) == ""
+
+
 def test_mentions_other_branch_handoffs_in_one_line(repo):
     write_handoff(repo, "feature_bar", NOW - timedelta(days=2))
     text = load_module(HOOK, "inject").render(repo, NOW)

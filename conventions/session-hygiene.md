@@ -44,7 +44,8 @@ at 150k, by 65%.
 `<work-tree>/.claude/handoffs/<branch>.md`, gitignored, under 80 lines. Written
 by `/handoff`; its State section is refreshed automatically at session end; it is
 injected automatically on the next `startup` or `clear` on the same branch while
-younger than seven days. Sections: Task, State (generated), Done this session,
+its Written date is younger than seven days (the session-end refresh does not
+move that date, so an old task is not revived). Sections: Task, State (generated), Done this session,
 Next, Files that matter, Commands that work, Suggested skills, Open questions,
 Moved to durable homes. `/handoff <focus>` tailors it to what the next session
 will do. It never holds secrets or personal data, since every later session on

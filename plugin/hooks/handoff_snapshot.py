@@ -2,8 +2,9 @@
 """SessionEnd hook: refresh the branch's handoff file with the current git State.
 
 Creates ``.claude/handoffs/<branch>.md`` (with the last few user prompts) when
-none exists; otherwise replaces only its State section and Written line. Outside
-a git repo it does nothing. Always exits 0 (ADR 0007).
+none exists; otherwise replaces only its State section and State refreshed line,
+keeping Written so the handoff ages by its hand-written body. Outside a git repo
+it does nothing. Always exits 0 (ADR 0007).
 """
 
 from __future__ import annotations

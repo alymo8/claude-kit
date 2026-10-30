@@ -75,11 +75,8 @@ context. Apply every bullet under "Self-contained plans" in
 
 ## Token discipline
 
-The lean-context rule is injected at session start by the kit's
-`lean_context_inject.py` hook, on by default. To switch it off, set
-`"CLAUDE_KIT_LEAN_CONTEXT": "0"` under `env` in `~/.claude/settings.json` and deny
-`Skill(claude-kit:lean-context)` (ADR 0014). Details:
-[conventions/session-hygiene.md](conventions/session-hygiene.md).
+Follow [conventions/session-hygiene.md](conventions/session-hygiene.md); its
+switches are in `docs/setup.md` (ADR 0014).
 
 ## Open files and folders for me
 
@@ -114,43 +111,20 @@ to integrate and clean up: the worktree removed and pruned, the branch deleted
 locally and on the remote, and any scratch files created outside the repo deleted.
 Clean-up never deletes a repository and never suggests deleting one; the repo's
 owner does that.
-Docker is part of the workspace. Before a task first uses Docker, make its objects
-identifiable. Record the IDs that already exist (`docker ps -aq`, `images -q`,
-`volume ls -q`, `network ls -q`) in a scratch file outside the repo. Label what the
-task creates (`--label claude-kit.task=<slug>`, compose `-p <slug>`) and build with
-its own builder (`docker buildx create --name <slug>`). At cleanup, before removing
-the worktree: stop and remove the task's containers (`docker compose -p <slug> down
---volumes --rmi local` for a stack), remove the images, volumes and networks it
-created or pulled that are not in the baseline, and remove its builder
-(`docker buildx rm <slug>`, which drops that build cache). Never run a prune
-(`docker system|volume|image|container|network|builder prune`) without a
-`label=claude-kit.task=<slug>` filter, and never remove anything in the baseline. The clean-up also runs
-`plugin/scripts/docker-disk.py` (it reports only on Windows) and reports its line;
-compaction is only on demand, via `/docker-compact` (ADR 0038).
+Before a task first uses Docker, follow "Docker hygiene" in
+[conventions/engineering-practices.md](conventions/engineering-practices.md#docker-hygiene)
+(baseline, labels, clean-up; never an unfiltered prune).
 The kit's session-start hook reports leftover worktrees and branches; treat that as
 a to-do, but **never delete anything with unmerged commits or uncommitted changes
 without asking me first.** The normal end of a working session on a feature is
 `/handoff` then `/clear`; the next session on the branch starts from the handoff.
 
-**Once I approve a spec, `/ship <spec.md>` is my instruction to continue
-autonomously** through plan → implement → CI → review → PR → green CI →
-squash-merge → verify `main` → cleanup, with no further check-ins. Invoking it is
-my explicit approval for the merge; it stops only on the rules listed in the
-command.
-
-**`/ship-many <spec.md> ...` ships several approved specs at once.** It gates
-each spec, groups the ones whose Scope In lists share no file
-(`parallel-plan.py specs`), and runs each group's specs as concurrent
-headless `/ship` runs (at most 3 by default); specs that share a file run in
-sequence. Invoking it is my approval for every listed spec and its merge, like
-`/ship`. Use `--dry-run` first to see the waves without launching anything
+**When I invoke `/ship <spec.md>` or `/ship-many <spec.md> ...`, that is my
+approval to run to a squash-merge on `main` with no further check-ins**,
+stopping only on the rules in the command
 ([ADR 0018](knowledge/decisions/0018-ship-many-headless-children.md)).
-
-**`/ship-fast [spec.md | idea]` is the light path for an hour-sized POC**
-([command](plugin/commands/ship-fast.md), [overview](docs/ship-fast.md)).
-It interviews me for the spec, which I approve; it skips the gates and
-stops at an open PR with green CI, with the POC running for me to try. I
-merge it myself. It cleans up only when I ask, and never deletes a repo.
+`/ship-fast` (it interviews me for a POC spec) stops at a PR I merge myself and
+cleans up only when I ask. The README describes all three.
 
 ## Developing the kit (this repo)
 
