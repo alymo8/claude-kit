@@ -44,3 +44,4 @@ the next number; superseded ones are never deleted.
 | [0036](0036-ship-auto-approves-plan-decisions.md) | `/ship` approves the plan gate's decisions itself | accepted | 2026-10-16 |
 | [0037](0037-lean-ship-orchestrator.md) | `/ship`'s main session coordinates; subagents write the plan and the code | accepted | 2026-10-20 |
 | [0038](0038-docker-disk-upkeep-outside-cleanup.md) | Docker disk upkeep runs outside the per-feature clean-up | accepted | 2026-10-21 |
+| [0039](0039-handoff-ages-by-written.md) | A handoff ages by its Written date, not by the session-end refresh | accepted | 2026-10-30 |

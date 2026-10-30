@@ -66,6 +66,23 @@ The scaffolder (`/new-project`, `/adopt-conventions`) ships `ci.yml`,
 `secret-scan.yml`, a PR template carrying the Definition of done, and a
 `claude-review.yml` that stays disabled until the repo has credentials.
 
+## Docker hygiene
+
+Docker is part of the workspace. Before a task first uses Docker, make its objects
+identifiable. Record the IDs that already exist (`docker ps -aq`, `images -q`,
+`volume ls -q`, `network ls -q`) in a scratch file outside the repo. Label what the
+task creates (`--label claude-kit.task=<slug>`, compose `-p <slug>`) and build with
+its own builder (`docker buildx create --name <slug>`). At cleanup, before removing
+the worktree: stop and remove the task's containers (`docker compose -p <slug> down
+--volumes --rmi local` for a stack), remove the images, volumes and networks it
+created or pulled that are not in the baseline, and remove its builder
+(`docker buildx rm <slug>`, which drops that build cache). Never run a prune
+(`docker system|volume|image|container|network|builder prune`) without a
+`label=claude-kit.task=<slug>` filter, and never remove anything in the baseline.
+The clean-up also runs `plugin/scripts/docker-disk.py` (it reports only on
+Windows) and reports its line; compaction is only on demand, via
+`/docker-compact` (ADR 0038).
+
 ## Definition of done
 
 - Behavior is covered by tests at merge (test-first, or the divergence is a named

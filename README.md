@@ -108,7 +108,11 @@ is in [`plugin/`](plugin/).
   an approved spec all the way to a squash-merged, cleaned-up change on
   `main` without further check-ins; it stops only on the rules listed in
   the command (red CI after three fixes, a review finding that needs a
-  decision, a refused merge, a failed pre-flight). `/ship-fast [spec.md | idea]` is the light
+  decision, a refused merge, a failed pre-flight). `/ship-many <spec.md> ...`
+  ships several approved specs at once: it gates each, groups the ones whose
+  Scope In lists share no file, and runs each group as concurrent headless
+  `/ship` runs (at most 3 by default); `--dry-run` shows the waves first.
+  `/ship-fast [spec.md | idea]` is the light
   path for an hour-sized POC: given an idea it first interviews you for the
   spec (at most 7 questions) and opens it for you to approve, then runs
   with no gates, a short task

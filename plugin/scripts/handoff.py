@@ -9,8 +9,8 @@ Usage:
 The file lives at ``<work-tree>/.claude/handoffs/<branch>.md`` (gitignored). The
 ``/handoff`` command writes the whole file; ``snapshot`` (run by the SessionEnd
 hook) creates it if missing and otherwise replaces only the ``## State`` section
-and the ``**Written:**`` line, leaving every other byte untouched. Exit 1 outside a
-git work tree.
+and a ``**State refreshed:**`` line, leaving every other byte untouched. Exit 1
+outside a git work tree.
 """
 
 from __future__ import annotations
@@ -27,6 +27,7 @@ SAFE_RE = re.compile(r"[^A-Za-z0-9._-]")
 STATE_HEADER = "## State"
 STATE_NOTE = "<!-- generated; do not edit -->"
 WRITTEN_RE = re.compile(r"^- \*\*Written:\*\* [^\r\n]*$", re.M)
+REFRESHED_RE = re.compile(r"^- \*\*State refreshed:\*\* [^\r\n]*$", re.M)
 
 
 def git(*args: str, cwd: Path, timeout: int = 30) -> str | None:
@@ -155,12 +156,27 @@ def ensure_ignored(folder: Path) -> None:
         ignore.write_text("*\n", encoding="utf-8", newline="\n")
 
 
+def refresh_line(text: str) -> str:
+    """Set the ``**State refreshed:**`` line, right after ``**Written:**``.
+
+    Written is left alone: it dates the hand-written body, and the inject hook
+    ages the handoff by it, so a refreshed State cannot revive an old task.
+    """
+    stamp = f"{datetime.now():%Y-%m-%dT%H:%M}"
+    line = f"- **State refreshed:** {stamp} by session-end snapshot"
+    if REFRESHED_RE.search(text):
+        return REFRESHED_RE.sub(line, text, count=1)
+    written = WRITTEN_RE.search(text)
+    if written is None:
+        return text
+    return text[: written.end()] + "\n" + line + text[written.end() :]
+
+
 def snapshot(cwd: Path, prompts: list[str]) -> Path:
     path = handoff_path(cwd)
     state = state_section(cwd)
     if path.exists():
-        text = replace_state(path.read_text(encoding="utf-8"), state)
-        text = WRITTEN_RE.sub(written_line("session-end snapshot"), text, count=1)
+        text = refresh_line(replace_state(path.read_text(encoding="utf-8"), state))
     else:
         text = new_file_text(branch_name(cwd), state, prompts)
     path.parent.mkdir(parents=True, exist_ok=True)
