@@ -23,6 +23,9 @@ Things that cost time in past runs and are not obvious from the code.
   line that starts at column 0 with `<digits>. `. Prose added inside a step
   (sub-items included) stays indented 3 spaces (4 for steps 10–12), or
   every later step's tests break. Plans that edit `ship.md` should say so.
+- Writing test code through a bash heredoc into a Python script turns
+  `\n` escapes inside string literals into real line breaks, so the
+  test file no longer parses. Edit test files with the Edit tool.
 - Appending to a CRLF file with a bash heredoc mixes line endings, and
   `ruff format --check` then flags the file. Run `ruff format <file>`.
 
