@@ -41,6 +41,11 @@ Things that cost time in past runs and are not obvious from the code.
 - Git before 2.32 ignores `GIT_CONFIG_GLOBAL`, so a test that hides the
   user's git identity with it still sees the real one on such a machine.
   Also point `HOME`, `USERPROFILE` and `XDG_CONFIG_HOME` at `tmp_path`.
+- CI runners have no git identity; this machine has one. Code that adds
+  `-c user.name=...` when none is set takes a different path on CI, so a
+  fake `git` that matches `args[0] == "commit"` passes here and fails there.
+  Match `"commit" in args`, and run identity-sensitive tests once with
+  `GIT_CONFIG_GLOBAL`, `HOME` and `USERPROFILE` pointed at an empty folder.
 
 ## Worktree-isolated sessions (`/ship`, `parallel-tasks`)
 
