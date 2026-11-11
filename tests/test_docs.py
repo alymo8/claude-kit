@@ -172,5 +172,6 @@ def test_setup_guide_names_prerequisites_and_installer():
     assert "ExecutionPolicy" in guide
     readme = (REPO / "README.md").read_text(encoding="utf-8")
     assert "ExecutionPolicy" not in readme
-    assert "ten hooks" in readme
+    assert "twelve hooks" in readme
+    assert "CLAUDE_KIT_VAULT" in readme
     assert "CLAUDE_KIT_WORKSPACE_RULES=0" in readme

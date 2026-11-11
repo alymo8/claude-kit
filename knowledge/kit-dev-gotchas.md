@@ -47,6 +47,14 @@ Things that cost time in past runs and are not obvious from the code.
   few hundred bytes larger than the stored LF file.
 - Appending to a CRLF file with a bash heredoc mixes line endings, and
   `ruff format --check` then flags the file. Run `ruff format <file>`.
+- Git before 2.32 ignores `GIT_CONFIG_GLOBAL`, so a test that hides the
+  user's git identity with it still sees the real one on such a machine.
+  Also point `HOME`, `USERPROFILE` and `XDG_CONFIG_HOME` at `tmp_path`.
+- CI runners have no git identity; this machine has one. Code that adds
+  `-c user.name=...` when none is set takes a different path on CI, so a
+  fake `git` that matches `args[0] == "commit"` passes here and fails there.
+  Match `"commit" in args`, and run identity-sensitive tests once with
+  `GIT_CONFIG_GLOBAL`, `HOME` and `USERPROFILE` pointed at an empty folder.
 
 ## Worktree-isolated sessions (`/ship`, `parallel-tasks`)
 
@@ -100,6 +108,10 @@ The commands keep the rules and leave out the reasons; the reasons are here.
   `additionalContext`. Above that, only a preview reaches the session.
   Keep a size test with a margin (`workspace_rules_inject.py` is capped at
   9,500 and injects about 9,000 today).
+- The README's "N hooks" sentence and its assertion in `tests/test_docs.py`
+  are not derived from `plugin/hooks/hooks.json`, so a PR adding a hook can
+  leave them stale (#52 did). Count the `python` commands in `hooks.json`
+  and update both; do not trust the number in a spec or the README.
 
 ## Main checkout
 

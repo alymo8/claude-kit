@@ -206,10 +206,10 @@ def test_description_mentions_pr_review_respond():
     assert "pr-review-respond" in data["description"]
 
 
-def test_version_is_0_27_1():
+def test_version_is_0_28_0():
     plugin_json = PLUGIN / ".claude-plugin" / "plugin.json"
     data = json.loads(plugin_json.read_text(encoding="utf-8"))
-    assert data["version"] == "0.27.1"
+    assert data["version"] == "0.28.0"
 
 
 def test_description_mentions_cross_platform_installer():
@@ -229,3 +229,10 @@ def test_description_mentions_docker_compact():
     plugin_json = PLUGIN / ".claude-plugin" / "plugin.json"
     data = json.loads(plugin_json.read_text(encoding="utf-8"))
     assert "/docker-compact" in data["description"]
+
+
+def test_description_mentions_vault():
+    plugin_json = PLUGIN / ".claude-plugin" / "plugin.json"
+    data = json.loads(plugin_json.read_text(encoding="utf-8"))
+    assert "a personal vault (/vault-init" in data["description"]
+    assert "CLAUDE_KIT_VAULT" in data["description"]
