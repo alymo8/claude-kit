@@ -158,3 +158,28 @@ def test_pass_message_sends_the_user_to_a_fresh_ship_session():
     passed = " ".join(passed.split())
     assert "/clear" in passed
     assert "/claude-kit:ship docs/superpowers/specs/" in passed
+
+
+def test_rubric_checks_frozen_bullet():
+    rubric = read("rubric.md")
+    item8 = rubric.index("8. **ADR triggers.**")
+    item9 = rubric.index("9. **Frozen evaluator.**")
+    severity = rubric.index("## Severity")
+    assert item8 < item9 < severity
+    assert "- **Frozen:**" in rubric
+    assert "`minor`" in rubric[item9:severity]
+
+
+def test_frozen_field_is_documented():
+    sdd = (REPO / "conventions" / "spec-driven-development.md").read_text(
+        encoding="utf-8"
+    )
+    section = sdd.split("## Frozen files", 1)[1].split("\n## ", 1)[0]
+    for phrase in (
+        "- **Frozen:**",
+        "frozen-check.py",
+        "Frozen-change-approved: <path>",
+        "created once",
+        "ADR 0042",
+    ):
+        assert phrase in section, phrase
