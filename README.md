@@ -84,13 +84,14 @@ is in [`plugin/`](plugin/).
     per-branch handoff file, a context meter, lean exploration.
 - **[`plugin/`](plugin/)** — a Claude Code plugin: the `supabase-cli`,
   `lean-context`, `grill` (opt-in, `CLAUDE_KIT_GRILL=1`), `audit`,
-  `audit-deep`, `pr-review-respond` and `capture-learnings` skills (the
+  `audit-deep`, `pr-review-respond`, `capture-learnings`, `ingest` and `task-prompt` skills (the
   audits share a citation
   checker, `check-findings.py`), the `teach` skill (copied as is from
   [mattpocock/skills](https://github.com/mattpocock/skills), MIT), the on-demand spec → HTML renderer, the `token-report.py`
-  measurement script, a status line, and ten hooks (regenerate the spec/plan
+  measurement script, a status line, and twelve hooks (regenerate the spec/plan
   index after edits and at every stop; report leftover worktrees, inject the
-  branch handoff, inject the lean-context rule unless `CLAUDE_KIT_LEAN_CONTEXT=0`, inject the kit map unless `CLAUDE_KIT_KIT_MAP=0`, inject the workspace rules in repos outside the kit folder unless `CLAUDE_KIT_WORKSPACE_RULES=0`, inject the grill rule when `CLAUDE_KIT_GRILL=1`,
+  branch handoff, inject the lean-context rule unless `CLAUDE_KIT_LEAN_CONTEXT=0`, inject the kit map unless `CLAUDE_KIT_KIT_MAP=0`, inject the workspace rules in repos outside the kit folder unless `CLAUDE_KIT_WORKSPACE_RULES=0`, inject the grill rule when `CLAUDE_KIT_GRILL=1`, point every session at the
+  vault when `CLAUDE_KIT_VAULT` is set,
   and nudge past a context threshold at the right moments;
   snapshot git state at session end). Install once per machine, on any OS,
   with `python plugin/install.py` (see the [setup guide](docs/setup.md)) —
@@ -122,7 +123,7 @@ is in [`plugin/`](plugin/).
   renders a spec or plan (the latest one when no path is given) and opens
   its HTML view. `/docker-compact` reclaims unused space in
   Docker Desktop's virtual disk on Windows, after asking (see
-  [`docs/setup.md`](docs/setup.md#docker-desktop-on-windows)). `/present [repo | spec.md [plan.md]]` (the
+  [`docs/setup.md`](docs/setup.md#docker-desktop-on-windows)). `/vault-init <path> [personal|work]` scaffolds a personal vault (plain Markdown opened in Obsidian) that the `ingest` skill fills from raw pages, documents and call transcripts and the `task-prompt` skill turns tasks into prompts (see [`docs/setup.md`](docs/setup.md#personal-vault)). `/present [repo | spec.md [plan.md]]` (the
   `present` skill) builds a timed, self-contained HTML deck from a repo, spec or
   plan, with every slide rendered and checked by `check-deck.py`. Every deck
   closes with what was built, what was out of scope, a path-to-production

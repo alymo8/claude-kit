@@ -83,6 +83,21 @@ never changes these settings itself.
 prints it when a task used Docker. `/docker-compact` reclaims space that has
 already built up: it asks first, stops Docker and needs one UAC prompt.
 
+## Personal vault
+
+1. Run `/vault-init <path> [personal|work]` to scaffold a vault outside any
+   project repo.
+2. Set `CLAUDE_KIT_VAULT` to that path (see Switches) so each session gets a
+   pointer to it.
+3. Install Obsidian and open the folder as a vault.
+4. Install the Obsidian Web Clipper and set its save folder to `raw/web/`.
+5. Save call transcripts (`.vtt`, `.docx` or text) into `raw/transcripts/`.
+6. Run the `claude-kit:ingest` skill; it writes source, people, topic and task
+   pages and does not commit, so you review the diff.
+
+The work profile keeps `raw/` out of git. Check the employer's policy on
+sending call content to an LLM before ingesting work calls.
+
 ## How changes ship
 
 The flow is in the [README](../README.md): brainstorm, spec, spec gate,
