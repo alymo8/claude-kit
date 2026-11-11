@@ -43,6 +43,12 @@ These are the only reasons to stop. When one fires: write the handoff with the
   and rerun the plan gate through step 3's subagent dispatch. Commit, and
   continue `/ship` from step 4.
 - The PR title does not match the spec's title after one fix in step 7.
+- `frozen-check.py` exits 1 (see Frozen check). Report each changed path. The
+  user answers by approving the change or by revising the spec. On approval,
+  and only then, the main session runs `git commit --allow-empty` after the
+  change commit, with one `Frozen-change-approved: <path>` trailer line per
+  approved path, and continues from the push it stopped before. Implementers
+  and subagents never write that trailer.
 
 ## Git lock retry
 
@@ -51,6 +57,18 @@ that fails with `Unable to create '...lock': File exists` or
 `cannot lock ref` is retried after 5 seconds, up to 5 times. All worktrees
 share one `.git` directory, so concurrent worktrees can collide on its locks.
 A command still failing after that is handled like any other failed command.
+
+## Frozen check
+
+Before every `git push` in steps 5 to 9 (step 7's push, step 8's fix loop and
+step 9's rebase included), run
+`python "${CLAUDE_PLUGIN_ROOT}/scripts/frozen-check.py" <spec> <plan>`
+(fallback if the variable is not expanded:
+`~/.claude/skills/claude-kit/scripts/frozen-check.py`) in the feature
+worktree. Exit 0: push. Exit 1: the frozen stop rule. Exit 2 (bad usage,
+unreadable file, git failure): debug it with
+`superpowers:systematic-debugging` and rerun before pushing; it is not a stop
+rule.
 
 ## Steps
 
@@ -107,7 +125,10 @@ A command still failing after that is handled like any other failed command.
    > `docs/superpowers/plans/<YYYY-MM-DD>-<slug>.md`. Where the spec leaves a
    > choice open, prefer one the spec, its ADRs or the existing code already
    > imply. Answer every question under `## Plan questions` in the spec gate
-   > record in the task it affects (none if the section is missing). Add a
+   > record in the task it affects (none if the section is missing). Copy the
+   > spec's `**Frozen:**` bullet into the plan header, adding any test or eval
+   > file whose full content the plan writes and that a success criterion
+   > depends on. Add a
    > `**Depends on:**` line under each task's `**Files:**` block: `none`, or
    > the earlier tasks whose results it uses (`Task 1, Task 3`); a task whose
    > only link to earlier tasks is shared files gets `none`. Do not write a
@@ -191,7 +212,12 @@ A command still failing after that is handled like any other failed command.
    full test suite and lint from `CLAUDE.md` with quiet output and confirms
    the task's commit is on the branch; a red suite is debugged and fixed in
    the main session with `superpowers:systematic-debugging` (not by resuming
-   the implementer) before the next task. The plan's review
+   the implementer) before the next task. Pass each implementer and task
+   reviewer this global constraint, with <list> the plan's `**Frozen:**`
+   paths (skip it when the plan has none): "Files under Frozen (`<list>`)
+   that exist are read-only. One that does not exist yet is created once,
+   exactly as the plan gives it, and never changed after that commit. Report
+   any other needed change as a blocker." The plan's review
    checkpoints are progress notes, not pauses. A failing test or an unclear
    instruction is debugged with `superpowers:systematic-debugging`, not
    escalated. Before every commit run the full test suite and lint from
@@ -200,40 +226,41 @@ A command still failing after that is handled like any other failed command.
    `docker network ls -q`) in a scratch file outside the repo; then label every
    object the task creates `claude-kit.task=<slug>` (compose: `-p <slug>`) and
    build with `docker buildx create --name <slug>`.
-5. **CI.** `git push -u origin feat/<slug>`. Find the run for the pushed commit:
+5. **CI.** Run the frozen check, then `git push -u origin feat/<slug>`. Find
+   the run for the pushed commit:
    `gh run list --commit $(git rev-parse HEAD) --json databaseId,status,conclusion`
    (retry every 15 s until it appears), then `gh run watch <id> --exit-status`.
    On red: `gh run view <id> --log-failed`, use `superpowers:systematic-debugging`,
-   fix, commit, push, count one attempt.
-6. **Review.** If this session received, during step 4 of this run, the
-   report of the final whole-branch review that step 4's skill runs (SDD's
-   final review or `parallel-tasks`' final review), do not run
-   `superpowers:requesting-code-review`: the findings that review fixed are
-   the review findings for the PR and the report. Otherwise (for example a
-   run resumed in another session that found every task complete and did not
-   reach a final review), use `superpowers:requesting-code-review` on
-   `origin/main..HEAD`, then `superpowers:receiving-code-review`. Fix every
-   finding you can verify; commit, re-run tests, push. A finding that needs a
+   fix, commit, run the frozen check, push, count one attempt.
+6. **Review.** If this session did not receive, during step 4 of this run,
+   the report of the final whole-branch review that step 4's skill runs
+   (SDD's final review or `parallel-tasks`' final review), for example on a
+   run resumed in another session, first use
+   `superpowers:requesting-code-review` on `origin/main..HEAD`, then
+   `superpowers:receiving-code-review`, and fix every finding you can verify.
+   Then, on every run, run the `claude-kit:review` skill with base
+   `origin/main`, the spec and the plan. Fix every `hard` standards finding
+   and every spec finding of kind (a) or (c) you can verify; remove scope
+   creep (b) unless removing it breaks a requirement. Fix a `judgement`
+   finding when the fix is small and clearly better; keep the rest for the PR
+   body and the report. Commit, re-run the full test suite and lint, run the
+   frozen check, push. A finding from any of these reviews that needs a
    scope, product or behaviour decision the spec does not settle is a stop
-   rule, whichever review raised it.
-7. **PR.** First run the `claude-kit:capture-learnings` skill. If it made a
-   commit, run the full test suite and lint from `CLAUDE.md`, then
-   `git push`. The PR title is the spec's **title**: the first line outside code
-   fences that starts with `# `, with the `# ` prefix and trailing whitespace
+   rule.
+7. **PR.** First run the `claude-kit:capture-learnings` skill with the
+   argument `--auto`. If it made a commit, run the full test suite and lint
+   from `CLAUDE.md`, then run the frozen check and `git push`. The PR title
+   is the spec's **title**: the first line outside code fences that starts
+   with `# `, with the `# ` prefix and trailing whitespace
    removed (backticks and punctuation kept). Run, with the Bash tool (not
    PowerShell, whose native-argument quoting drops `"` and mangles non-ASCII),
    `gh pr create --title '<title>' --body-file <file>`, with the title written
    out literally inside single quotes and each `'` in it written as `'\''`.
    Single quotes keep backticks and `$` literal, and a literal command passes
-   worktree-isolation guards, which refuse command substitution. The body has:
-   Summary, links to the spec, the plan and the plan gate record
-   (`docs/superpowers/gates/plans/<plan file name>`), a section that lists
-   verbatim each entry of the plan record's `## Plan-introduced decisions`
-   (omit it when that list is `none`), titled
-   `Plan decisions (auto-approved)` when the record has
-   `- **Approved by:** /ship (auto)` and `Plan decisions` otherwise,
-   Verification (the exact
-   commands and their results), and the attribution line the session requires.
+   worktree-isolation guards, which refuse command substitution. Write the
+   body by `${CLAUDE_PLUGIN_ROOT}/references/pr-body.md` (fallback if the
+   variable is not expanded: `~/.claude/skills/claude-kit/references/pr-body.md`):
+   its shared parts and its `/ship` list.
    Then compare `gh pr view --json title` with the title; on a mismatch run
    `gh pr edit --title '<title>'` (same quoting) once and compare again. A
    title that still differs is a stop rule.
