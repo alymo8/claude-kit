@@ -40,11 +40,30 @@ Language-agnostic principles that hold whatever the stack:
 - Readable over clever.
 - Consistent formatting enforced by an **automated formatter** — no hand-formatting
   debates.
-- No dead or commented-out code.
+- No dead or commented-out code introduced by the change.
 - Meaningful, intention-revealing names.
 
 Concrete tool choices (formatter, linter, type-checker, and their configs) are
 pinned per project once its stack is known — and that choice is itself worth an ADR.
+
+### Surgical diffs and simplicity
+
+- **Trace every line.** Every changed line traces to the spec, plan task or
+  request. Do not reformat, rename or refactor code the change does not need.
+- **Mention unrelated dead code.** Unrelated dead code you notice: mention it
+  (report or PR body); do not delete it.
+- **Remove only your own leftovers.** Remove only what your own change made unused
+  (imports, variables, functions, files).
+- **Nothing speculative.** No configurability nobody asked for, no abstraction
+  with one caller, no error handling for cases that cannot happen.
+- **Deleting is a win.** A change that deletes code and keeps the same behaviour
+  is a win; prefer it to adding code.
+- **Ask during design.** When the request is ambiguous, ask during design
+  (brainstorming, spec). This never adds a check-in to `/ship` or `/ship-many`,
+  whose approval covers the run (ADR 0018, ADR 0036): during execution, take the
+  reading the spec most supports and note it.
+
+The standards reviewer of claude-kit:review checks these rules (ADR 0044).
 
 ## 3. Code review
 
@@ -87,5 +106,7 @@ Windows) and reports its line; compaction is only on demand, via
 
 - Behavior is covered by tests at merge (test-first, or the divergence is a named
   carve-out).
-- Formatting is tool-enforced; no dead code; names reveal intent.
+- Formatting is tool-enforced; no dead code introduced by the change; names reveal
+  intent.
+- The diff is surgical: every changed line traces to the spec or task.
 - The PR passed CI, an AI review, and a human approval before landing on `main`.

@@ -74,6 +74,7 @@ A good spec answers, in roughly this order:
   `plugin/skills/grill/coverage.md`, saying where the spec addresses it or
   `N/A` with the reason. `spec-lint.py` rule `L9-coverage` checks it
   ([ADR 0019](../knowledge/decisions/0019-spec-grill-opt-in.md)).
+- **Frozen** (optional) — see [Frozen files](#frozen-files).
 
 ## Spec gate
 
@@ -148,6 +149,21 @@ the open items go to the user as questions. The gate writes
 either makes the record stale. Under `/ship`, `/ship` approves a
 `pass-with-decisions` itself unless a decision is irreversible, and a `fail`
 stops the run.
+
+## Frozen files
+
+A spec or plan may carry, among its header bullets, a `- **Frozen:**` bullet
+listing backticked repo-relative paths or globs: the acceptance tests, eval
+harness or fixtures whose results decide "done". Once the spec or plan is
+approved, implementers never edit those files to make them pass. A frozen
+file that does not exist yet is created once, exactly as the plan gives it,
+and never changed after. A needed change goes back to the user as a spec
+decision.
+
+`plugin/scripts/frozen-check.py` enforces this before each push in `/ship`
+and `/ship-fast`. Only the main session writes a
+`Frozen-change-approved: <path>` trailer, and only after the user approves
+the change; implementers and subagents never write it (ADR 0042).
 
 ## Parallel plan tasks
 

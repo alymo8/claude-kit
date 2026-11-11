@@ -51,6 +51,11 @@ never edit the spec.
    only: never add an ADR to Scope In for it without the user.
    (In the kit repo, `conventions/decision-log.md` is the workspace
    convention itself.)
+9. **Frozen evaluator.** If the Success criteria name a test or eval file, or
+   a test suite the change adds, and the spec has neither a `- **Frozen:**`
+   header bullet nor a Decisions entry saying why nothing is frozen, raise a
+   `minor` finding. Its fix is to add the bullet with those paths, or a
+   Decisions entry saying why nothing is frozen.
 
 ## Severity
 

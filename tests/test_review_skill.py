@@ -1,4 +1,4 @@
-from helpers import PLUGIN
+from helpers import PLUGIN, REPO
 
 REVIEW = PLUGIN / "skills" / "review"
 SMELLS = (
@@ -121,3 +121,26 @@ def test_spec_reviewer_axes():
         "<spec path>",
     ):
         assert phrase in text, phrase
+
+
+def collapsed(path):
+    return " ".join(path.read_text(encoding="utf-8").split())
+
+
+def test_engineering_practices_name_the_surgical_rules():
+    text = collapsed(REPO / "conventions" / "engineering-practices.md")
+    for phrase in (
+        "### Surgical diffs and simplicity",
+        *(f"**{name}.**" for name in SURGICAL_RULES),
+        "The diff is surgical: every changed line traces to the spec or task.",
+        "No dead or commented-out code introduced by the change.",
+        "no dead code introduced by the change",
+        "ADR 0044",
+    ):
+        assert phrase in text, phrase
+
+
+def test_knowledge_layer_names_the_reviewer_only_file():
+    text = collapsed(REPO / "conventions" / "knowledge-layer.md")
+    assert "knowledge/review-standards.md" in text
+    assert "never link it from `CLAUDE.md`" in text
