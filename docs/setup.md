@@ -61,6 +61,7 @@ Set these under `env` in `~/.claude/settings.json`.
 | Variable | Default | Effect |
 |---|---|---|
 | `CLAUDE_KIT_LEAN_CONTEXT` | on | `0` stops injecting the lean-context rule (also deny `Skill(claude-kit:lean-context)`) |
+| `CLAUDE_KIT_PRECOMPACT` | on | `0` stops steering the compaction summary toward dead ends and open problems |
 | `CLAUDE_KIT_KIT_MAP` | on | `0` stops injecting the kit map |
 | `CLAUDE_KIT_WORKSPACE_RULES` | on | `0` stops injecting the workspace rules in repos outside the kit folder |
 | `CLAUDE_KIT_GRILL` | off | `1` turns on the spec grill before a spec is written |

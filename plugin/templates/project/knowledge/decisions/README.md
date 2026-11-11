@@ -2,7 +2,8 @@
 
 Architecture Decision Records for {{project_name}}: one decision per numbered file,
 the next number for a new one, never deleted, superseded instead. Template:
-[`0000-template.md`](0000-template.md).
+[`0000-template.md`](0000-template.md). An idea considered and refused gets an ADR
+with status `rejected`, so its reason survives; check the log before reopening one.
 
 ## When to write one
 
