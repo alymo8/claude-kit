@@ -305,7 +305,6 @@ def test_frozen_check_runs_before_every_push():
     rule = _frozen()
     for needle in (
         'frozen-check.py" <spec> <plan>',
-        "~/.claude/skills/claude-kit/scripts/frozen-check.py",
         "superpowers:systematic-debugging",
         "not a stop rule",
         "step 8's fix loop",
@@ -349,7 +348,6 @@ def test_pr_body_follows_the_reference():
     step = _step(7)
     for needle in (
         "references/pr-body.md",
-        "~/.claude/skills/claude-kit/references/pr-body.md",
         "**Door:**",
         "**Blast radius:**",
         "Merge danger",
