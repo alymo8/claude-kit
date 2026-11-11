@@ -23,6 +23,16 @@ Things that cost time in past runs and are not obvious from the code.
   line that starts at column 0 with `<digits>. `. Prose added inside a step
   (sub-items included) stays indented 3 spaces (4 for steps 10–12), or
   every later step's tests break. Plans that edit `ship.md` should say so.
+  Steps 8–12 live in `plugin/references/ship-finish.md`; the tests read
+  `helpers.command_text("ship")`, which inlines each reference file after
+  the paragraph that points to it.
+- A skill or command at 20,000 bytes or more fails `tests/test_skill_size.py`
+  (Claude Code cuts it there after a compaction). Move late sections to
+  `plugin/references/`, never into `commands/` (every `.md` there becomes a
+  slash command), and point to them as
+  `${CLAUDE_PLUGIN_ROOT}/references/<file>.md` with the
+  `~/.claude/skills/claude-kit/references/<file>.md` fallback in the same
+  file, or the pointer test fails.
 - Writing test code through a bash heredoc into a Python script turns
   `\n` escapes inside string literals into real line breaks, so the
   test file no longer parses. Edit test files with the Edit tool.
