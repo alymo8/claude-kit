@@ -36,7 +36,10 @@ at 150k, by 65%.
    switches it off (ADR 0014). The kit map, injected at session start, gives the
    absolute paths of these playbooks and the kit's ADRs from any repo;
    `CLAUDE_KIT_KIT_MAP=0` switches it off (ADR 0032).
-4. **Make growth visible.** The status line shows context size at zero cost; a
+4. **Keep dead ends through a compaction.** A PreCompact hook tells the
+   compaction summary to keep the approaches already tried and why they failed,
+   open problems and confirmed decisions; `CLAUDE_KIT_PRECOMPACT=0` switches it off.
+5. **Make growth visible.** The status line shows context size at zero cost; a
    nudge at 300k tokens (then every 100k) says when to hand off.
 
 ## The handoff file

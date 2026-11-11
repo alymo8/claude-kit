@@ -61,7 +61,7 @@ practice doc; the ADR captures the decision itself.
 ```markdown
 # ADR NNNN: <Title>
 
-- **Status:** proposed | accepted | superseded
+- **Status:** proposed | accepted | rejected | superseded
 - **Date:** YYYY-MM-DD
 
 ## Context
@@ -74,7 +74,9 @@ practice doc; the ADR captures the decision itself.
 <tradeoffs — what this enables and what it costs>
 ```
 
-- **Status** is one of `proposed` | `accepted` | `superseded`.
+- **Status** is one of `proposed` | `accepted` | `rejected` | `superseded`. Use
+  `rejected` for an idea that was seriously considered and refused: the ADR keeps
+  the reason, and the log is checked before the idea is reopened.
 - **Cross-reference** related ADRs and knowledge docs rather than duplicating their
   content.
 
