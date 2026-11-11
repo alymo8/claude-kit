@@ -84,8 +84,9 @@ is in [`plugin/`](plugin/).
     per-branch handoff file, a context meter, lean exploration.
 - **[`plugin/`](plugin/)** — a Claude Code plugin: the `supabase-cli`,
   `lean-context`, `grill` (opt-in, `CLAUDE_KIT_GRILL=1`), `audit`,
-  `audit-deep`, `pr-review-respond` and `capture-learnings` skills (the
-  audits share a citation
+  `audit-deep`, `pr-review-respond`, `capture-learnings` and `review` skills
+  (`review` is a standards reviewer and a spec reviewer side by side, run by
+  `/ship`'s review step; the audits share a citation
   checker, `check-findings.py`), the `teach` skill (copied as is from
   [mattpocock/skills](https://github.com/mattpocock/skills), MIT), the on-demand spec → HTML renderer, the `token-report.py`
   measurement script, a status line, and ten hooks (regenerate the spec/plan
@@ -108,7 +109,10 @@ is in [`plugin/`](plugin/).
   an approved spec all the way to a squash-merged, cleaned-up change on
   `main` without further check-ins; it stops only on the rules listed in
   the command (red CI after three fixes, a review finding that needs a
-  decision, a refused merge, a failed pre-flight). `/ship-many <spec.md> ...`
+  decision, a refused merge, a failed pre-flight). A spec or plan can freeze
+  its acceptance tests with a `- **Frozen:**` bullet; `frozen-check.py`
+  checks them before every push and a changed frozen file stops the run.
+  `/ship-many <spec.md> ...`
   ships several approved specs at once: it gates each, groups the ones whose
   Scope In lists share no file, and runs each group as concurrent headless
   `/ship` runs (at most 3 by default); `--dry-run` shows the waves first.

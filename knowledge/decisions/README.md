@@ -45,3 +45,8 @@ the next number; superseded ones are never deleted.
 | [0037](0037-lean-ship-orchestrator.md) | `/ship`'s main session coordinates; subagents write the plan and the code | accepted | 2026-10-20 |
 | [0038](0038-docker-disk-upkeep-outside-cleanup.md) | Docker disk upkeep runs outside the per-feature clean-up | accepted | 2026-10-21 |
 | [0039](0039-handoff-ages-by-written.md) | A handoff ages by its Written date, not by the session-end refresh | accepted | 2026-10-30 |
+| [0041](0041-two-axis-review-in-ship.md) | Two-axis review in `/ship` | accepted | 2026-11-10 |
+| [0042](0042-frozen-evaluator-diff-check.md) | Frozen evaluator as a diff check and a stop rule | accepted | 2026-11-10 |
+| [0043](0043-harden-in-capture-learnings.md) | Harden step in capture-learnings | accepted | 2026-11-10 |
+| [0044](0044-surgical-diffs-and-simplicity.md) | Surgical diffs and simplicity | accepted | 2026-11-10 |
+| [0045](0045-merge-danger-in-pr-bodies.md) | Merge Danger in PR bodies | accepted | 2026-11-10 |

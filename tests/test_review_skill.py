@@ -144,3 +144,26 @@ def test_knowledge_layer_names_the_reviewer_only_file():
     text = collapsed(REPO / "conventions" / "knowledge-layer.md")
     assert "knowledge/review-standards.md" in text
     assert "never link it from `CLAUDE.md`" in text
+
+
+ADRS = (
+    "0041-two-axis-review-in-ship.md",
+    "0042-frozen-evaluator-diff-check.md",
+    "0043-harden-in-capture-learnings.md",
+    "0044-surgical-diffs-and-simplicity.md",
+    "0045-merge-danger-in-pr-bodies.md",
+)
+
+
+def test_adrs_exist_and_are_indexed():
+    decisions = REPO / "knowledge" / "decisions"
+    index = (decisions / "README.md").read_text(encoding="utf-8")
+    for adr in ADRS:
+        assert (decisions / adr).is_file(), adr
+        assert f"]({adr})" in index, adr
+    assert "0037" in (decisions / ADRS[0]).read_text(encoding="utf-8")
+
+
+def test_readme_names_the_review_skill_and_frozen_check():
+    readme = " ".join((REPO / "README.md").read_text(encoding="utf-8").split())
+    assert "`review`" in readme and "frozen-check.py" in readme
