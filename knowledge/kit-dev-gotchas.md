@@ -30,12 +30,21 @@ Things that cost time in past runs and are not obvious from the code.
   (Claude Code cuts it there after a compaction). Move late sections to
   `plugin/references/`, never into `commands/` (every `.md` there becomes a
   slash command), and point to them as
-  `${CLAUDE_PLUGIN_ROOT}/references/<file>.md` with the
-  `~/.claude/skills/claude-kit/references/<file>.md` fallback in the same
-  file, or the pointer test fails.
+  `${CLAUDE_PLUGIN_ROOT}/references/<file>.md`. The same file must give the
+  `~/.claude/skills/claude-kit/references/<file>.md` fallback, or state it
+  once with the `FALLBACK_RULE` line from `tests/test_skill_size.py`, or the
+  pointer test fails.
 - Writing test code through a bash heredoc into a Python script turns
   `\n` escapes inside string literals into real line breaks, so the
   test file no longer parses. Edit test files with the Edit tool.
+- Before promising how much a command can shrink, read its tests:
+  `tests/test_ship_command.py` and `tests/test_ship_fast_command.py` pin
+  about 60 exact phrases, and one pins a line break
+  (`"one\n   copy, the only one the run starts"` in step 5 of
+  `ship-fast.md`), so rewrapping that sentence fails the test.
+- Measure a tracked file's size with `git show HEAD:<path> | wc -c`, not
+  `wc -c <path>`: the working copy is checked out with CRLF and reads a
+  few hundred bytes larger than the stored LF file.
 - Appending to a CRLF file with a bash heredoc mixes line endings, and
   `ruff format --check` then flags the file. Run `ruff format <file>`.
 
@@ -54,6 +63,25 @@ Things that cost time in past runs and are not obvious from the code.
   origin/main` tracks `origin/main`, so `handoff.py state` reports
   "upstream: origin/main". The first push must be
   `git push -u origin feat/<slug>`.
+
+## Why `/ship` and `/ship-fast` say what they say
+
+The commands keep the rules and leave out the reasons; the reasons are here.
+
+- **Git lock retry:** every worktree shares one `.git` directory, so
+  concurrent worktrees (`parallel-tasks`, `/ship-many`) collide on its
+  lock files.
+- **PR title through the Bash tool, in single quotes:** PowerShell's
+  native-argument quoting drops `"` and mangles non-ASCII; single quotes
+  keep backticks and `$` literal; a literal command passes the worktree
+  isolation guard, which refuses command substitution.
+- **Red first `main` CI on a new `/ship-fast` repo:** pytest exits 5 on an
+  empty suite. `uv init --no-workspace` stops a parent `pyproject.toml`
+  from adopting the new project.
+- **Plugin path fallback:** `${CLAUDE_PLUGIN_ROOT}` is not always expanded in
+  command text, so each long command states once that
+  `~/.claude/skills/claude-kit` stands in for it (`tests/test_skill_size.py`
+  accepts that line or a per-pointer fallback).
 
 ## Scripts on Windows
 

@@ -5,14 +5,11 @@ disable-model-invocation: true
 ---
 
 Ship a proof of concept of about an hour fast, with the user deciding what
-it does. `$ARGUMENTS` is a spec path or an idea (see Input). This is the
-light path: the user reads and approves the spec, no gate runs on the spec
-or on the task list, there is no formal
-review round, and the run ends at an open pull request with green CI and
-the POC running from its kept workspace. The user reviews and merges it;
-never merge it yourself. The workspace is cleaned up only when the user
-asks, after testing (see Cleanup). The run may be shown
-live to a client: phrase every question in product terms.
+it does. `$ARGUMENTS` is a spec path or an idea (see Input). The user reads
+and approves the spec; no gate runs, there is no formal review round, and
+the run ends at an open pull request with green CI and the POC running from
+its kept workspace. The user merges it; never merge it yourself. The run
+may be shown live to a client: phrase every question in product terms.
 
 Invoking `/ship-fast` is the user's approval for every step below,
 including creating a private GitHub repository when the spec asks for one.
@@ -24,8 +21,9 @@ the user, within step 0's budget. Anywhere else, where a skill this command
 invokes says "ask" or "wait for the answer", take the path this command
 names and continue. Do not check local `main` or stop for its state, and
 skip the workspace's pre-flight branch check: invoking `/ship-fast` waives
-it. Never delete a repository, and never suggest deleting one: the user
-does that themselves.
+it. Never delete a repository, and never suggest deleting one.
+
+Where `${CLAUDE_PLUGIN_ROOT}` is not expanded, use `~/.claude/skills/claude-kit` in its place.
 
 ## Input
 
@@ -82,27 +80,21 @@ the task list, and continues from the same point. No handoff is written and
 the run does not end.
 
 **Non-interactive runs.** At the start of step 0 (or, with a spec path,
-before the first question), check whether the
-`AskUserQuestion` tool is available in this session (listed directly or
-as a deferred tool both count as available); if it is not (for
-example a scripted `claude -p` run), the session is non-interactive. In a
-non-interactive session: step 0 is a stop rule (the interview needs the
-user; pass a spec path), and so is a spec whose Status is not `approved`
-(approve it first). Every product or non-risky engineering question in
-step 3b or later takes its recommended answer, listed as "assumed (not
-asked)" in the task list's `## Decisions` and in the PR body, and the run
-continues. A risky engineering choice is a stop rule, and in step 3b it
+before the first question), check whether `AskUserQuestion` is available
+(listed directly or deferred); if not (say a scripted `claude -p` run),
+the session is non-interactive and its stop rules apply. Every product or
+non-risky engineering question in step 3b or later then takes its
+recommended answer, listed as "assumed (not asked)" in the task list's
+`## Decisions` and in the PR body. A risky engineering choice in step 3b
 stops before `## Decisions` is written, so the rerun asks step 3b again:
 the stop message and the handoff list the choice with its options and
 recommendation, and say how to settle it (rerun interactively, or add the
 answer to the spec's `## Decisions`, which step 3b then treats as
 decided).
 
-**Where answers go.** Every question the user answered, product or
-engineering, appears under **Decisions** in the PR body and the report;
-product choices taken without asking appear there as "assumed (not
-asked)". Only engineering choices taken without asking go under
-**Assumptions**.
+**Where answers go.** In the PR body and the report, **Decisions** lists
+every answered question and every product choice "assumed (not asked)";
+**Assumptions** lists only engineering choices taken without asking.
 
 ## Stop rules
 
@@ -134,11 +126,9 @@ invocation (for example `/ship-fast <path to an existing spec.md>`).
 
 ## Git lock retry
 
-Any git command in this repository, in the main checkout or any worktree,
-that fails with `Unable to create '...lock': File exists` or
-`cannot lock ref` is retried after 5 seconds, up to 5 times. All worktrees
-share one `.git` directory, so concurrent worktrees can collide on its locks.
-A command still failing after that is handled like any other failed command.
+A git command (any checkout or worktree of this repository) that fails with
+`Unable to create '...lock': File exists` or `cannot lock ref` is retried
+after 5 seconds, up to 5 times; then it is handled like any failed command.
 
 ## Resume
 
@@ -146,7 +136,7 @@ A rerun after a stop continues where the last run stopped. A run that
 stopped before step 0 wrote the spec starts the interview again; after
 that, rerun with the spec path the stop message gave.
 
-On a rerun, before anything else, read `${CLAUDE_PLUGIN_ROOT}/references/ship-fast-resume.md` (fallback if the variable is not expanded: `~/.claude/skills/claude-kit/references/ship-fast-resume.md`)
+On a rerun, before anything else, read `${CLAUDE_PLUGIN_ROOT}/references/ship-fast-resume.md`
 and follow it.
 
 ## Steps
@@ -154,25 +144,22 @@ and follow it.
 Record the wall-clock time at the start of each step from 2 to 7, and when
 step 7 ends. A resumed run reports the minutes it measured.
 
-**Step 0** (Spec), only when Input says so: read `${CLAUDE_PLUGIN_ROOT}/references/ship-fast-spec.md` (fallback if the variable is not expanded: `~/.claude/skills/claude-kit/references/ship-fast-spec.md`)
+**Step 0** (Spec), only when Input says so: read `${CLAUDE_PLUGIN_ROOT}/references/ship-fast-spec.md`
 and follow it.
 
 1. **Repo.** With a `**Repo:** new <name> <stack>` line, run
    `python "${CLAUDE_PLUGIN_ROOT}/scripts/scaffold.py" --name <name> --stack <stack>`
-   (fallback if the variable is not expanded:
-   `~/.claude/skills/claude-kit/scripts/scaffold.py`). Pass no `--parent`:
-   the repository is created beside the other project repos in the
-   workspace, and `<repo>` is the path the script prints. In `<repo>`, run
+   with no `--parent` (the repository goes beside the other project repos);
+   `<repo>` is the path the script prints. In `<repo>`, run
    only the stack's init commands from the script's `next:` line (not
    `/init`, and not its `gh repo create` hint), passing `--no-workspace` to
    `uv init` so a parent `pyproject.toml` does not adopt the new project;
    copy the spec to
    `docs/superpowers/specs/<spec file name>` (the original stays where it
    was), and commit the init output and the spec together. Then run
-   `gh repo create <name> --private --source <repo> --push`. The first
-   `main` CI run on that push may be red because the repository has no
-   tests yet (pytest exits 5 on an empty suite); that is expected, not a
-   stop, and the report says so. From here on, "the spec" is the copy at
+   `gh repo create <name> --private --source <repo> --push`. A red first
+   `main` CI run there (no tests yet) is expected, not a stop; the report
+   says so. From here on, "the spec" is the copy at
    `docs/superpowers/specs/<spec file name>` in `<repo>`. Without the line,
    run `git fetch origin` in the spec's repository.
 2. **Worktree.** Use `superpowers:using-git-worktrees` in the repository;
@@ -214,8 +201,7 @@ and follow it.
    are empty, say so in one line, write `## Decisions` with the single line
    `- none new`, and commit.
 4. **Implement.** Run
-   `python "${CLAUDE_PLUGIN_ROOT}/scripts/parallel-plan.py" waves <plan>`
-   (fallback: `~/.claude/skills/claude-kit/scripts/parallel-plan.py`). If it
+   `python "${CLAUDE_PLUGIN_ROOT}/scripts/parallel-plan.py" waves <plan>`. If it
    exits non-zero, or every wave has one task, implement the tasks in order
    in this session with `superpowers:test-driven-development`. Otherwise
    run `claude-kit:parallel-tasks` with `<plan>` as its argument (at most 3
@@ -230,15 +216,13 @@ and follow it.
    implementing that task inline. Tests cover the core path and every
    acceptance criterion a test can check; skip edge cases the spec does not
    ask for. Before each commit run the full suite and lint; commit per task
-   with its commit message. Before the first Docker command, record the
-   baseline (`docker ps -aq`, `docker images -q`, `docker volume ls -q`,
-   `docker network ls -q`) in `~/.claude/ship-fast-specs/<slug>.docker-baseline.txt`
-   (outside the repo, and still there for a Cleanup in a later session); then label
-   every object the task creates `claude-kit.task=<slug>` (compose:
-   `-p <slug>`) and build with `docker buildx create --name <slug>`.
-5. **Smoke run.** The user tries the app while the smoke run checks it, so
-   their time is not spent waiting. First, use the `run` skill to launch the
-   app from the worktree as a background process (or its containers): one
+   with its commit message. Before the first Docker command, follow "Docker
+   hygiene" in the engineering-practices playbook (kit map), with `<slug>`
+   as the task name and the baseline in
+   `~/.claude/ship-fast-specs/<slug>.docker-baseline.txt` (it outlives the
+   session, for a later Cleanup).
+5. **Smoke run.** The user tries the app while it is checked. Use the
+   `run` skill to launch it from the worktree in the background (or its containers): one
    copy, the only one the run starts. Before any check, post a **Try it
    now** line: its URL or entry command and the command to stop it (for a
    CLI app with no server, the entry command alone, for the user to run).
@@ -259,7 +243,7 @@ and follow it.
    commit `<slug>: review fixes` if anything is left (that commit restarts
    the app, as in step 5).
 **Steps 7 to 9** (PR, Hand over, Report): once step 6 is done, read
-`${CLAUDE_PLUGIN_ROOT}/references/ship-fast-finish.md` (fallback if the variable is not expanded: `~/.claude/skills/claude-kit/references/ship-fast-finish.md`) and follow it.
+`${CLAUDE_PLUGIN_ROOT}/references/ship-fast-finish.md` and follow it.
 
 ## Cleanup (on request)
 
@@ -269,4 +253,4 @@ testing the POC, in this session or a later one. Find the worktree with
 changes or commits not on `origin/poc/<slug>` (the user may have edited
 while testing), list them and ask before removing anything.
 
-Then read `${CLAUDE_PLUGIN_ROOT}/references/ship-fast-cleanup.md` (fallback if the variable is not expanded: `~/.claude/skills/claude-kit/references/ship-fast-cleanup.md`) and follow it.
+Then read `${CLAUDE_PLUGIN_ROOT}/references/ship-fast-cleanup.md` and follow it.

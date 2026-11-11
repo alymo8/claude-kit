@@ -22,12 +22,20 @@ def test_under_compaction_limit(path):
     assert size < LIMIT, f"{size} bytes; move late sections to plugin/references/"
 
 
+FALLBACK_RULE = (
+    "Where `${CLAUDE_PLUGIN_ROOT}` is not expanded, "
+    "use `~/.claude/skills/claude-kit` in its place."
+)
+
+
 def test_every_reference_pointer_resolves_and_has_a_fallback():
+    # A file either states the fallback once (FALLBACK_RULE) or per pointer.
     for path in FILES:
         text = path.read_text(encoding="utf-8")
         for ref in REFERENCE_RE.findall(text):
             assert (PLUGIN / "references" / ref).is_file(), (path.name, ref)
-            assert f"~/.claude/skills/claude-kit/references/{ref}" in text, ref
+            fallback = f"~/.claude/skills/claude-kit/references/{ref}"
+            assert FALLBACK_RULE in text or fallback in text, ref
 
 
 def test_every_reference_file_is_read_by_a_command():
