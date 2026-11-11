@@ -15,7 +15,7 @@ auto-memory, remote docs and dozens of repo `knowledge/` folders.
 This change adds a **vault**: a folder of plain Markdown (opened in Obsidian)
 that follows the same principles as the knowledge layer, applied to a person
 rather than a repo. Raw material is dropped into `raw/` and kept verbatim; an
-`/ingest` skill compiles it into one page per person, topic and source, linked
+`ingest` skill compiles it into one page per person, topic and source, linked
 with `[[wiki-links]]` and reachable from one index (the "LLM wiki" pattern). A
 `task-prompt` skill turns a task in the vault into a ready prompt with its
 context. A SessionStart hook tells every session, in every repo, where the vault
@@ -44,7 +44,9 @@ defaults and nothing is shared between instances.
   see Testing.
 - `tests/fixtures/vault/` (new): three raw samples for the live check, all
   fictional. Every person and organization in them is invented and named in a
-  header comment of each file:
+  header comment of each file. The people and topics each sample materially
+  concerns (the pages ingest is expected to create) are listed in
+  `tests/fixtures/vault/EXPECTED.md` (new), which is never copied into `raw/`:
   - `tests/fixtures/vault/web/atlas-launch-notes.md` (new): a clipped page.
   - `tests/fixtures/vault/transcripts/2026-11-03-atlas-sync.vtt` (new): a call
     with exactly three action items: one with an owner and a due date, one
@@ -76,7 +78,7 @@ defaults and nothing is shared between instances.
 - Automatic call capture (Teams Graph API, bots, audio recording): v1 takes
   transcripts the user saves into `raw/transcripts/` by hand.
 - Syncing remote documents (OneDrive, SharePoint, Claude Docs) into the vault.
-- Changes to the `meeting-actions` repo.
+- Changes to any other project repo.
 - Global coding rules from the andrej-karpathy-skills CLAUDE.md: the kit's
   conventions already cover them.
 - Creating the user's actual vaults: done after merge with `/vault-init`, not
@@ -126,7 +128,7 @@ Registries:
   file), `sha256` (of the raw file's bytes at ingest), `date`, `people: []`,
   `topics: []`. Sections: Summary, Key facts, and for calls Decisions and
   Action items. Calls use `call.md`; other kinds use `source.md`.
-- **`tasks/`**: one file per task, `<YYYY-MM-DD>-<slug>.md`. Frontmatter
+- **`tasks/`** (a folder, not a registry in `vault.toml`): one file per task, `<YYYY-MM-DD>-<slug>.md`. Frontmatter
   `type: task`, `status` (`inbox` | `todo` | `doing` | `done`), `owner`,
   `topic`, `source` (a wiki-link to the source page), `due`. Sections:
   Description, Acceptance criteria, Notes.
@@ -188,8 +190,9 @@ the script, shows its output verbatim, stops on a non-zero exit.
 of every `wiki/sources/*.md`, and prints one line per raw file that is
 `new` (no source page names it) or `changed` (its sha256 differs), as
 `<status>\t<vault-relative path>`, sorted by path. `--json` prints a list of
-`{"path", "status", "source"}` objects (`source` is the existing page's path
-for `changed`, else null). Exit 0, also when nothing is pending; exit 2 if
+`{"path", "status", "source", "sha256"}` objects (`source` is the existing page's path
+for `changed`, else null; `sha256` is the raw file's current hash, hex, of its
+bytes). Exit 0, also when nothing is pending; exit 2 if
 `VAULT` has no `vault.toml`.
 
 `vault-pending.py --extract FILE` prints the plain text of a `.docx` file
@@ -214,7 +217,8 @@ user asks to ingest or file material into the vault. Steps:
    read directly; `.docx` through `vault-pending.py --extract`. Any other
    format is skipped and listed in the report as unsupported. Then:
    - write or update its `sources/` page from the matching template, with
-     `raw` and the current `sha256`;
+     `raw` and the `sha256` value from `vault-pending.py --json` (the skill
+     never hashes by itself);
    - for each person and topic it materially concerns, update the existing
      page (search `wiki/` by name and aliases first, skipping `wiki/_templates/`) or create one from the
      template; add only facts the source states, each ending with a link to
@@ -222,7 +226,8 @@ user asks to ingest or file material into the vault. Steps:
    - for a call, add each action item to the source page and create a
      `tasks/` file with `status: inbox`, the stated owner (empty if none was
      stated), `topic`, `source` and `due` (empty if none was stated);
-   - add every new page to `wiki/index.md` under its registry.
+   - add every new page to `wiki/index.md` under its registry, and every new
+     task file under Tasks.
 4. **Changed files** update their existing source page and the facts that came
    from it, rather than creating a second source page.
 5. **Report**: one list of pages created and pages updated, tasks created,
@@ -315,6 +320,9 @@ It does not change any file.
 - **Change detection by sha256 in source-page frontmatter** (builder's call):
   no separate log file to drift, and `vault-pending.py` makes it testable.
 - **Ingest does not commit** (builder's call): the user reviews the diff.
+- **The work profile keeps `raw/` out of git** (builder's call, privacy):
+  raw call transcripts and documents stay out of git history; the user checks
+  the employer's policy before ingesting work calls.
 - **A new hook rather than extending the kit map** (builder's call): the kit
   map prints nothing on a plugin-only install, and the vault pointer must not
   depend on that.
@@ -325,10 +333,10 @@ It does not change any file.
 2. `ruff check plugin tests` and `ruff format --check plugin tests` pass.
 3. **Live ingest check** (run by the implementer, transcript of the run in the
    PR): `vault-init.py` a throwaway vault in a temp folder; copy
-   `tests/fixtures/vault/` samples into its `raw/`; run the ingest skill. Then
+   `tests/fixtures/vault/` samples (not `EXPECTED.md`) into its `raw/`; run the ingest skill. Then
    `vault-pending.py` prints nothing; each sample has a `sources/` page with
-   matching `raw` and `sha256`; the people and topics named in the samples have
-   pages linking to those source pages; `wiki/index.md` lists every new page;
+   matching `raw` and `sha256`; the people and topics `EXPECTED.md` lists for each
+   sample have pages linking to those source pages; `wiki/index.md` lists every new page;
    the transcript produced one `tasks/` file per action item in it, each with
    a `source` link and an owner only where the transcript states one. Commit the
    first run's result in the vault (as the user would after review); running
@@ -356,7 +364,7 @@ It does not change any file.
   placeholder remains in any rendered file.
 - `tests/test_vault_pending.py`: new, changed and up-to-date raw files are
   classified correctly; `.gitkeep` and dotfiles are skipped; output is sorted;
-  `--json` shape; a folder with no `vault.toml` exits 2; `--extract` on a
+  `--json` shape, including each `sha256` equal to the file's hash; a folder with no `vault.toml` exits 2; `--extract` on a
   `.docx` built in the test with `zipfile` prints its paragraphs in order, and
   on a non-docx file exits 1.
 - `tests/test_vault_inject.py`: unset and empty print nothing; a path with no

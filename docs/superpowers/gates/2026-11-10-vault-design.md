@@ -1,43 +1,54 @@
 # Gate: Vault: a personal knowledge vault the kit scaffolds, ingests into and points every session at
 
 - **Spec:** docs/superpowers/specs/2026-11-10-vault-design.md
-- **Spec SHA-256:** a8296c8b29dc0d963b20e99e0c13a5d7e9d3e9c5650b7d9e1bab59d912b0f29a
+- **Spec SHA-256:** 886bfb01ae6b09521a915120079f5b193d527406046b8757262e009f78d21d19
 - **Verdict:** pass
 - **Date:** 2026-11-10
-- **Rounds:** 1 discovery + 1 verification
+- **Rounds:** 2 discovery + 0 verification
 
 ## Key decisions
 
-- The tooling (template, scripts, skills, hook) lives in the kit, and the content lives in each vault; the kit holds no personal data
-- One vault per machine, with personal and work profiles that differ only in defaults; no sharing or sectioning across vaults
-- The work profile keeps `raw/` out of git; the personal profile ignores nothing
-- One generic `topics/` registry with a free-text `kind` instead of `clients/`; extra registries live at `wiki/<name>/` and use `topic.md`
-- Obsidian is the viewer and the Obsidian Web Clipper the clipper; no custom clipper, Kanban app or graph tooling
-- Transcripts are saved by hand in v1; automatic call capture and remote-doc sync are out
-- Supported raw formats: .md, .txt, .vtt, .html, .pdf read directly; .docx through a stdlib `vault-pending.py --extract`; others skipped and reported
-- A new SessionStart hook injects `Vault (<profile>): <path>` in every repo whenever `CLAUDE_KIT_VAULT` is set, rather than extending the kit map
-- Change detection uses sha256 in source-page frontmatter, with no separate log
-- Ingest never commits and never edits `raw/`; the task-prompt skill changes no file
-- `vault-init` creates a local git repo with one commit, and never creates a remote or pushes
-- Creating the user's real vaults happens after merge, not in this PR
-- Version bump to 0.28.0 and ADR 0040 recording these decisions
+- The tooling (template, scripts, skills, hook) lives in the kit and the content lives in each vault; the kit holds no personal data (Decisions)
+- One vault per machine (personal here, work on a work laptop); no sharing or sections across vaults; profiles change only defaults (Decisions, Scope Out)
+- One generic `topics/` registry with a free-text `kind` instead of `clients/`; extra registries go through `vault.toml` and use `topic.md` (Decisions, Template)
+- Obsidian is the viewer and the Obsidian Web Clipper is the clipper; the kit builds no graph, clipper or Kanban (Decisions, Scope Out)
+- v1 takes transcripts saved into `raw/transcripts/` by hand; no automatic call capture and no remote doc sync (Decisions, Scope Out)
+- A new SessionStart hook points every session in every repo at the vault when `CLAUDE_KIT_VAULT` is set, instead of extending the kit map (Decisions)
+- No Graphify in v1 (Decisions)
+- `vault.toml` read with `tomllib`; `.docx` read with the standard library; no new dependencies (Decisions)
+- Change detection by sha256 in source-page frontmatter, with no separate log; ingest takes the hash from `vault-pending.py --json` (Decisions, `vault-pending.py`)
+- Ingest never edits `raw/`, never invents, and does not commit; task-prompt changes no file (Design, Decisions)
+- The work profile keeps `raw/` out of git for privacy; the user checks the employer's policy before ingesting work calls (Decisions, Docs)
+- vault-init runs `git init` and one local commit but never creates a remote or pushes (`/vault-init`)
+- The user's actual vaults are created after merge, not in this PR (Scope Out)
+- Version bump to 0.28.0 and ADR 0040 recording these decisions (Scope In)
 
 ## Findings fixed
 
-- round 1 [blocking] Re-run criterion asks for a clean git status, but ingest never commits: criterion 3 commits the first run's result before checking the re-run against a clean tree
-- round 1 [blocking] README "ten hooks" test not in Scope: `tests/test_docs.py` added to Scope In (eleven hooks, CLAUDE_KIT_VAULT assertion)
-- round 1 [blocking] Supported raw formats undefined: format list and `vault-pending.py --extract` for .docx added, with a test and a decision; fixtures named with formats and contents
-- round 1 [minor] Tasks counted as a registry: knowledge-layer text says people, topics, sources under `wiki/` plus a `tasks/` folder
-- round 1 [minor] Two template folders: `task.md` moved into `wiki/_templates/`; ingest skips `wiki/_templates/` when searching
-- round 1 [minor] Hook says "Personal vault" on a work vault: line is now `Vault (<profile>): <path>`
-- round 1 [minor] Name grep not checkable: criterion 6 greps for the username and private repo names; fixtures list their invented names
-- round 1 [minor] tomllib rationale had no reader: `vault-pending.py` reads `vault.toml` and exits 2 if it does not parse
+- pre-gate [blocking] A private repo name in Scope Out (raised by the plan gate): reworded to "Changes to any other project repo."
+- round 1 [blocking] Ingest had no defined way to get the sha256 it must write: `--json` objects gain `sha256`; ingest copies it and never hashes by itself; the `--json` shape test checks it
+- round 1 [blocking] The live check wanted pages for everyone named, but ingest creates pages only for those materially concerned: the expected people and topics per sample are listed, and success criterion 3 checks exactly that list
+- round 1 [minor] The work profile's privacy default was missing from Decisions: added
+- round 1 [minor] Purpose said "/ingest": it now says "the `ingest` skill"
+- round 2 [minor] The answer key sat in the fixtures ingest reads: moved to `tests/fixtures/vault/EXPECTED.md`, which is never copied into `raw/`
+- round 2 [minor] It was unclear whether tasks are listed in the index: `tasks/` is a folder, not a `vault.toml` registry, and ingest adds each new task file under Tasks
 
 ## Plan questions
 
-- What git identity does the scaffold commit use when none is configured (fallback in the script, or tests set one and the script fails clearly)? (Design, /vault-init)
-- Is the `raw/` walk recursive, and is a source page whose raw file is gone reported (for example `missing`) or ignored? (Design, vault-pending.py)
-- Which date names a task file (call date or ingest date), and how is `topic` chosen when a call concerns several topics? (Design, Template tasks/ and ingest step 3)
+- Which date names source and task files and fills `date` (the material's own date, or the ingest date), and what is the fallback when the source states none? (Template, ingest skill)
+- Do the person and topic templates get `aliases: []`, which ingest searches? (Template)
+- Does the frontmatter parser strip surrounding quotes and normalize `raw` to posix paths? (`vault-pending.py`)
+- Does the `raw/` walk skip dot-directories as well as dotfiles? (`vault-pending.py`)
+- How do `--extract FILE` and the `VAULT` positional coexist, and is a mixed call a usage error (exit 2)? (`vault-pending.py`)
+- On a missing `git` or a failed commit (no identity), which exit code applies, is the scaffold kept, and do the tests set a git identity? (`/vault-init`)
+- Is `.gitignore` generated by vault-init only, and absent from `plugin/templates/vault/`? (Template)
+- Is the work profile's ignore `raw/` (folders lost on clone) or `raw/**` with `!raw/**/.gitkeep`, and what does the test assert for its committed tree? (Template, Testing)
+- Does the template ship a `.gitattributes` (e.g. `raw/** -text`) so line-ending conversion never changes raw hashes, or is that accepted for v1? (Template)
+- Are task `owner` and `topic` wiki-links or plain names that task-prompt resolves by search? (Template, task-prompt skill)
+- When a raw file changes, does ingest remove facts the new version no longer supports? (ingest skill)
+- With no matching task, does task-prompt list open tasks or say so and stop? (task-prompt skill)
+- Is `vault-init` added to the existing `user_only` set in `tests/test_plugin_manifest.py`, or checked only in the new test file? (Testing)
+- Is the printed hook path the env value as given or the resolved path? (The vault hook)
 
 ## Open
 
