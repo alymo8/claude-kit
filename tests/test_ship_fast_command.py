@@ -4,9 +4,9 @@ from __future__ import annotations
 
 import re
 
-from helpers import PLUGIN
+from helpers import command_text
 
-SHIP_FAST = (PLUGIN / "commands" / "ship-fast.md").read_text(encoding="utf-8")
+SHIP_FAST = command_text("ship-fast")
 
 
 def test_frontmatter_is_user_only():

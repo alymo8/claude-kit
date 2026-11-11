@@ -1,8 +1,8 @@
 import re
 
-from helpers import PLUGIN
+from helpers import command_text
 
-SHIP = (PLUGIN / "commands" / "ship.md").read_text(encoding="utf-8")
+SHIP = command_text("ship")
 
 
 def _step(n):
