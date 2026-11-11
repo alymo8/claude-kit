@@ -65,6 +65,7 @@ Set these under `env` in `~/.claude/settings.json`.
 | `CLAUDE_KIT_KIT_MAP` | on | `0` stops injecting the kit map |
 | `CLAUDE_KIT_WORKSPACE_RULES` | on | `0` stops injecting the workspace rules in repos outside the kit folder |
 | `CLAUDE_KIT_GRILL` | off | `1` turns on the spec grill before a spec is written |
+| `CLAUDE_KIT_VAULT` | off (unset) | a vault path: inject a pointer to that vault at session start |
 | `CLAUDE_KIT_NUDGE_AT` | 300000 | context tokens at which the first `/handoff` nudge fires |
 | `CLAUDE_KIT_NUDGE_STEP` | 100000 | tokens between later nudges |
 
