@@ -15,8 +15,12 @@ The skill runs a standards reviewer and a spec reviewer side by side, and the
 two axes are reported apart, never merged into one list. This amends ADR 0037:
 step 6 adds two diff-only reviewer subagents on every run, which shifts the
 token baseline ADR 0037 measured.
-Rejected: replacing the final review (it is the superpowers default and the
-kit does not edit superpowers skills); running `claude-kit:review` only when
+The live check runs in step 10's detached worktree at the squash commit,
+before it is removed; if the loaded plugin has no `review` skill yet, the
+session follows `skills/review/SKILL.md` from the file. It changes nothing and
+its findings are not a stop rule.
+Rejected: replacing the final review (the plan constrains this change to edit
+no superpowers skill); running `claude-kit:review` only when
 the final review did not run (the axes would then be missing on exactly the
 runs that look clean).
 

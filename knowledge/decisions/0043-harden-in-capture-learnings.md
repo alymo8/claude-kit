@@ -15,6 +15,10 @@ hook, test or script change, never built by the step. Under `/ship`,
 lists the proposals; a hand run asks the user. Judgement calls go to
 `knowledge/review-standards.md`, a file only the standards reviewer reads. A
 scan for steering that was needed during the session is report-only.
+A hand run is told from an automated one by the `--auto` argument that `/ship`
+and `/ship-fast` pass in step 7. Files changed by the branch's `Capture
+learnings` commit (`CLAUDE.md`, `knowledge/` entries, an ADR) are process
+files and never scope creep in `claude-kit:review`.
 Rejected: a separate `/retro` skill (one more thing to remember to run);
 putting the step in `/ship`'s clean-up (it would not cover `/ship-fast` or a
 hand-finished change).

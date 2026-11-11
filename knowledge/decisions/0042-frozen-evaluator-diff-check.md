@@ -16,7 +16,21 @@ spec and plan were approved and reports any changed file before every push in
 that does not exist yet is created once, exactly as the plan gives it. A
 needed change goes back to the user as a spec decision. Only the main session
 writes the `Frozen-change-approved: <path>` trailer, after the user approves;
-implementers and subagents never do.
+implementers and subagents never do. The approval is a separate
+`git commit --allow-empty` the main session makes after the change commit,
+with one trailer line per approved path.
+The check also runs before step 7's push and in step 8's fix loop of `/ship`,
+not only before the pushes in steps 5, 6 and 9.
+Globs use a custom matcher, not the spec's `fnmatch`: a single `*` and `?`
+never cross `/`, `**/` matches zero or more whole directories, and a trailing
+`**` matches anything. Of several approval trailers for one path, the last
+wins.
+An exit 2 (bad usage, unreadable file, git failure) under `/ship` and
+`/ship-fast` is debugged with `superpowers:systematic-debugging` and rerun
+before pushing; it is not a stop rule. `claude-kit:review` passes the stderr
+to the standards reviewer and does not report it as a finding; with no spec
+and no plan found it skips the check and reports
+`Frozen: skipped (no spec or plan)`.
 Rejected: a PreToolUse hook (ADR 0007 makes hooks exit 0, so a hook cannot
 block an edit); letting an implementer edit the Frozen bullet to unfreeze a
 file (that changes the spec and re-gates the spec and the plan).
