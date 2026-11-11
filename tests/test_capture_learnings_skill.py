@@ -113,3 +113,52 @@ def test_resume_reports_earlier_learnings():
     text = flat()
     assert "already has a `Capture learnings` commit" in text
     assert "already written:" in text
+
+
+def test_harden_step_sits_between_route_and_commit():
+    text = flat()
+    assert (
+        text.index("3. **Route**")
+        < text.index("4. **Harden.**")
+        < text.index("5. **Write and commit.**")
+        < text.index("6. **Return**")
+    )
+
+
+def test_harden_classifies_mistakes():
+    text = flat()
+    for needle in (
+        "**Mechanical:**",
+        "**Judgement call:**",
+        "harden (mechanical):",
+        "harden (steering):",
+        "harden (navigation):",
+        "knowledge/review-standards.md",
+        "## Rules",
+        "status: stable",
+        "Hardening:",
+        "Hardening: none",
+        "CI failure",
+    ):
+        assert needle in text, needle
+
+
+def test_steering_scan_does_not_edit():
+    assert "Do not edit these files for this scan." in flat()
+
+
+def test_standards_file_is_never_linked_from_claude_md():
+    assert "Never link this file from `CLAUDE.md`" in flat()
+
+
+def test_mechanical_proposals_are_built_only_on_a_hand_run():
+    assert frontmatter(body())["argument-hint"] == "[--auto]"
+    text = flat()
+    for needle in (
+        "## Mode",
+        "--auto",
+        "/ship-many",
+        "only on a yes",
+        "separate commit",
+    ):
+        assert needle in text, needle
