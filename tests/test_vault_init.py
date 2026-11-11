@@ -196,6 +196,31 @@ def test_git_failure_removes_what_was_written(
         assert not dest.exists()
 
 
+def _fail_copy(*args, **kwargs):
+    raise OSError("copy failed")
+
+
+@pytest.mark.parametrize("pre_existing", [False, True])
+@pytest.mark.parametrize("stage", ["copytree", "write_text"])
+def test_copy_or_write_failure_rolls_back(
+    tmp_path, monkeypatch, capsys, stage, pre_existing
+):
+    mod = load_module(SCRIPT, "vault_init")
+    if stage == "copytree":
+        monkeypatch.setattr(mod.shutil, "copytree", _fail_copy)
+    else:
+        monkeypatch.setattr(Path, "write_text", _fail_copy)
+    dest = tmp_path / "v"
+    if pre_existing:
+        dest.mkdir()
+    assert mod.main([str(dest)]) == 1
+    assert capsys.readouterr().err.startswith("error:")
+    if pre_existing:
+        assert list(dest.iterdir()) == []
+    else:
+        assert not dest.exists()
+
+
 def test_obsidian_settings(tmp_path):
     init(tmp_path / "v")
     obsidian = tmp_path / "v" / ".obsidian"

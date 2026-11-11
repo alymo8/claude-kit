@@ -55,6 +55,26 @@ def test_valid_vault_injects_pointer(tmp_path, suffix):
     assert "claude-kit:task-prompt" in text
 
 
+def test_tilde_is_expanded(tmp_path):
+    vault = tmp_path / "vault"
+    vault.mkdir()
+    (vault / "vault.toml").write_text('profile = "work"\n', encoding="utf-8")
+    result = run(
+        CLAUDE_KIT_VAULT="~/vault", HOME=str(tmp_path), USERPROFILE=str(tmp_path)
+    )
+    assert result.returncode == 0
+    text = json.loads(result.stdout)["hookSpecificOutput"]["additionalContext"]
+    assert text.startswith(f"Vault (work): {vault.as_posix()}. ")
+
+
+def test_relative_path_is_refused():
+    result = run(CLAUDE_KIT_VAULT="relative/vault")
+    assert (result.returncode, result.stdout) == (0, "")
+    assert result.stderr == (
+        "[claude-kit] CLAUDE_KIT_VAULT is not an absolute path: relative/vault\n"
+    )
+
+
 def test_broken_vault_toml_reports_error_and_exits_0(tmp_path):
     (tmp_path / "vault.toml").write_text("profile = \n", encoding="utf-8")
     result = run(CLAUDE_KIT_VAULT=str(tmp_path))

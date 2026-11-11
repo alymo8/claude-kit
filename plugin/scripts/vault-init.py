@@ -88,6 +88,8 @@ def _rmtree(path: Path) -> None:
 
 
 def remove_written(dest: Path, created: bool) -> None:
+    if not dest.exists():
+        return
     if created:
         _rmtree(dest)
         return
@@ -115,10 +117,10 @@ def main(argv: list[str] | None = None) -> int:
         return 1
 
     created = not dest.exists()
-    shutil.copytree(TEMPLATE, dest, dirs_exist_ok=True)
-    (dest / "vault.toml").write_text(vault_toml(args.profile), encoding="utf-8")
-    (dest / ".gitignore").write_text(gitignore(args.profile), encoding="utf-8")
     try:
+        shutil.copytree(TEMPLATE, dest, dirs_exist_ok=True)
+        (dest / "vault.toml").write_text(vault_toml(args.profile), encoding="utf-8")
+        (dest / ".gitignore").write_text(gitignore(args.profile), encoding="utf-8")
         commit_all(dest)
     except (GitError, OSError) as exc:
         remove_written(dest, created)

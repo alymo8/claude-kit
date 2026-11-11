@@ -31,7 +31,13 @@ def main() -> int:
         value = os.environ.get("CLAUDE_KIT_VAULT", "")
         if not value:
             return 0
-        path = Path(value)
+        path = Path(value).expanduser()
+        if not path.is_absolute():
+            print(
+                f"[claude-kit] CLAUDE_KIT_VAULT is not an absolute path: {value}",
+                file=sys.stderr,
+            )
+            return 0
         toml_file = path / "vault.toml"
         if not toml_file.is_file():
             print(
