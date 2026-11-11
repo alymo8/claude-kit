@@ -37,6 +37,14 @@ Things that cost time in past runs and are not obvious from the code.
 - Writing test code through a bash heredoc into a Python script turns
   `\n` escapes inside string literals into real line breaks, so the
   test file no longer parses. Edit test files with the Edit tool.
+- Before promising how much a command can shrink, read its tests:
+  `tests/test_ship_command.py` and `tests/test_ship_fast_command.py` pin
+  about 60 exact phrases, and one pins a line break
+  (`"one\n   copy, the only one the run starts"` in step 5 of
+  `ship-fast.md`), so rewrapping that sentence fails the test.
+- Measure a tracked file's size with `git show HEAD:<path> | wc -c`, not
+  `wc -c <path>`: the working copy is checked out with CRLF and reads a
+  few hundred bytes larger than the stored LF file.
 - Appending to a CRLF file with a bash heredoc mixes line endings, and
   `ruff format --check` then flags the file. Run `ruff format <file>`.
 
