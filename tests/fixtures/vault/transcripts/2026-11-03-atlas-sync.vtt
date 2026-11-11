@@ -1,0 +1,33 @@
+WEBVTT
+
+NOTE
+Fictional test data for the vault ingest. Every name in it is invented.
+People: Mara Quint, Tobias Renn, Ines Calder. Organizations and projects:
+Project Atlas. Call date: 2026-11-03.
+
+00:00:01.000 --> 00:00:06.000
+<v Mara Quint>Thanks for joining. This is the Project Atlas sync for November 3rd.
+
+00:00:06.500 --> 00:00:13.000
+<v Tobias Renn>The pilot feedback pushed the export feature later, so the launch timeline needs to move.
+
+00:00:13.500 --> 00:00:19.000
+<v Mara Quint>Tobias, can you send the revised launch timeline by November 14th?
+
+00:00:19.500 --> 00:00:22.000
+<v Tobias Renn>Yes, I will send it by the 14th.
+
+00:00:22.500 --> 00:00:29.000
+<v Ines Calder>We still need real dispatchers to try the report builder before launch.
+
+00:00:29.500 --> 00:00:34.000
+<v Mara Quint>Ines, can you book the usability sessions?
+
+00:00:34.500 --> 00:00:37.000
+<v Ines Calder>Sure, I will book them.
+
+00:00:37.500 --> 00:00:44.000
+<v Tobias Renn>Someone also needs to check the accessibility audit before we ship.
+
+00:00:44.500 --> 00:00:48.000
+<v Mara Quint>Agreed. Let's pick that up next time. Thanks, everyone.
