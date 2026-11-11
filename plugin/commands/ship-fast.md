@@ -146,110 +146,17 @@ A rerun after a stop continues where the last run stopped. A run that
 stopped before step 0 wrote the spec starts the interview again; after
 that, rerun with the spec path the stop message gave.
 
-A repository folder counts as this run's only if it holds
-`docs/superpowers/specs/<spec file name>` (step 1 commits it there). Any
-other existing folder at that path is a name collision: `scaffold.py`
-refuses it, and that is a stop rule.
-
-- With `**Repo:** new`, if this run's repository folder already exists as a
-  git repository with an `origin` remote, step 1 only runs `git fetch origin`
-  there.
-- With `**Repo:** new`, if this run's repository folder exists as a git
-  repository without an `origin` remote (a stop in step 1): skip
-  `scaffold.py`, run the stack's init commands only if their output
-  (`pyproject.toml` or `package.json`) is missing, commit anything
-  uncommitted, then run `gh repo create` as in step 1.
-- In both cases above, "the spec" is the copy at
-  `docs/superpowers/specs/<spec file name>` in the repository, as after
-  step 1.
-- If you are already in a worktree on `poc/<slug>`, skip step 2. If
-  `git worktree list` shows a worktree on `poc/<slug>`, enter it
-  (`EnterWorktree` with its path, or change directory) and skip step 2. If
-  only the branch `poc/<slug>` exists, run
-  `git worktree add <path> poc/<slug>` (no `-b`) and skip the rest of
-  step 2.
-- If `docs/superpowers/plans/*-<slug>.md` with `**Status:** fast (ungated)`
-  exists on the branch, skip step 3, and in step 4 implement only the tasks
-  whose commit message (`<slug>: task N`) is not yet in
-  `git log origin/main..HEAD`.
-- If that task list already has a `## Decisions` section, skip step 3b.
+On a rerun, before anything else, read `${CLAUDE_PLUGIN_ROOT}/references/ship-fast-resume.md` (fallback if the variable is not expanded: `~/.claude/skills/claude-kit/references/ship-fast-resume.md`)
+and follow it.
 
 ## Steps
 
 Record the wall-clock time at the start of each step from 2 to 7, and when
 step 7 ends. A resumed run reports the minutes it measured.
 
-0. **Spec.** Only when Input says so. **Budget: at most 7 questions to the
-   user in the whole step**, brainstorming and grill together, counting
-   each numbered question and each single question (the idea question and
-   the approach choice included). Fewer is better: a clear idea may need 2
-   or 3.
-   1. **Idea.** With no idea text, ask "What are we building, and for
-      whom?" and wait for the answer in the user's words. This counts as 1.
-   2. **Home.** If the current directory is inside a git repository that
-      is not the claude-kit repository itself (the one whose
-      `plugin/.claude-plugin/plugin.json` has `"name": "claude-kit"`), that
-      repository is the home: state it in one line and read its stack from
-      its files; do not ask. Otherwise Home is a grill question: a new
-      repository (name, and `node` or `python`) or the path of an existing
-      one.
-   3. **Design.** Run `superpowers:brainstorming` on the idea, on its
-      architectural path, with these overrides: skip its separate
-      clarifying questions and its visual-companion offer; read the home
-      repository, if there is one, for context; propose 2–3 approaches with
-      a recommendation; present the design for the recommended approach
-      once, in full, with no per-section approval. The approach choice is
-      not asked on its own: it is the first question of the grill's first
-      round. Stop there: do not write brainstorming's spec, run any review
-      of it, or invoke writing-plans.
-   4. **Grill.** Run `claude-kit:grill` on that design with these
-      overrides: its tree holds the design's open product choices and the
-      areas below **instead of** the `coverage.md` areas, and it asks at
-      most the budget left, most important first, aiming for one round and
-      two at most.
-      - **Users and outcome:** who uses it and what they get.
-      - **Core flows:** the steps a user takes, start to finish.
-      - **In and cut:** what the POC does, and what it leaves out.
-      - **Data:** what it takes in, what it shows, what it keeps.
-      - **States and wording:** empty, loading and error screens, and the
-        text users read.
-      - **Acceptance criteria:** how the user will check the POC works.
-      - **Home:** as in item 2, only when it is not settled there.
+**Step 0** (Spec), only when Input says so: read `${CLAUDE_PLUGIN_ROOT}/references/ship-fast-spec.md` (fallback if the variable is not expanded: `~/.claude/skills/claude-kit/references/ship-fast-spec.md`)
+and follow it.
 
-      Every open product choice that does not fit the budget takes the
-      grill's recommended answer and is listed in the grill summary as
-      **Assumed (not asked)**. Acceptance criteria are never only assumed:
-      when they do not fit as their own question, the summary proposes them
-      and the user's confirmation covers them. If the user chose an
-      approach other than the recommended one, the summary states the
-      chosen approach and what it changes in the design; the design is not
-      presented again. The summary's coverage list names the areas above,
-      not `coverage.md`'s, and the grill summary names Home (inferred in
-      item 2 or answered), so the confirmation covers it. The user's
-      confirmation of the summary ends the interview; it is not yet the
-      spec's approval (item 6). A correction to an assumption in that reply
-      is applied and does not count against the budget.
-   5. **Write the spec.** Pick `<slug>`, a short kebab-case name for the
-      POC. Write a `# <title>` line (the POC's name; step 7 uses it as the
-      PR title), Status `draft`, Date, a
-      `- **Repo:** new <name> <stack>` line when Home is a new repository,
-      and the sections Purpose, Scope (`**In:**` and `**Out:**`), Design,
-      Decisions (each question and the user's answer, then an
-      **Assumed (not asked)** list) and Success criteria (the acceptance
-      criteria). No `## Coverage` section. The file name is
-      `<YYYY-MM-DD>-<slug>-design.md`: in an existing repository, under
-      `docs/superpowers/specs/` in its main checkout (step 2 commits it on
-      the branch); for a new repository, under `~/.claude/ship-fast-specs/`
-      (durable across sessions and outside every repository; step 1 copies
-      it in). State the path in one line and go to item 6.
-   6. **Approval.** The user reads the spec and approves it; this is the
-      spec's only review, and no gate runs. Open the spec's `.md` for the
-      user (`Invoke-Item <path>` on Windows, `open` on macOS, `xdg-open`
-      elsewhere) and ask them to read it and reply "approve" or with the
-      changes they want. Apply changes to the spec, open it again, and ask
-      again; these rounds do not count against the budget. On "approve",
-      set the spec's Status bullet to `approved` and continue to step 1
-      without another pause.
 1. **Repo.** With a `**Repo:** new <name> <stack>` line, run
    `python "${CLAUDE_PLUGIN_ROOT}/scripts/scaffold.py" --name <name> --stack <stack>`
    (fallback if the variable is not expanded:
@@ -351,48 +258,8 @@ step 7 ends. A resumed run reports the minutes it measured.
    correctness bug and revert the rest. Re-run the full suite and lint, and
    commit `<slug>: review fixes` if anything is left (that commit restarts
    the app, as in step 5).
-7. **PR.** First run the `claude-kit:capture-learnings` skill, then
-   `git push -u origin poc/<slug>` (it carries any learnings commit, which
-   changes no app code and needs no restart). (Each CI fix commit restarts
-   the app, as in step 5.) The PR title is the spec's title: the first
-   line outside code fences that starts with `# `, with the
-   `# ` prefix and trailing whitespace removed. Run, with the Bash tool (not
-   PowerShell), `gh pr create --title '<title>' --body-file <file>`, with
-   the title written out literally inside single quotes and each `'` in it
-   written as `'\''`. The body has: Summary; Acceptance criteria, each with
-   its evidence (the test name or the smoke-run output); Decisions (every
-   question the user answered, then the product choices "assumed (not
-   asked)"); Assumptions (engineering choices taken without asking); Cut
-   (what the POC leaves out); links to the spec and the task list;
-   Verification (the exact commands and their results); and the
-   attribution line the session requires. Then
-   compare `gh pr view --json title` with the title; on a mismatch run
-   `gh pr edit --title '<title>'` once. Whether the repository has CI is
-   decided only by whether `.github/workflows/*.yml` exists on the branch.
-   If it does, run `gh pr checks` every 15 seconds until checks appear
-   (they start a few seconds after the PR is created), then
-   `gh pr checks --watch --fail-fast`. On red: `gh run view <id> --log-failed`, fix with
-   `superpowers:systematic-debugging`, commit, push, count one attempt. If
-   there is no workflow file, skip the watch and say so in the report.
-8. **Hand over.** No cleanup runs here: the user tests and presents the
-   POC from this workspace first. Keep the feature worktree, the local
-   branch `poc/<slug>` and any Docker objects. The app launched in step 5
-   is already running: confirm it serves the branch's final commit
-   (restart it if not, or relaunch it with the `run` skill if it has
-   stopped) and leave it running; note its URL or entry command, the
-   command to stop it, and the command to start it again (a background
-   process ends with the session; containers keep running). Stop any other
-   process the smoke run left behind.
-9. **Report.** One message: the PR link; each acceptance criterion with its
-   evidence; Decisions (answered, then assumed) and Assumptions; the review
-   fixes; the Learnings summary from step 7; the CI result (and, for a new
-   repository, that its first `main` run was red because it had no tests
-   yet); the wall-clock minutes of steps 2 to 7 (each, and in total); and
-   **Try it**: the running app's URL or entry command, how to stop and
-   restart it, and the worktree path.
-   Do not suggest cleaning up in the report. Once the user says they have
-   tested the app or finished presenting it, suggest the Cleanup below in
-   one line, and run it when they agree.
+**Steps 7 to 9** (PR, Hand over, Report): once step 6 is done, read
+`${CLAUDE_PLUGIN_ROOT}/references/ship-fast-finish.md` (fallback if the variable is not expanded: `~/.claude/skills/claude-kit/references/ship-fast-finish.md`) and follow it.
 
 ## Cleanup (on request)
 
@@ -402,24 +269,4 @@ testing the POC, in this session or a later one. Find the worktree with
 changes or commits not on `origin/poc/<slug>` (the user may have edited
 while testing), list them and ask before removing anything.
 
-Stop the app started in step 5. Leave the feature worktree (`ExitWorktree`
-with `keep` if the session entered it with `EnterWorktree`, otherwise
-change directory). If the task used Docker: stop and remove the containers
-labelled `claude-kit.task=<slug>` (`docker compose -p <slug> down
---volumes --rmi local` for a stack), remove the images, volumes and
-networks it created or pulled that are not in the step-4 baseline, and
-`docker buildx rm <slug>`; never run a prune without a
-`label=claude-kit.task=<slug>` filter. If the task used Docker, then run
-`python "${CLAUDE_PLUGIN_ROOT}/scripts/docker-disk.py"` (fallback
-`~/.claude/skills/claude-kit/scripts/docker-disk.py`) and put its
-`docker disk:` line in your clean-up reply; it changes nothing and never
-prompts. Then
-`git -C <main-checkout> worktree remove <worktree-path>`,
-`git -C <main-checkout> worktree prune` and
-`git -C <main-checkout> branch -D poc/<slug>`. The remote branch stays for
-the PR; the user deletes it when merging. A handoff an earlier stop wrote
-on this branch (`.claude/handoffs/poc_<slug>.md`) lives in the feature
-worktree and goes with `worktree remove`; leave the main checkout's handoff
-files alone. Delete the step-4 Docker baseline file and any scratch files
-you created outside the repo; the spec under `~/.claude/ship-fast-specs/`
-is not a scratch file and stays. The repository itself always stays.
+Then read `${CLAUDE_PLUGIN_ROOT}/references/ship-fast-cleanup.md` (fallback if the variable is not expanded: `~/.claude/skills/claude-kit/references/ship-fast-cleanup.md`) and follow it.

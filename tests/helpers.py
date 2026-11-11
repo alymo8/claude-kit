@@ -15,6 +15,21 @@ REPO = Path(__file__).resolve().parents[1]
 PLUGIN = REPO / "plugin"
 
 
+REFERENCE_RE = re.compile(r"\$\{CLAUDE_PLUGIN_ROOT\}/references/([\w.-]+\.md)")
+
+
+def command_text(name: str) -> str:
+    """A command's text with each reference file it points to inlined after the
+    paragraph that points to it, so tests read the steps in run order."""
+    text = (PLUGIN / "commands" / f"{name}.md").read_text(encoding="utf-8")
+    parts = []
+    for para in text.split("\n\n"):
+        parts.append(para)
+        for ref in dict.fromkeys(REFERENCE_RE.findall(para)):
+            parts.append((PLUGIN / "references" / ref).read_text(encoding="utf-8"))
+    return "\n\n".join(parts)
+
+
 def load_module(path: Path, name: str) -> ModuleType:
     """Import a script by file path (works for names with hyphens)."""
     spec = importlib.util.spec_from_file_location(name, path)
