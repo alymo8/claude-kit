@@ -1,6 +1,6 @@
 # /ship: steps 8 to 12
 
-Part of `commands/ship.md`, which reads this file when it reaches it. That command's Stop rules and Git lock retry apply here.
+Part of `commands/ship.md`, which reads this file when it reaches it. That command's Stop rules, Git lock retry and Frozen check apply here.
 
 8. **Green CI.** `gh pr checks --watch --fail-fast`. On red, repeat the step-5 fix
    loop.
@@ -14,7 +14,8 @@ Part of `commands/ship.md`, which reads this file when it reaches it. That comma
    duplicate entry, and an ADR whose number `origin/main` already uses is
    renumbered to the next free one, with its file name and index row;
    other files as before), then `git rebase --continue`, re-run
-   tests, `git push --force-with-lease`, return to step 8. Then
+   tests, run the frozen check, `git push --force-with-lease`, return to
+   step 8. Then
    `gh pr merge --squash --delete-branch`. Run from a worktree this exits
    non-zero *after* merging, because it cannot check out `main` here; confirm
    with `gh pr view --json state,mergeCommit` — `MERGED` means continue, and
@@ -63,8 +64,9 @@ Part of `commands/ship.md`, which reads this file when it reaches it. That comma
     `docker buildx ls` has no `<slug>`.
 12. **Report.** One message: the PR link, the squash commit on `main`, the
     verification output from step 10, whether local `main` was fast-forwarded
-    (and why not, if not), the review findings you fixed (from whichever
-    review ran in step 4 or step 6), the
+    (and why not, if not), the review findings you fixed (from the review
+    in step 4 or step 6) and, per `claude-kit:review` axis (Standards,
+    Spec), the findings fixed and the `judgement` findings left, the
     `Plan decisions (auto-approved)` (or `Plan decisions`) list from step 7, if
     any, the Learnings summary from step 7, the `docker disk:` line from
     step 11 if the task used Docker, and anything left out and why
