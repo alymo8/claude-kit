@@ -65,6 +65,7 @@ Set these under `env` in `~/.claude/settings.json`.
 | `CLAUDE_KIT_KIT_MAP` | on | `0` stops injecting the kit map |
 | `CLAUDE_KIT_WORKSPACE_RULES` | on | `0` stops injecting the workspace rules in repos outside the kit folder |
 | `CLAUDE_KIT_GRILL` | off | `1` turns on the spec grill before a spec is written |
+| `CLAUDE_KIT_VAULT` | off (unset) | a vault path: inject a pointer to that vault at session start |
 | `CLAUDE_KIT_NUDGE_AT` | 300000 | context tokens at which the first `/handoff` nudge fires |
 | `CLAUDE_KIT_NUDGE_STEP` | 100000 | tokens between later nudges |
 
@@ -81,6 +82,21 @@ never changes these settings itself.
 `python plugin/scripts/docker-disk.py` shows the state, and `/ship`'s clean-up
 prints it when a task used Docker. `/docker-compact` reclaims space that has
 already built up: it asks first, stops Docker and needs one UAC prompt.
+
+## Personal vault
+
+1. Run `/vault-init <path> [personal|work]` to scaffold a vault outside any
+   project repo.
+2. Set `CLAUDE_KIT_VAULT` to that path (see Switches) so each session gets a
+   pointer to it.
+3. Install Obsidian and open the folder as a vault.
+4. Install the Obsidian Web Clipper and set its save folder to `raw/web/`.
+5. Save call transcripts (`.vtt`, `.docx` or text) into `raw/transcripts/`.
+6. Run the `claude-kit:ingest` skill; it writes source, people, topic and task
+   pages and does not commit, so you review the diff.
+
+The work profile keeps `raw/` out of git. Check the employer's policy on
+sending call content to an LLM before ingesting work calls.
 
 ## How changes ship
 

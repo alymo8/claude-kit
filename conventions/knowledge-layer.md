@@ -62,6 +62,15 @@ archive discipline.
   do not, so never link it from `CLAUDE.md` or any file loaded at session start.
   `claude-kit:capture-learnings` creates it on first need.
 
+## Personal vault
+
+The same principles apply to a person's knowledge: raw sources are preserved
+verbatim, synthesized pages hold each fact once, and an index is the front door.
+The registries are people, topics and sources under `wiki/`, plus a `tasks/`
+folder. The vault lives outside any project repo, one per machine, and is
+scaffolded with `/vault-init`. Repos link to vault pages only by name and never
+copy them. See `docs/setup.md` and ADR 0040.
+
 ## Definition of done
 
 - Every raw source is digested into canonical docs; nothing is lost, and originals

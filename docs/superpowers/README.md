@@ -7,6 +7,7 @@
 | Date | Spec | Status |
 |---|---|---|
 | 2026-11-10 | [Two-axis review, surgical diffs, frozen evaluators, Merge Danger and a hardening retro](specs/2026-11-10-review-and-guardrails-design.md) | approved |
+| 2026-11-10 | [Vault: a personal knowledge vault the kit scaffolds, ingests into and points every session at](specs/2026-11-10-vault-design.md) | approved |
 | 2026-10-21 | [Docker Desktop disk upkeep on Windows](specs/2026-10-21-docker-disk-upkeep-design.md) | implemented |
 | 2026-10-20 | [`/ship` keeps its main session lean](specs/2026-10-20-lean-ship-orchestrator-design.md) | approved |
 | 2026-10-16 | [`/ship` approves the plan gate's decisions itself](specs/2026-10-16-ship-auto-approves-plan-decisions-design.md) | approved |
@@ -36,6 +37,7 @@
 | Date | Plan | Status |
 |---|---|---|
 | 2026-11-10 | [Two-axis review, surgical diffs, frozen evaluators, Merge Danger and a hardening retro Implementation Plan](plans/2026-11-10-review-and-guardrails.md) | approved |
+| 2026-11-10 | [Personal vault Implementation Plan](plans/2026-11-10-vault.md) | approved |
 | 2026-10-21 | [Docker Desktop disk upkeep on Windows Implementation Plan](plans/2026-10-21-docker-disk-upkeep.md) | implemented |
 | 2026-10-20 | [`/ship` keeps its main session lean Implementation Plan](plans/2026-10-20-lean-ship-orchestrator.md) | approved |
 | 2026-10-16 | [`/ship` approves the plan gate's decisions itself Implementation Plan](plans/2026-10-16-ship-auto-approves-plan-decisions.md) | approved |
