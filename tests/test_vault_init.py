@@ -169,7 +169,7 @@ def test_commit_falls_back_to_kit_identity(tmp_path):
 
 
 def failing_git(*args, cwd):
-    if args[0] == "commit":
+    if "commit" in args:  # identity "-c" options may come first
         return subprocess.CompletedProcess(["git", *args], 1, "", "no identity")
     return subprocess.run(["git", *args], cwd=cwd, capture_output=True, text=True)
 
