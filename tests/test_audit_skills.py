@@ -144,3 +144,56 @@ def test_rules_name_one_scratch_location():
 
 def test_report_phase_may_read_its_own_instructions():
     assert "other than this file" in read(DEEP / "phases" / "G-report.md")
+
+
+DUPES = AUDIT / "duplicates.md"
+CATALOG_REL = "../../scripts/function-catalog.py"
+COUNTS_LINE = (
+    "<n> functions catalogued; <u> of <t> compare units dispatched; "
+    "groups: <h> HIGH, <m> MEDIUM, <l> LOW"
+)
+
+
+def flat(path):
+    return " ".join(read(path).split())
+
+
+def test_audit_skill_has_pass_4_and_section():
+    body = read(AUDIT / "SKILL.md")
+    assert "## Pass 4: duplicate intent" in body
+    assert "duplicates.md" in body
+    assert body.index("## Pass 3") < body.index("## Pass 4")
+    assert body.index("`## Duplicate intent`") < body.index("`## What is missing`")
+    assert "duplicated blocks inside functions" in flat(AUDIT / "SKILL.md")
+
+
+def test_duplicates_procedure_names_its_limits():
+    text = flat(DUPES)
+    for phrase in (
+        "function-catalog.py",
+        "model: haiku",
+        "no model override",
+        "general-purpose",
+        "20-function threshold",
+        "3,000-function limit",
+        "batches of 150",
+        "at most 150",
+        "at most 12",
+        "audit-scratch",
+        "HIGH",
+        "MEDIUM",
+        "LOW",
+        COUNTS_LINE,
+        "Skipped: <n> functions, below the 20-function threshold.",
+        "Skipped: <n> functions, above the 3,000-function limit; audit a smaller repo.",
+        "Skipped: function-catalog.py exited <code>",
+        "Grouping gap:",
+        "other: <subdomain>",
+        "Duplicate intent: <intent>",
+    ):
+        assert phrase in text, phrase
+
+
+def test_catalog_path_from_duplicates_resolves():
+    assert CATALOG_REL in read(DUPES)
+    assert (AUDIT / CATALOG_REL).resolve().is_file()
