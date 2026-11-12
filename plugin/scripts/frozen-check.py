@@ -3,10 +3,12 @@
 
     python frozen-check.py FILE.md [FILE.md ...] [--base REF] [--root DIR]
 
-Reads the ``- **Frozen:**`` bullets of each spec or plan FILE.md (outside code
-fences; indented continuation lines count) and takes their backticked spans
-as path patterns: ``*`` and ``?`` stay inside one path segment, ``**/``
-matches zero or more directories, a trailing ``**`` matches anything.
+Reads the ``- **Frozen:**`` header bullets of each spec or plan FILE.md
+(before the first ``## `` heading, outside code fences; indented continuation
+lines count) and takes their backticked spans as path patterns: ``*`` and
+``?`` stay inside one path segment, ``**/`` matches zero or more directories,
+a trailing ``**`` matches anything. A pattern ending in ``/``, or one that
+matches no file but names a directory, freezes everything under it.
 
 The base is ``git merge-base REF HEAD`` (REF defaults to ``origin/main``) in
 the repository holding ``--root`` (default: the current directory). A frozen
@@ -44,17 +46,19 @@ class GitError(Exception):
 
 
 def parse_patterns(text: str) -> list[str]:
-    """The backticked spans of every ``- **Frozen:**`` bullet, in order."""
+    """The backticked spans of every ``- **Frozen:**`` header bullet, in order."""
     bullets: list[str] = []
     in_fence = False
     in_bullet = False
     for line in text.splitlines():
-        if line.lstrip().startswith("```"):
+        if line.lstrip().startswith(("```", "~~~")):
             in_fence = not in_fence
             in_bullet = False
             continue
         if in_fence:
             continue
+        if line.startswith("## "):
+            break
         if BULLET_RE.match(line):
             bullets.append(line)
             in_bullet = True
@@ -143,8 +147,11 @@ def _check(patterns: list[str], base_ref: str, root: str) -> int:
     frozen: set[str] = set()
     warnings = []
     for pattern in patterns:
-        regex = pattern_regex(pattern)
-        matched = {p for p in candidates if regex.fullmatch(p)}
+        glob = pattern + "**" if pattern.endswith("/") else pattern
+        matched = {p for p in candidates if pattern_regex(glob).fullmatch(p)}
+        if not matched and not glob.endswith("**"):
+            regex = pattern_regex(glob + "/**")
+            matched = {p for p in candidates if regex.fullmatch(p)}
         if not matched:
             warnings.append(f"frozen: warning: no file matches {pattern}")
         frozen |= matched

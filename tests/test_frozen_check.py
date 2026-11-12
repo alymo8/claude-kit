@@ -150,6 +150,43 @@ def test_glob_matches_nested_files(repo, tmp_path):
     assert "tests/acceptance/x/y.txt" in r.stdout
 
 
+@pytest.mark.parametrize("pattern", ["tests/acceptance", "tests/acceptance/"])
+def test_directory_pattern_freezes_its_files(repo, tmp_path, pattern):
+    s = spec(tmp_path, f"- **Frozen:** `{pattern}`")
+    commit(repo, "create", {"tests/acceptance/x/y.txt": "y\n"})
+    r = check(repo, s)
+    assert r.returncode == 0, r.stderr
+    assert "ok (1 files)" in r.stdout
+    commit(repo, "edit", {"tests/acceptance/x/y.txt": "z\n"})
+    r = check(repo, s)
+    assert r.returncode == 1, r.stderr
+    assert "tests/acceptance/x/y.txt" in r.stdout
+
+
+def test_approval_trailer_moves_the_snapshot_of_a_created_file(repo, tmp_path):
+    s = spec(tmp_path, "- **Frozen:** `tests/new.py`")
+    commit(repo, "create", {"tests/new.py": "n\n"})
+    commit(repo, "edit", {"tests/new.py": "m\n"})
+    approve(repo, "tests/new.py")
+    r = check(repo, s)
+    assert r.returncode == 0, r.stdout + r.stderr
+    commit(repo, "edit again", {"tests/new.py": "o\n"})
+    r = check(repo, s)
+    assert r.returncode == 1, r.stderr
+
+
+def test_bullet_after_first_section_is_ignored(repo, tmp_path):
+    commit(repo, "edit", {"tests/a.py": "b\n"})
+    path = tmp_path / "plan.md"
+    path.write_text(
+        "# P\n\n- **Status:** approved\n\n## Task 1\n\n- **Frozen:** `tests/a.py`\n",
+        encoding="utf-8",
+    )
+    r = check(repo, path)
+    assert r.returncode == 0, r.stderr
+    assert r.stdout.strip() == "frozen: none declared"
+
+
 def test_unmatched_pattern_warns_and_passes(repo, tmp_path):
     r = check(repo, spec(tmp_path, "- **Frozen:** `tests/nothing/*.py`"))
     assert r.returncode == 0, r.stderr
