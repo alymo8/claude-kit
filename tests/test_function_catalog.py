@@ -270,6 +270,36 @@ def test_java_keyword_names_dropped():
     assert fc.function_name(line, "Java/C#") == "compute"
 
 
+def test_js_function_keyword_needs_a_boundary():
+    fc = load_module(SCRIPT, "function_catalog")
+    lang = "JavaScript/TypeScript"
+    assert fc.function_name("functionCall(x);", lang) is None
+    assert fc.function_name("function* gen() {", lang) == "gen"
+    assert fc.function_name("function *gen() {", lang) == "gen"
+    assert fc.function_name("function foo(a) {", lang) == "foo"
+
+
+def test_unwritable_split_target_is_one_line_exit_2(tmp_path):
+    repo = make_repo(tmp_path)
+    blocker = tmp_path / "blocker"
+    blocker.write_text("not a folder", encoding="utf-8")
+    out = run(repo, "--split", str(blocker))
+    assert out.returncode == 2
+    assert "Traceback" not in out.stderr
+    assert len(out.stderr.strip().splitlines()) == 1
+    assert out.stderr.startswith("function-catalog:")
+
+
+def test_unwritable_output_target_is_one_line_exit_2(tmp_path):
+    repo = make_repo(tmp_path)
+    blocker = tmp_path / "blocker"
+    blocker.write_text("not a folder", encoding="utf-8")
+    out = run(repo, "-o", str(blocker / "catalog.json"))
+    assert out.returncode == 2
+    assert "Traceback" not in out.stderr
+    assert len(out.stderr.strip().splitlines()) == 1
+
+
 def test_paths_with_spaces_and_non_ascii(tmp_path):
     extra = {"my dir/café.py": "def brew():\n    pass\n"}
     entries = json.loads(run(make_repo(tmp_path, extra)).stdout)

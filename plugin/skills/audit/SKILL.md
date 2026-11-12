@@ -91,9 +91,8 @@ Write `docs/audit/audit.md`:
 2. `## Inventory`: pass 1 as tables, not prose.
 3. One section per area, holding its findings in the format from `rules.md`.
    An area with nothing wrong gets one line saying so.
-4. `## Duplicate intent`: Pass 4's output, opening with its counts line (or
-   the skip line), then its findings, the LOW table, the domains not compared
-   and any grouping gap.
+4. `## Duplicate intent`: Pass 4's output, in the order `duplicates.md`
+   gives under its Output heading.
 5. `## What is missing`: things that should exist and do not, as absence
    findings.
 6. `## Fix first`: every finding ranked by value over effort, one line each

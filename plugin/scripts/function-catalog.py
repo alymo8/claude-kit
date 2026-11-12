@@ -25,7 +25,7 @@ component, and file names matching ``test_*``, ``*_test.*``, ``*.test.*``,
 is skipped with a stderr line.
 
 Exit 0 on success (an empty array included); exit 2 on bad usage, a root that
-is not a git repo, or a git failure.
+is not a git repo, a git failure, or an output path that cannot be written.
 """
 
 from __future__ import annotations
@@ -103,7 +103,7 @@ PATTERNS: dict[str, list[re.Pattern[str]]] = {
     "JavaScript/TypeScript": [
         re.compile(
             r"^[ \t]*(?:export[ \t]+)?(?:default[ \t]+)?(?:async[ \t]+)?"
-            rf"function\*?[ \t]*({_JS_IDENT})[ \t]*\("
+            rf"function(?:[ \t]*\*[ \t]*|[ \t]+)({_JS_IDENT})[ \t]*\("
         ),
         re.compile(
             rf"^[ \t]*(?:export[ \t]+)?(?:const|let)[ \t]+({_JS_IDENT})[ \t]*"
@@ -175,14 +175,18 @@ def git_files(root: Path) -> list[str]:
         result = subprocess.run(
             ["git", "-C", str(root), "ls-files", "-z"],
             capture_output=True,
-            encoding="utf-8",
         )
     except OSError as exc:
         raise CatalogError(f"cannot run git: {exc}") from exc
     if result.returncode != 0:
-        first = (result.stderr.strip().splitlines() or ["git failed"])[0]
+        err = result.stderr.decode("utf-8", errors="replace")
+        first = (err.strip().splitlines() or ["git failed"])[0]
         raise CatalogError(f"git ls-files failed: {first}")
-    return [p for p in result.stdout.split("\0") if p]
+    try:
+        listing = result.stdout.decode("utf-8")
+    except UnicodeDecodeError as exc:
+        raise CatalogError(f"git ls-files output is not UTF-8: {exc}") from exc
+    return [p for p in listing.split("\0") if p]
 
 
 def wanted(rel: str, include_tests: bool) -> str | None:
@@ -279,18 +283,23 @@ def main(argv: list[str] | None = None) -> int:
         entries = catalog(
             args.repo_root, context=args.context, include_tests=args.include_tests
         )
+        if args.split is not None:
+            message = str(write_split(entries, args.split, args.batch_size))
+        elif args.output is not None:
+            args.output.parent.mkdir(parents=True, exist_ok=True)
+            args.output.write_text(dump(entries), encoding="utf-8")
+            message = str(len(entries))
+        else:
+            sys.stdout.write(dump(entries))
+            return 0
     except CatalogError as exc:
         print(f"function-catalog: {exc}", file=sys.stderr)
         return 2
-
-    if args.split is not None:
-        print(write_split(entries, args.split, args.batch_size))
-    elif args.output is not None:
-        args.output.parent.mkdir(parents=True, exist_ok=True)
-        args.output.write_text(dump(entries), encoding="utf-8")
-        print(len(entries))
-    else:
-        sys.stdout.write(dump(entries))
+    except OSError as exc:
+        text = " ".join(str(exc).split())
+        print(f"function-catalog: cannot write output: {text}", file=sys.stderr)
+        return 2
+    print(message)
     return 0
 
 

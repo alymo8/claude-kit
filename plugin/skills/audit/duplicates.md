@@ -47,28 +47,57 @@ Each prompt gives the batch path and the output path
 - write the result with the Write tool as a JSON array of
   `{file, line, name, domain, purpose}` and nothing else (no snippets).
 
-Check that each output parses and has as many entries as its batch. On a
-mismatch, dispatch that batch once more. Then join the outputs back to the
-catalog by `file` and `line`: catalog entries with no match in any categorized
-output count as uncategorized, and categorized entries with no catalog match
-are dropped. Continue with what joined. When `k` entries are uncategorized
-out of `n`, write one line in the report: `Grouping gap: <k> of <n> functions
-not categorized (batches: <NNN, ...>).` listing the affected batches.
+Check that each output parses and has as many entries as its batch; on a
+mismatch, dispatch that batch once more.
 
 ## 3. Compare within domains
 
-A domain is its exact label after trimming and lowercasing, so each distinct
-`other: <subdomain>` is its own domain. Compare the domains with 3 or more
-functions, largest first. A domain over 150 entries is split into chunks of at
-most 150, sorted by file then line. Each domain or chunk is one compare unit.
-Dispatch at most 12 units; list every unit not dispatched under "Not compared".
+Join and split in code, never by hand (copying alters `path:line` keys); set
+`S` to SCRATCH:
+
+```python
+import glob, json
+
+S = "SCRATCH"
+cat = json.load(open(S + "/catalog.json", encoding="utf-8"))
+key = lambda e: (e["file"], e["line"])
+byk, by, seen = {key(e): e for e in cat}, {}, set()
+for p in sorted(glob.glob(S + "/categorized-*.json")):
+    for c in json.load(open(p, encoding="utf-8")):
+        if key(c) in byk and key(c) not in seen:
+            seen.add(key(c))
+            e = {x: c[x] for x in ("file", "line", "name", "purpose")}
+            by.setdefault(c["domain"].strip().lower(), []).append(e)
+units = []
+for d in sorted((d for d in by if len(by[d]) >= 3), key=lambda d: -len(by[d])):
+    es = sorted(by[d], key=key)
+    units += [(d, es[i : i + 150]) for i in range(0, len(es), 150)]
+for n, (d, es) in enumerate(units[:12], 1):
+    with open(f"{S}/unit-{n:02d}.json", "w", encoding="utf-8") as f:
+        json.dump({"domain": d, "entries": es}, f)
+gap = sorted({i // 150 + 1 for i, e in enumerate(cat) if key(e) not in seen})
+print(len(units), len(cat), len(cat) - len(seen), gap)  # t, n, k, batches
+print([(d, len(es)) for d, es in units[12:]])  # not compared
+```
+
+Catalog entries with no categorized match are uncategorized. When `k` of `n`
+are, write one report line: `Grouping gap: <k> of <n> functions not categorized
+(batches: <NNN, ...>).` listing the affected batches.
+
+A domain is its label trimmed and lowercased, so each distinct `other:
+<subdomain>` is its own domain. The code keeps domains with 3 or more
+functions, largest first, and splits any over 150 entries into chunks of at
+most 150: each domain or chunk is one compare unit, `SCRATCH/unit-<NN>.json`.
+Write at most 12; list every other unit under "Not compared".
 
 Dispatch one `general-purpose` subagent per unit, all in one message, with no
-model override (the session's model). Each is told to read only and change
-nothing. The prompt gives the repo root and the unit's entries (`file`, `line`,
-`name`, `purpose`), and asks it to open each function in the repo and return
-groups of functions with the same intent (the same inputs to the same result,
-whatever the names or bodies). Each group has:
+model override (the session's model), told to read only and change nothing.
+The prompt gives the repo root and the unit file's path (entries with `file`,
+`line`, `name`, `purpose`), and asks it to open each function in the repo and
+return groups of functions with the same intent (the same inputs to the same
+result, whatever the names or bodies). Overrides, implementations of one
+interface or base class, and abstract declarations are not duplicates. A unit
+with no group returns `none`. Each group has:
 
 - the intent, in one line;
 - the confidence: `HIGH` (same behaviour), `MEDIUM` (same purpose, small
@@ -77,8 +106,6 @@ whatever the names or bodies). Each group has:
 - how they differ;
 - a recommended survivor and the reason (better tests, more callers, clearer
   name).
-
-A unit with no group returns `none`.
 
 ## 4. Findings
 
@@ -111,6 +138,10 @@ This is the content the audit puts in its duplicate-intent section, in order:
 3. The findings.
 4. The LOW table.
 5. The "Not compared" list.
+
+In the counts line, `<t>` = compare units after chunking, `<u>` = units
+dispatched (at most 12), `<h>`/`<m>`/`<l>` = groups by confidence across all
+dispatched units, `<n>` = catalogued functions.
 
 ## 5. Clean up
 
