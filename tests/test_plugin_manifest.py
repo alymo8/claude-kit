@@ -206,10 +206,10 @@ def test_description_mentions_pr_review_respond():
     assert "pr-review-respond" in data["description"]
 
 
-def test_version_is_0_29_0():
+def test_version_is_0_30_0():
     plugin_json = PLUGIN / ".claude-plugin" / "plugin.json"
     data = json.loads(plugin_json.read_text(encoding="utf-8"))
-    assert data["version"] == "0.29.0"
+    assert data["version"] == "0.30.0"
 
 
 def test_description_mentions_review():
@@ -243,3 +243,10 @@ def test_description_mentions_vault():
     data = json.loads(plugin_json.read_text(encoding="utf-8"))
     assert "a personal vault (/vault-init" in data["description"]
     assert "CLAUDE_KIT_VAULT" in data["description"]
+
+
+def test_description_mentions_duplicate_intent():
+    plugin_json = PLUGIN / ".claude-plugin" / "plugin.json"
+    data = json.loads(plugin_json.read_text(encoding="utf-8"))
+    assert "duplicate-intent pass" in data["description"]
+    assert "function-catalog.py" in data["description"]
