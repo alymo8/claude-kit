@@ -22,6 +22,7 @@ Prints, warnings first:
 
     frozen: none declared
     frozen: warning: no backticked path in <file>: <line>
+    frozen: warning: Frozen bullet after the header is ignored in <file>: <line>
     frozen: warning: no file matches <pattern>
     frozen: changed <path> since <short snapshot>
     frozen: ok (<n> files)
@@ -47,20 +48,35 @@ class GitError(Exception):
     pass
 
 
-def parse_bullets(text: str) -> list[str]:
-    """Every ``- **Frozen:**`` header bullet with its continuation lines."""
-    bullets: list[str] = []
+def _unfenced_lines(text: str) -> tuple[list[str], list[str]]:
+    """Lines outside code fences, split into header (before the first ``## ``)
+    and the rest. A fence line is kept as an empty line, so it ends a bullet."""
+    header: list[str] = []
+    rest: list[str] = []
     in_fence = False
-    in_bullet = False
     for line in text.splitlines():
         if line.lstrip().startswith(("```", "~~~")):
             in_fence = not in_fence
-            in_bullet = False
+            line = ""
+        elif in_fence:
             continue
-        if in_fence:
-            continue
-        if line.startswith("## "):
-            break
+        if not rest and not line.startswith("## "):
+            header.append(line)
+        else:
+            rest.append(line)
+    return header, rest
+
+
+def late_bullets(text: str) -> list[str]:
+    """``**Frozen:**`` lines after the header, which the check ignores."""
+    return [line for line in _unfenced_lines(text)[1] if BULLET_RE.match(line)]
+
+
+def parse_bullets(text: str) -> list[str]:
+    """Every ``- **Frozen:**`` header bullet with its continuation lines."""
+    bullets: list[str] = []
+    in_bullet = False
+    for line in _unfenced_lines(text)[0]:
         if BULLET_RE.match(line):
             bullets.append(line)
             in_bullet = True
@@ -146,6 +162,7 @@ def _check(patterns: list[str], base_ref: str, root: str) -> int:
         for p in git(
             "log",
             "-z",
+            "-m",
             "--no-renames",
             "--diff-filter=A",
             "--name-only",
@@ -188,6 +205,7 @@ def _check(patterns: list[str], base_ref: str, root: str) -> int:
         else:
             first = git(
                 "log",
+                "-m",
                 "--no-renames",
                 "--diff-filter=A",
                 "--reverse",
@@ -245,6 +263,11 @@ def main(argv: list[str] | None = None) -> int:
         for bullet in parse_bullets(text):
             if not SPAN_RE.search(bullet):
                 print(f"frozen: warning: no backticked path in {name}: {bullet}")
+        for line in late_bullets(text):
+            print(
+                "frozen: warning: Frozen bullet after the header is ignored "
+                f"in {name}: {line.strip()}"
+            )
         for pattern in parse_patterns(text):
             if pattern not in patterns:
                 patterns.append(pattern)
