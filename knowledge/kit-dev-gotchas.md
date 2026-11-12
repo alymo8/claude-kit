@@ -101,6 +101,13 @@ The commands keep the rules and leave out the reasons; the reasons are here.
 - Docker Desktop's resource saver stops the `docker-desktop` distro when
   idle, so `docker-disk.py` prints `used ?` (it never starts the distro).
   To compare its numbers by hand, run `docker info` first to wake it.
+- Git paths with `"`, `\`, a tab or a newline: git C-quotes them in
+  newline-separated output even with `core.quotepath=off`, so parse
+  `ls-tree`/`log --name-only` with `-z`. Windows cannot create such files,
+  so their tests are `skipif win32` and run only in CI. To check one
+  locally, build the commit with plumbing in a scratch repo:
+  `git config core.protectNTFS false`, then
+  `git update-index --add --cacheinfo 100644,<blob>,'t/q"x.py'` and commit.
 
 ## Hooks
 
