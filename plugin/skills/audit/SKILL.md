@@ -62,7 +62,9 @@ Silent failures first: they are real bugs that read fine as prose.
   queries, paths, shells, deserializers or templates; untrusted content
   reaching a model that can call tools; broad permissions.
 - Dependencies: lockfile committed, unpinned versions, abandoned packages.
-- Design: god modules, duplication, circular dependencies, business logic in
+- Design: god modules, duplicated blocks inside
+  functions (duplicate functions are Pass 4's, so one root cause gets one
+  finding), circular dependencies, business logic in
   handlers, abstractions with one caller, config sprawl, state that breaks
   when two instances run.
 - Observability: structured logging or print statements, levels, what is lost
@@ -75,6 +77,11 @@ Silent failures first: they are real bugs that read fine as prose.
 - The Claude-config checklist in `rules.md` (section 4, "Is it built well"),
   when it applies.
 
+## Pass 4: duplicate intent
+
+Read `duplicates.md` in this skill's directory and follow it, with the target
+repo as `<repo>`.
+
 ## Output
 
 Write `docs/audit/audit.md`:
@@ -84,14 +91,16 @@ Write `docs/audit/audit.md`:
 2. `## Inventory`: pass 1 as tables, not prose.
 3. One section per area, holding its findings in the format from `rules.md`.
    An area with nothing wrong gets one line saying so.
-4. `## What is missing`: things that should exist and do not, as absence
+4. `## Duplicate intent`: Pass 4's output, in the order `duplicates.md`
+   gives under its Output heading.
+5. `## What is missing`: things that should exist and do not, as absence
    findings.
-5. `## Fix first`: every finding ranked by value over effort, one line each
-   (severity, title, effort).
+6. `## Fix first`: every finding ranked by value over effort, one line each
+   (severity, title, effort). Pass 4's findings enter it like any other.
 
 Then run the self-check in `rules.md` (section 5) until it exits 0.
 
-In chat: the production bar, the counts by severity, the top five from "Fix
+In chat: the production bar, the counts by severity, Pass 4's counts line (or skip line), the top five from "Fix
 first", the checker's summary line, and the report path. Open the report for
 the user when the environment allows (`Invoke-Item` on Windows, `open` on
 macOS, `xdg-open` on Linux). Do not commit it.

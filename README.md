@@ -87,8 +87,9 @@ is in [`plugin/`](plugin/).
   `audit-deep`, `pr-review-respond`, `capture-learnings`, `ingest`,
   `task-prompt` and `review` skills (`review` is a standards reviewer and a
   spec reviewer side by side, run by `/ship`'s review step; the audits share
-  a citation
-  checker, `check-findings.py`), the `teach` skill (copied as is from
+  a citation checker, `check-findings.py`, and a duplicate-intent pass that
+  lists functions with `function-catalog.py` and compares them by domain),
+  the `teach` skill (copied as is from
   [mattpocock/skills](https://github.com/mattpocock/skills), MIT), the on-demand spec → HTML renderer, the `token-report.py`
   measurement script, a status line, and twelve hooks (regenerate the spec/plan
   index after edits and at every stop; report leftover worktrees, inject the
