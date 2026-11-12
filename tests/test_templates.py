@@ -227,3 +227,19 @@ def test_each_action_has_one_pin_across_kit_and_templates():
                 pins.setdefault(match.group(1), set()).add(match.group(2))
     drift = {action: refs for action, refs in pins.items() if len(refs) > 1}
     assert not drift, f"copy the Dependabot bump into plugin/templates: {drift}"
+
+
+def test_pr_templates_state_merge_danger_and_surgical_diffs():
+    kit = PLUGIN.parent / ".github" / "PULL_REQUEST_TEMPLATE.md"
+    project = PROJECT / ".github" / "PULL_REQUEST_TEMPLATE.md"
+    text = kit.read_text(encoding="utf-8")
+    assert text == project.read_text(encoding="utf-8")
+    for phrase in (
+        "## Merge danger",
+        "**Door:** one-way | two-way",
+        "**Blast radius:**",
+        "smallest visual",
+        "The diff is surgical: every changed line traces to the spec or task",
+        "introduced by the change",
+    ):
+        assert phrase in text, phrase

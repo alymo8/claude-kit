@@ -1,6 +1,6 @@
 import re
 
-from helpers import command_text
+from helpers import PLUGIN, command_text
 
 SHIP = command_text("ship")
 
@@ -294,3 +294,78 @@ def test_cleanup_reports_docker_disk_line():
     assert "Never run a prune without a" in step
     assert "never remove anything in the baseline" in step
     assert "docker disk:" in _step(12)
+
+
+def _frozen():
+    rule = SHIP.split("## Frozen check", 1)[1].split("## Steps", 1)[0]
+    return " ".join(rule.split())
+
+
+def test_frozen_check_runs_before_every_push():
+    rule = _frozen()
+    for needle in (
+        'frozen-check.py" <spec> <plan>',
+        "superpowers:systematic-debugging",
+        "not a stop rule",
+        "step 8's fix loop",
+    ):
+        assert needle in rule, needle
+    for n in (5, 6, 7, 9):
+        assert "frozen check" in _step(n), n
+
+
+def test_frozen_violation_is_a_stop_rule():
+    stops = " ".join(_stops().split())
+    for needle in (
+        "`frozen-check.py` exits 1",
+        "git commit --allow-empty",
+        "Frozen-change-approved: <path>",
+        "Implementers and subagents never write that trailer",
+    ):
+        assert needle in stops, needle
+
+
+def test_plan_prompt_copies_the_frozen_bullet():
+    assert "**Frozen:**" in _quoted(3)
+
+
+def test_step_four_passes_the_frozen_constraint():
+    step = _step(4)
+    assert "Files under Frozen (`<list>`) that exist are read-only" in step
+    assert "created once, exactly as the plan gives it" in step
+
+
+def test_step_six_runs_the_two_axis_review_every_run():
+    step = _step(6)
+    assert "on every run, run the `claude-kit:review` skill" in step
+    for needle in ("`hard`", "`judgement`", "scope creep"):
+        assert needle in step, needle
+    review = step.index("claude-kit:review")
+    assert step.index("superpowers:requesting-code-review") < review
+
+
+def test_pr_body_follows_the_reference():
+    step = _step(7)
+    for needle in (
+        "references/pr-body.md",
+        "**Door:**",
+        "**Blast radius:**",
+        "Merge danger",
+        "Hardening proposals",
+    ):
+        assert needle in step, needle
+
+
+def test_capture_learnings_runs_in_auto_mode():
+    needle = "`claude-kit:capture-learnings` skill with the argument `--auto`"
+    assert needle in _step(7)
+
+
+def test_report_lists_review_axes():
+    step = _step(12)
+    assert "claude-kit:review" in step
+    assert "`judgement`" in step
+
+
+def test_ship_md_stays_under_its_size_budget():
+    assert len((PLUGIN / "commands" / "ship.md").read_bytes()) <= 18_500

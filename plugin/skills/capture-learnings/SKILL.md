@@ -1,6 +1,7 @@
 ---
 name: capture-learnings
-description: Use when /ship or /ship-fast reaches its PR step, or when a feature or change is finished by hand before its branch merges. Writes the session's learnings (gotchas, commands that work, conventions, decisions, the user's corrections) to the repo's CLAUDE.md, knowledge/, an ADR or auto-memory, as one commit on the feature branch, and returns a Learnings summary for the caller's report.
+description: Use when /ship or /ship-fast reaches its PR step, or when a feature or change is finished by hand before its branch merges. Writes the session's learnings (gotchas, commands that work, conventions, decisions, the user's corrections) to the repo's CLAUDE.md, knowledge/, an ADR or auto-memory, as one commit on the feature branch, and returns a Learnings summary and hardening proposals for the caller's report.
+argument-hint: [--auto]
 ---
 
 # Capture learnings
@@ -9,6 +10,14 @@ Runs once per feature, on its feature branch, before the PR is opened (or,
 for a manual finish, before the branch merges). The learnings ride in the
 feature's PR and are visible in its diff, so there is no approval pause: do
 not ask the user to confirm them.
+
+## Mode
+
+With the argument `--auto` (passed by `/ship` and `/ship-fast`, so
+`/ship-many` children pass it too), never build a mechanical proposal:
+report it in the `Hardening:` block only. Without it (a hand run), after
+returning the summary, offer once to build the mechanical proposals, and
+build them only on a yes, as a separate commit with its tests.
 
 ## Steps
 
@@ -55,22 +64,59 @@ not ask the user to confirm them.
      no ADR; list the decision in the summary as `not written:`.
    - The session has no auto-memory directory: list preference learnings
      in the summary as `not written:`.
-4. **Write and commit.** Entries are terse and imperative, with exact
+4. **Harden.** Inputs: step 1's candidates plus every review finding
+   fixed in this feature (from the review reports that reached this
+   session) and every CI failure's cause; step 2's filter still applies.
+   Classify each mistake (something done wrong, then corrected by a
+   review, CI, a failed command or the user):
+   - **Mechanical:** a fixed pattern a tool could detect without
+     judgement (a banned API or import, a file-location or naming rule, a
+     forbidden string, a missing file, a format). Write the line
+     `harden (mechanical): <mistake> → <lint rule | hook | test | CI check>
+     in <file>: <the rule>`. Prefer extending an existing check: read the
+     lint config, the test layout and `.github/workflows/` first. An
+     existing check not wired into CI or a pre-commit/pre-push hook is
+     itself the proposal.
+   - **Judgement call:** needs reading the code in context. Add one terse
+     imperative bullet under `## Rules` in `knowledge/review-standards.md`,
+     in the same `Capture learnings` commit. If the file is missing, create
+     it with frontmatter `title: Review standards`, `status: stable`,
+     `last_updated: <today>`, `sources: []`, then one line saying it is
+     read by the standards reviewer of `claude-kit:review` and not by
+     implementers, then `## Rules`; if `knowledge/README.md` exists, add a
+     row for it in its map. Never link this file from `CLAUDE.md` or any
+     file an implementer loads at session start.
+
+   Then two report-only scans:
+   - **Steering bloat:** read the root and nested `CLAUDE.md` files; flag
+     rules that are no-ops, duplicates, better as a check (to-check) or
+     better in the standards file (to-standards):
+     `harden (steering): <file>:<line> <no-op | duplicate | to-check |
+     to-standards>: <why>`. Do not edit these files for this scan.
+   - **Navigation and information access:** what was hard to find:
+     `harden (navigation): <what was hard to find> → <pointer to add,
+     where>`.
+5. **Write and commit.** Entries are terse and imperative, with exact
    commands in code spans or fences. Never write secrets, credentials,
    connection strings or personal data, and no names of other private
    repos or of user accounts, in any repo (visibility can change). For
    auto-memory, re-read `MEMORY.md` right before adding the pointer line,
    and add one line rather than rewriting the file: parallel runs may
-   write it at the same time. Commit the repo files on the feature branch
-   as one commit with the subject `Capture learnings` and the session's
-   attribution line. Auto-memory writes are not committed. If no repo file
-   changed, make no commit.
-5. **Return** the Learnings summary for the caller's report:
-   - one line per written learning: `<destination>: <learning>`;
+   write it at the same time. Commit the repo files, including
+   `knowledge/review-standards.md` when step 4 wrote to it, on the feature
+   branch as one commit with the subject `Capture learnings` and the
+   session's attribution line. Auto-memory writes are not committed. If no
+   repo file changed, make no commit.
+6. **Return** the Learnings summary for the caller's report:
+   - one line per written learning: `<destination>: <learning>` (a rule
+     written to the standards file appears as
+     `knowledge/review-standards.md: <rule>`);
    - one line per decision or preference listed instead of written,
      starting `not written:`;
    - when nothing was written: `none`, then each dropped candidate with
-     the step-2 rule that dropped it.
+     the step-2 rule that dropped it;
+   - after the learnings lines, a `Hardening:` block with one line per
+     `harden (...)` line from step 4, or `Hardening: none`.
 
    If the branch already has a `Capture learnings` commit from an earlier
    run, start the summary with that commit's entries (from `git show`),

@@ -2,7 +2,8 @@
 
 Part of `commands/ship-fast.md`, which reads this file when it reaches it. That command's Stop rules and Git lock retry apply here.
 
-7. **PR.** First run the `claude-kit:capture-learnings` skill, then
+7. **PR.** First run the `claude-kit:capture-learnings` skill with the
+   argument `--auto`, then run the frozen check and
    `git push -u origin poc/<slug>` (it carries any learnings commit, which
    changes no app code and needs no restart). (Each CI fix commit restarts
    the app, as in step 5.) The PR title is the spec's title: the first
@@ -10,21 +11,25 @@ Part of `commands/ship-fast.md`, which reads this file when it reaches it. That 
    `# ` prefix and trailing whitespace removed. Run, with the Bash tool (not
    PowerShell), `gh pr create --title '<title>' --body-file <file>`, with
    the title written out literally inside single quotes and each `'` in it
-   written as `'\''`. The body has: Summary; Acceptance criteria, each with
-   its evidence (the test name or the smoke-run output); Decisions (every
-   question the user answered, then the product choices "assumed (not
-   asked)"); Assumptions (engineering choices taken without asking); Cut
-   (what the POC leaves out); links to the spec and the task list;
-   Verification (the exact commands and their results); and the
-   attribution line the session requires. Then
+   written as `'\''`. Write the body by
+   `${CLAUDE_PLUGIN_ROOT}/references/pr-body.md` (fallback if the variable
+   is not expanded: `~/.claude/skills/claude-kit/references/pr-body.md`):
+   its shared parts and its `/ship-fast` list. Then
    compare `gh pr view --json title` with the title; on a mismatch run
    `gh pr edit --title '<title>'` once. Whether the repository has CI is
    decided only by whether `.github/workflows/*.yml` exists on the branch.
    If it does, run `gh pr checks` every 15 seconds until checks appear
    (they start a few seconds after the PR is created), then
-   `gh pr checks --watch --fail-fast`. On red: `gh run view <id> --log-failed`, fix with
-   `superpowers:systematic-debugging`, commit, push, count one attempt. If
-   there is no workflow file, skip the watch and say so in the report.
+   `gh pr checks --watch --fail-fast`. On red: `gh run view <id> --log-failed`,
+   fix with `superpowers:systematic-debugging`, commit, run the frozen check,
+   push, count one attempt. If there is no workflow file, skip the watch and
+   say so in the report.
+   **Frozen check:** before each push in this step, run
+   `python "${CLAUDE_PLUGIN_ROOT}/scripts/frozen-check.py" <spec>` (fallback
+   `~/.claude/skills/claude-kit/scripts/frozen-check.py`; the task list
+   carries no Frozen bullet). Exit 0: push. Exit 1: a stop rule. Exit 2:
+   debug it with `superpowers:systematic-debugging` and rerun before
+   pushing.
 8. **Hand over.** No cleanup runs here: the user tests and presents the
    POC from this workspace first. Keep the feature worktree, the local
    branch `poc/<slug>` and any Docker objects. The app launched in step 5

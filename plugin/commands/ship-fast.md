@@ -123,6 +123,11 @@ invocation (for example `/ship-fast <path to an existing spec.md>`).
 - An acceptance criterion still fails the smoke run after 2 fix attempts.
   No PR is opened.
 - PR CI is red after 2 fix attempts. Report the open PR link.
+- `frozen-check.py` exits 1 before a push in step 7. Report each changed
+  path (and the open PR link, if any). The user approves the change, and
+  only then the main session runs `git commit --allow-empty`, after the
+  change commit, with one `Frozen-change-approved: <path>` trailer line per
+  approved path; or the user revises the spec.
 
 ## Git lock retry
 

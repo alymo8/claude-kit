@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import re
 
-from helpers import command_text
+from helpers import PLUGIN, command_text
 
 SHIP_FAST = command_text("ship-fast")
 
@@ -183,6 +183,43 @@ def test_learnings_are_captured_before_the_push():
     assert "claude-kit:capture-learnings" in step
     learn = step.index("claude-kit:capture-learnings")
     assert learn < step.index("git push -u origin poc/<slug>")
+
+
+def test_frozen_check_before_each_push():
+    step = _step(7)
+    assert 'frozen-check.py" <spec>' in step
+    assert "~/.claude/skills/claude-kit/scripts/frozen-check.py" in step
+    assert "superpowers:systematic-debugging" in step
+    assert step.index("frozen check") < step.index("git push -u origin poc/<slug>")
+
+
+def test_frozen_violation_is_a_stop_rule():
+    stops = " ".join(
+        SHIP_FAST.split("## Stop rules", 1)[1].split("\n## ", 1)[0].split()
+    )
+    assert "`frozen-check.py` exits 1" in stops
+    assert "Frozen-change-approved: <path>" in stops
+
+
+def test_pr_body_follows_the_reference():
+    step = _step(7)
+    assert "references/pr-body.md" in step
+    assert "--auto" in step
+    body = (PLUGIN / "references" / "pr-body.md").read_text(encoding="utf-8")
+    part = body.split("## /ship-fast body", 1)[1]
+    for needle in (
+        "Acceptance criteria",
+        "Merge danger",
+        "Hardening proposals",
+        "Cut",
+        "Assumptions",
+    ):
+        assert needle in part, needle
+
+
+def test_quick_review_is_still_code_review():
+    assert "code-review" in _step(6)
+    assert "claude-kit:review" not in SHIP_FAST
 
 
 def test_report_lists_learnings():
