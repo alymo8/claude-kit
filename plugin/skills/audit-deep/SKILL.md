@@ -16,6 +16,7 @@ Names used below:
 
 - SKILL_DIR: this skill's directory. Phase prompts are in `SKILL_DIR/phases/`.
 - RULES: the absolute path of `../audit/rules.md` from SKILL_DIR.
+- DUPES: the absolute path of `../audit/duplicates.md` from SKILL_DIR.
 - CHECKER: the absolute path of `../../scripts/check-findings.py` from
   SKILL_DIR.
 - REPO: the absolute path of the target repo.
@@ -31,7 +32,7 @@ Names used below:
    "internal tool, trusted users, no PII" or "customer-facing multi-tenant
    SaaS, handles customer data"); and, only if any of `00-repo-map.md`,
    `01-product.md`, `02-quality.md`, `03-context-engineering.md`,
-   `04-security.md`, `05-design.md`, `06-onboarding.md` or `report.html`
+   `04-security.md`, `05-design.md`, `06-onboarding.md`, `07-duplicates.md` or `report.html`
    already exists in `REPO/docs/audit/`, whether to overwrite them. Leave
    other files in `docs/audit/` alone.
 
@@ -76,6 +77,14 @@ Prompt (replace every capitalised name with its absolute value):
 Wait for all four. Rerun CHECKER on `02` to `05`. Fix any rejection yourself,
 opening the cited file first.
 
+## Phase H: duplicate intent (this session)
+
+Subagents cannot dispatch subagents, so this session runs it. Read DUPES and
+follow it with REPO as the repo. Write `REPO/docs/audit/07-duplicates.md`: a
+`# Duplicate intent` heading, BAR, the date, then the counts line or the skip
+line, then the rest of the pass's output in DUPES's order. Run CHECKER on it,
+as for the other files.
+
 ## Phase F: onboarding (one subagent)
 
 The same prompt with PHASE_FILE `F-onboarding.md` and OUTPUT
@@ -91,8 +100,8 @@ the facts in the markdown. Prompt:
     source code or any file outside REPO/docs/audit/, other than the phase
     file named below.
     Read SKILL_DIR/phases/G-report.md and follow it. The inputs are the files
-    00-repo-map.md to 06-onboarding.md in REPO/docs/audit/; ignore every
-    other file there.
+    00-repo-map.md to 06-onboarding.md and 07-duplicates.md in
+    REPO/docs/audit/; ignore every other file there.
     Your only output file is REPO/docs/audit/report.html.
     Reply with the number of findings rendered, and every finding you could
     not render and why.
@@ -103,7 +112,7 @@ fixed.
 
 ## Report
 
-In chat: BAR, finding counts by severity per area, the merged Top 10 from the
+In chat: BAR, finding counts by severity per area, Phase H's counts line (or skip line), the merged Top 10 from the
 report's landing view, CHECKER's result on every file, anything G could not
 render, and the path to `report.html`. Open it for the user (`Invoke-Item` on
 Windows, `open` on macOS, `xdg-open` on Linux).

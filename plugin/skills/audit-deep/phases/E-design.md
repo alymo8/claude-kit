@@ -9,7 +9,8 @@ Cover:
   aspirational one, and note where the code contradicts the stated or implied
   architecture, including anything claimed in README or CLAUDE.md.
 - **Antipatterns:** god objects, god modules, circular dependencies,
-  copy-paste duplication, premature abstraction, abstraction that leaks its
+  duplicated blocks inside functions (duplicate functions, the same intent
+  written twice, are left to Phase H), premature abstraction, abstraction that leaks its
   implementation, business logic in controllers or handlers, config sprawl.
 - **Coupling and cohesion:** which modules cannot be changed independently,
   and which change together in git history despite being nominally separate

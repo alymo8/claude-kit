@@ -4,6 +4,8 @@ A formatting task. Do not read the source code or any file outside
 `docs/audit/` other than this file. Every fact in the output comes from the input markdown files;
 do not add, infer, reword or re-derive any finding.
 
+The inputs include `07-duplicates.md` (duplicate intent), an area like the others; its LOW table and counts line are not findings.
+
 Produce one self-contained file, `docs/audit/report.html`:
 
 - **One file.** No CDN links, no external scripts, fonts, stylesheets or

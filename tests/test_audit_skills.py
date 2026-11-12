@@ -82,6 +82,7 @@ OUTPUTS = [
     "04-security.md",
     "05-design.md",
     "06-onboarding.md",
+    "07-duplicates.md",
     "report.html",
 ]
 
@@ -197,3 +198,27 @@ def test_duplicates_procedure_names_its_limits():
 def test_catalog_path_from_duplicates_resolves():
     assert CATALOG_REL in read(DUPES)
     assert (AUDIT / CATALOG_REL).resolve().is_file()
+
+
+def test_deep_has_phase_h_between_e_and_f():
+    body = read(DEEP / "SKILL.md")
+    h = body.index("## Phase H: duplicate intent (this session)")
+    assert body.index("Wait for all four") < h < body.index("## Phase F")
+    assert "../audit/duplicates.md" in body
+    assert (DEEP / "../audit/duplicates.md").resolve().is_file()
+
+
+def test_deep_overwrite_list_and_g_inputs_name_duplicates():
+    body = read(DEEP / "SKILL.md")
+    setup = body.split("## Setup", 1)[1].split("## Phase A", 1)[0]
+    assert "07-duplicates.md" in setup
+    assert "00-repo-map.md to 06-onboarding.md and 07-duplicates.md" in (
+        " ".join(body.split())
+    )
+    assert "07-duplicates.md" in read(DEEP / "phases" / "G-report.md")
+
+
+def test_design_phase_leaves_duplicate_functions_to_phase_h():
+    text = flat(DEEP / "phases" / "E-design.md")
+    assert "Phase H" in text
+    assert "duplicated blocks inside functions" in text
