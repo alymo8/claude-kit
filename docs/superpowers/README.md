@@ -37,6 +37,7 @@
 
 | Date | Plan | Status |
 |---|---|---|
+| 2026-11-11 | [Duplicate-intent pass in `audit` and `audit-deep` Implementation Plan](plans/2026-11-11-duplicate-functions-audit.md) | approved |
 | 2026-11-10 | [Two-axis review, surgical diffs, frozen evaluators, Merge Danger and a hardening retro Implementation Plan](plans/2026-11-10-review-and-guardrails.md) | approved |
 | 2026-11-10 | [Personal vault Implementation Plan](plans/2026-11-10-vault.md) | approved |
 | 2026-10-21 | [Docker Desktop disk upkeep on Windows Implementation Plan](plans/2026-10-21-docker-disk-upkeep.md) | implemented |
