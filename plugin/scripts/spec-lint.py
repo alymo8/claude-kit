@@ -605,25 +605,35 @@ def check_spec_gated(
 
 
 def file_items(body: list[Line]) -> list[tuple[int, str, list[str]]]:
-    """(line, kind, paths) for each Create/Modify/Test bullet under a Files line."""
+    """(line, kind, paths) for each Create/Modify/Test bullet under a Files line.
+
+    A bullet's paths include those on its indented continuation lines.
+    """
+
+    def paths_in(text: str) -> list[str]:
+        rest = PARENS_RE.sub("", text)  # asides are not file names
+        spans = [LINE_SUFFIX_RE.sub("", s) for s in SPAN_RE.findall(rest)]
+        return [s for s in spans if looks_like_path(s)]
+
     out = []
-    in_files = False
+    in_files = in_bullet = False
     for number, line, code in body:
         if code:
-            in_files = False
+            in_files = in_bullet = False
             continue
         if FILES_RE.match(line):
-            in_files = True
+            in_files, in_bullet = True, False
             continue
         match = FILE_ITEM_RE.match(line) if in_files else None
         if match:
-            rest = PARENS_RE.sub("", match.group(2))  # asides are not file names
-            spans = [LINE_SUFFIX_RE.sub("", s) for s in SPAN_RE.findall(rest)]
-            out.append(
-                (number, match.group(1), [s for s in spans if looks_like_path(s)])
-            )
-        elif line.strip() and not line.startswith((" ", "\t")):
-            in_files = False
+            out.append((number, match.group(1), paths_in(match.group(2))))
+            in_bullet = True
+        elif in_bullet and line.startswith((" ", "\t")) and line.strip():
+            out[-1][2].extend(paths_in(line))  # a wrapped bullet's continuation
+        else:
+            if line.strip() and not line.startswith((" ", "\t")):
+                in_files = False
+            in_bullet = False
     return out
 
 

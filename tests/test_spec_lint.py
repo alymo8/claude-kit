@@ -544,6 +544,27 @@ def test_p9_create_in_a_later_task_does_not_count(root):
     assert plan_rules(text, root) == [(14, "P9-path")]
 
 
+def test_p9_checks_a_path_on_a_wrapped_bullet_line(root):
+    plan_root(root)
+    wrapped = "- Modify: the helper in\n  `src/missing.py`"
+    text = PLAN.replace("- Modify: `src/app.py`", wrapped)
+    assert plan_rules(text, root) == [(14, "P9-path")]
+
+
+def test_p9_accepts_an_existing_path_on_a_wrapped_bullet_line(root):
+    plan_root(root)
+    wrapped = "- Modify: the helper in\n  `src/app.py`"
+    assert sl.lint_plan(PLAN.replace("- Modify: `src/app.py`", wrapped), root) == []
+
+
+def test_p9_wrapped_create_counts_as_new_for_a_later_modify(root):
+    plan_root(root)
+    wrapped = "- Create: a module at\n  `src/late.py`"
+    text = PLAN.replace("- Modify: `src/app.py`", wrapped)
+    text = text.replace("- Modify: `src/new.py`", "- Modify: `src/late.py`")
+    assert sl.lint_plan(text, root) == []
+
+
 def test_plan_hash_ignores_status_and_ticks():
     base = sl.plan_hash(PLAN)
     assert len(base) == 64
