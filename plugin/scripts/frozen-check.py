@@ -130,25 +130,29 @@ def _check(patterns: list[str], base_ref: str, root: str) -> int:
         return _run(["git", "-c", "core.quotepath=off", "-C", top, *args]).stdout
 
     base = git("merge-base", base_ref, "HEAD").strip()
-    commits = git("rev-list", "--reverse", f"{base}..HEAD").split()
+    commits = git("rev-list", "--reverse", "--topo-order", f"{base}..HEAD").split()
     index = {sha: i for i, sha in enumerate(commits)}
 
-    base_tree = set(
-        git("ls-tree", "-r", "--full-tree", "--name-only", base).split("\n")
-    )
-    head_tree = set(
-        git("ls-tree", "-r", "--full-tree", "--name-only", "HEAD").split("\n")
-    )
-    added = set(
-        git(
+    def tree(rev: str) -> set[str]:
+        return set(
+            git("ls-tree", "-r", "-z", "--full-tree", "--name-only", rev).split("\0")
+        )
+
+    base_tree = tree(base)
+    head_tree = tree("HEAD")
+    # With -z, each commit's name list is NUL-separated and ends in a newline.
+    added = {
+        p.strip("\n")
+        for p in git(
             "log",
+            "-z",
             "--no-renames",
             "--diff-filter=A",
             "--name-only",
             "--format=",
             f"{base}..HEAD",
-        ).split("\n")
-    )
+        ).split("\0")
+    }
     candidates = {p for p in base_tree | head_tree | added if p}
 
     frozen: set[str] = set()
@@ -174,6 +178,7 @@ def _check(patterns: list[str], base_ref: str, root: str) -> int:
         if sha not in index:
             continue
         for path in TRAILER_RE.findall(body):
+            path = path[2:] if path.startswith("./") else path
             approvals.setdefault(path, []).append(index[sha])
 
     violations = []

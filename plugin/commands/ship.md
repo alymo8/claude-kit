@@ -218,7 +218,8 @@ rule.
    and every spec finding of kind (a) or (c) you can verify; remove scope
    creep (b) unless removing it breaks a requirement. Fix a `judgement`
    finding when the fix is small and clearly better; keep the rest for the PR
-   body and the report. Commit, re-run the full test suite and lint, run the
+   body and the report. A `frozen: changed` finding is not fixed here: it is
+   the frozen stop rule. Commit, re-run the full test suite and lint, run the
    frozen check, push. A finding from any of these reviews that needs a
    scope, product or behaviour decision the spec does not settle is a stop
    rule.

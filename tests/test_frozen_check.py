@@ -1,4 +1,5 @@
 import subprocess
+import sys
 from pathlib import Path
 
 import pytest
@@ -125,6 +126,24 @@ def test_approval_trailer_moves_the_snapshot(repo, tmp_path):
     commit(repo, "edit again", {"tests/a.py": "c\n"})
     r = check(repo, s)
     assert r.returncode == 1, r.stderr
+
+
+def test_approval_trailer_with_dot_slash_prefix(repo, tmp_path):
+    s = spec(tmp_path, "- **Frozen:** `tests/a.py`")
+    commit(repo, "edit", {"tests/a.py": "b\n"})
+    approve(repo, "./tests/a.py")
+    r = check(repo, s)
+    assert r.returncode == 0, r.stdout + r.stderr
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="quote in file name")
+def test_frozen_file_with_quote_in_name(repo, tmp_path):
+    commit(repo, "add", {'tests/q"x.py': "a\n"})
+    git("update-ref", "refs/heads/main", "HEAD", cwd=repo)
+    commit(repo, "edit", {'tests/q"x.py': "b\n"})
+    r = check(repo, spec(tmp_path, '- **Frozen:** `tests/q"x.py`'))
+    assert r.returncode == 1, r.stdout + r.stderr
+    assert 'frozen: changed tests/q"x.py' in r.stdout
 
 
 def test_last_trailer_wins(repo, tmp_path):

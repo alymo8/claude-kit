@@ -1,6 +1,6 @@
 # ADR 0037: /ship's main session coordinates; subagents write the plan and the code
 
-- **Status:** accepted
+- **Status:** accepted; amended by 0041 ([ADR 0041](0041-two-axis-review-in-ship.md): step 6 adds two diff-only reviewer subagents on every run)
 - **Date:** 2026-10-20
 
 ## Context

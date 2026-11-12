@@ -39,4 +39,6 @@ file (that changes the spec and re-gates the spec and the plan).
 ## Consequences
 Enforcement happens at push time, not at edit time, so a violating edit is
 caught late but never reaches the remote. Specs that freeze nothing pay
-nothing: the script prints `frozen: none declared`.
+nothing: the script prints `frozen: none declared`. Any commit may carry a
+`Frozen-change-approved:` trailer, so a subagent that ignores its prompt
+could unfreeze a file; the rule is an instruction, not a mechanism.
