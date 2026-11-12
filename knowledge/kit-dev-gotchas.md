@@ -55,8 +55,17 @@ Things that cost time in past runs and are not obvious from the code.
   fake `git` that matches `args[0] == "commit"` passes here and fails there.
   Match `"commit" in args`, and run identity-sensitive tests once with
   `GIT_CONFIG_GLOBAL`, `HOME` and `USERPROFILE` pointed at an empty folder.
+- `ruff format --check plugin tests` (ruff 0.16) includes `.md` files and
+  formats the Python fences inside them, so a code block in a skill must be
+  ruff-clean and its reformatting can push a line-capped skill over its cap.
 
 ## Worktree-isolated sessions (`/ship`, `parallel-tasks`)
+
+- Under `/ship`, a background full-suite run in the feature worktree while
+  the next task's implementer edits it reports that implementer's
+  half-done files as failures or format diffs. To check a finished task's
+  commit alone, run the suite in a detached copy:
+  `git worktree add --detach <scratchpad>/tN <sha>`, then remove it.
 
 - The isolation guard refuses Bash commands it cannot prove stay inside the
   session's worktree: shell variables in paths (`rm "$M/$f"`), heredocs
