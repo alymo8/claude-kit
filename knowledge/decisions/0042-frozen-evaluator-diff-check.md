@@ -10,8 +10,9 @@ stopped that: the approved spec could not name files as off limits.
 
 ## Decision
 A spec or plan may carry a `- **Frozen:**` bullet of backticked paths or globs.
-`plugin/scripts/frozen-check.py` compares them with the snapshot taken when the
-spec and plan were approved and reports any changed file before every push in
+`plugin/scripts/frozen-check.py` compares each with its snapshot (the
+merge-base, else the branch commit that created it, moved by a later approval
+commit) and reports any changed file before every push in
 `/ship` and `/ship-fast`; a changed frozen file stops the run. A frozen file
 that does not exist yet is created once, exactly as the plan gives it. A
 needed change goes back to the user as a spec decision. Only the main session

@@ -275,6 +275,21 @@ def test_parse_patterns_unit():
     assert fc.parse_patterns(text) == ["a/b.py", "c/**"]
 
 
+@pytest.mark.parametrize("prefix", ["", "* ", "  - "])
+def test_frozen_line_without_dash_bullet_counts(repo, tmp_path, prefix):
+    commit(repo, "edit", {"tests/a.py": "b\n"})
+    r = check(repo, spec(tmp_path, f"{prefix}**Frozen:** `tests/a.py`"))
+    assert r.returncode == 1, r.stdout + r.stderr
+    assert "frozen: changed tests/a.py" in r.stdout
+
+
+def test_frozen_line_without_paths_warns(repo, tmp_path):
+    r = check(repo, spec(tmp_path, "- **Frozen:** tests/a.py"))
+    assert r.returncode == 0, r.stderr
+    assert "frozen: warning: no backticked path in" in r.stdout
+    assert "frozen: none declared" in r.stdout
+
+
 def test_pattern_regex_unit():
     assert fc.pattern_regex("a/*.py").fullmatch("a/b/c.py") is None
     assert fc.pattern_regex("a/**/c.py").fullmatch("a/c.py")

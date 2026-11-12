@@ -3,12 +3,13 @@
 
     python frozen-check.py FILE.md [FILE.md ...] [--base REF] [--root DIR]
 
-Reads the ``- **Frozen:**`` header bullets of each spec or plan FILE.md
-(before the first ``## `` heading, outside code fences; indented continuation
-lines count) and takes their backticked spans as path patterns: ``*`` and
-``?`` stay inside one path segment, ``**/`` matches zero or more directories,
-a trailing ``**`` matches anything. A pattern ending in ``/``, or one that
-matches no file but names a directory, freezes everything under it.
+Reads the ``- **Frozen:**`` header bullets of each spec or plan FILE.md (the
+``- `` may also be ``* `` or absent; before the first ``## `` heading, outside
+code fences; indented continuation lines count) and takes their backticked
+spans as path patterns: ``*`` and ``?`` stay inside one path segment, ``**/``
+matches zero or more directories, a trailing ``**`` matches anything. A
+pattern ending in ``/``, or one that matches no file but names a directory,
+freezes everything under it.
 
 The base is ``git merge-base REF HEAD`` (REF defaults to ``origin/main``) in
 the repository holding ``--root`` (default: the current directory). A frozen
@@ -20,6 +21,7 @@ its snapshot and HEAD is a violation.
 Prints, warnings first:
 
     frozen: none declared
+    frozen: warning: no backticked path in <file>: <line>
     frozen: warning: no file matches <pattern>
     frozen: changed <path> since <short snapshot>
     frozen: ok (<n> files)
@@ -36,7 +38,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-BULLET_RE = re.compile(r"^\s*- \*\*Frozen:\*\*")
+BULLET_RE = re.compile(r"^\s*(?:[-*] )?\*\*Frozen:\*\*")
 SPAN_RE = re.compile(r"`([^`]+)`")
 TRAILER_RE = re.compile(r"^Frozen-change-approved:[ \t]*(\S+)[ \t]*$", re.M)
 
@@ -45,8 +47,8 @@ class GitError(Exception):
     pass
 
 
-def parse_patterns(text: str) -> list[str]:
-    """The backticked spans of every ``- **Frozen:**`` header bullet, in order."""
+def parse_bullets(text: str) -> list[str]:
+    """Every ``- **Frozen:**`` header bullet with its continuation lines."""
     bullets: list[str] = []
     in_fence = False
     in_bullet = False
@@ -71,8 +73,13 @@ def parse_patterns(text: str) -> list[str]:
             bullets[-1] += "\n" + line
         else:
             in_bullet = False
+    return bullets
+
+
+def parse_patterns(text: str) -> list[str]:
+    """The backticked spans of every ``- **Frozen:**`` header bullet, in order."""
     patterns = []
-    for bullet in bullets:
+    for bullet in parse_bullets(text):
         for span in SPAN_RE.findall(bullet):
             patterns.append(span[2:] if span.startswith("./") else span)
     return patterns
@@ -230,6 +237,9 @@ def main(argv: list[str] | None = None) -> int:
         except (OSError, UnicodeDecodeError):
             print(f"frozen-check: cannot read {name}", file=sys.stderr)
             return 2
+        for bullet in parse_bullets(text):
+            if not SPAN_RE.search(bullet):
+                print(f"frozen: warning: no backticked path in {name}: {bullet}")
         for pattern in parse_patterns(text):
             if pattern not in patterns:
                 patterns.append(pattern)

@@ -1,6 +1,6 @@
 ---
 name: capture-learnings
-description: Use when /ship or /ship-fast reaches its PR step, or when a feature or change is finished by hand before its branch merges. Writes the session's learnings (gotchas, commands that work, conventions, decisions, the user's corrections) to the repo's CLAUDE.md, knowledge/, an ADR or auto-memory, as one commit on the feature branch, and returns a Learnings summary for the caller's report.
+description: Use when /ship or /ship-fast reaches its PR step, or when a feature or change is finished by hand before its branch merges. Writes the session's learnings (gotchas, commands that work, conventions, decisions, the user's corrections) to the repo's CLAUDE.md, knowledge/, an ADR or auto-memory, as one commit on the feature branch, and returns a Learnings summary and hardening proposals for the caller's report.
 argument-hint: [--auto]
 ---
 
@@ -86,14 +86,16 @@ build them only on a yes, as a separate commit with its tests.
      implementers, then `## Rules`; if `knowledge/README.md` exists, add a
      row for it in its map. Never link this file from `CLAUDE.md` or any
      file an implementer loads at session start.
-   - **Steering bloat:** (report only) read the root and nested
-     `CLAUDE.md` files; flag rules that are no-ops, duplicates, better as
-     a check (to-check) or better in the standards file (to-standards):
+
+   Then two report-only scans:
+   - **Steering bloat:** read the root and nested `CLAUDE.md` files; flag
+     rules that are no-ops, duplicates, better as a check (to-check) or
+     better in the standards file (to-standards):
      `harden (steering): <file>:<line> <no-op | duplicate | to-check |
      to-standards>: <why>`. Do not edit these files for this scan.
-   - **Navigation and information access:** (report only) what was hard
-     to find: `harden (navigation): <what was hard to find> → <pointer to
-     add, where>`.
+   - **Navigation and information access:** what was hard to find:
+     `harden (navigation): <what was hard to find> → <pointer to add,
+     where>`.
 5. **Write and commit.** Entries are terse and imperative, with exact
    commands in code spans or fences. Never write secrets, credentials,
    connection strings or personal data, and no names of other private

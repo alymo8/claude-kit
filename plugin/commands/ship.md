@@ -113,9 +113,9 @@ rule.
    > choice open, prefer one the spec, its ADRs or the existing code already
    > imply. Answer every question under `## Plan questions` in the spec gate
    > record in the task it affects (none if the section is missing). Copy the
-   > spec's `**Frozen:**` bullet into the plan header, adding any test or eval
-   > file whose full content the plan writes and that a success criterion
-   > depends on. Add a
+   > spec's `- **Frozen:**` bullet (with the `- `) into the plan header,
+   > adding any test or eval file whose full content the plan writes and
+   > that a success criterion depends on. Add a
    > `**Depends on:**` line under each task's `**Files:**` block: `none`, or
    > the earlier tasks whose results it uses (`Task 1, Task 3`); a task whose
    > only link to earlier tasks is shared files gets `none`. Do not write a

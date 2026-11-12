@@ -20,9 +20,10 @@ Part of `commands/ship-fast.md`, which reads this file when it reaches it. That 
    decided only by whether `.github/workflows/*.yml` exists on the branch.
    If it does, run `gh pr checks` every 15 seconds until checks appear
    (they start a few seconds after the PR is created), then
-   `gh pr checks --watch --fail-fast`. On red: `gh run view <id> --log-failed`, fix with
-   `superpowers:systematic-debugging`, commit, run the frozen check, push, count one attempt. If
-   there is no workflow file, skip the watch and say so in the report.
+   `gh pr checks --watch --fail-fast`. On red: `gh run view <id> --log-failed`,
+   fix with `superpowers:systematic-debugging`, commit, run the frozen check,
+   push, count one attempt. If there is no workflow file, skip the watch and
+   say so in the report.
    **Frozen check:** before each push in this step, run
    `python "${CLAUDE_PLUGIN_ROOT}/scripts/frozen-check.py" <spec>` (fallback
    `~/.claude/skills/claude-kit/scripts/frozen-check.py`; the task list
