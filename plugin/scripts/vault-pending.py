@@ -56,9 +56,8 @@ INSTRUCTION_PHRASES: tuple[str, ...] = (
     "you are claude",
     "you are an ai",
     "as an ai assistant",
-    "system prompt",
+    "your system prompt",
     "new instructions:",
-    "assistant:",
     "<system>",
     "</system>",
 )
@@ -91,6 +90,9 @@ def _phrase_pattern(phrase: str) -> re.Pattern[str]:
 INSTRUCTION_PATTERNS = [_phrase_pattern(p) for p in INSTRUCTION_PHRASES] + [
     re.compile(r"(?<![\w.])(?:Bash|WebFetch|Write|Edit)\(|(?<!\w)mcp__")
 ]
+# "assistant:" only as a speaker turn at the start of a raw line (a WebVTT
+# voice tag may come first); in prose it is a title or a label
+ROLE_MARKER_RE = re.compile(r"^[ \t]*(?:<v[^>]*>[ \t]*)?assistant:", re.I | re.M)
 COMMENT_RE = re.compile(r"<!--(.*?)(?:-->|\Z)", re.S)
 TAG_RE = re.compile(r"<([A-Za-z][\w-]*)\b([^>]*)>", re.S)
 STYLE_RE = re.compile(r"""(?<![\w-])style\s*=\s*(?:"([^"]*)"|'([^']*)')""", re.I)
@@ -297,6 +299,11 @@ def scan(path: Path) -> tuple[bool, list[dict]]:
             span = (line_of(first), line_of(last))
             if span not in found or first < found[span]:
                 found[span] = first
+    for m in ROLE_MARKER_RE.finditer(text):
+        first = m.start() + len(m.group()) - len("assistant:")
+        span = (line_of(first), line_of(first))
+        if span not in found or first < found[span]:
+            found[span] = first
     for (line, end_line), first in found.items():
         flags.append(
             {
