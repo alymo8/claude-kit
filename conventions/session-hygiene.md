@@ -21,6 +21,22 @@ Sessions ran long because starting fresh lost everything except `CLAUDE.md`.
 Simulating "restart with a 45k-token handoff at 300k" cut input tokens by 42%;
 at 150k, by 65%.
 
+Tokens are not dollars: a cache read costs a twentieth of fresh input on Opus
+5.5 ($0.20 against $4 per million tokens), so a long context is cheaper than
+its token count suggests. It still dominates the bill, because every turn reads
+it again. Re-measured in dollars at Opus 5.5 list prices across 235 sessions
+(`token-report.py --all --dollars`):
+
+| Measure | Value |
+|---|---|
+| Cost as recorded | $2,004 |
+| Share of cost: cache reads / cache writes / output | 62% / 23% / 15% |
+| Restart with a 45k handoff at 300k | $1,542 (23% less) |
+| Restart with a 45k handoff at 150k | $1,263 (37% less) |
+
+The saving in dollars is smaller than in tokens but still large, so the
+restart cap stays.
+
 ## Principles
 
 1. **A session is a unit of work, not a day.** End it at a natural boundary: a
@@ -69,8 +85,10 @@ takes its handoffs with it.
 ## Re-measuring
 
 `python <kit>/plugin/scripts/token-report.py --all` prints the numbers above for
-every project on this machine, plus the restart simulation. Run it after a few
-weeks of use and compare with the table at the top.
+every project on this machine, plus the restart simulation. `--dollars` adds
+the cost and the simulation in dollars (`--prices INPUT WRITE READ OUTPUT` for
+another model's rates). Run it after a few weeks of use, and again when a new
+model changes the prices, and compare with the tables at the top.
 
 ## Definition of done
 
