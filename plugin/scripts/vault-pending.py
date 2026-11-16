@@ -17,7 +17,11 @@ Text output is one ``<status>\\t<raw path>`` line per entry, sorted by path,
 with vault-relative posix paths; nothing is printed when nothing is pending.
 ``--json`` prints a list of objects with ``path``, ``status``, ``source`` (the
 source page for ``changed`` and ``missing``, else null) and ``sha256`` (the
-raw file's current lowercase hex sha256, null for ``missing``).
+raw file's current lowercase hex sha256, null for ``missing``). Entries also
+carry ``scanned`` (false for formats the scanner cannot read and for
+``missing``) and ``flags`` (``{kind, line, end_line, excerpt}`` entries, at
+most 50, then ``{kind: "truncated"}``). A text line for a file with flags ends
+in ``\\t<N> flag(s)``.
 
 ``--extract FILE`` prints the text of a ``.docx`` file, one line per
 non-empty paragraph. It cannot be combined with ``VAULT`` or ``--json``.
@@ -129,7 +133,7 @@ def _sha256(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
-def pending(vault: Path) -> list[dict[str, str | None]]:
+def pending(vault: Path) -> list[dict[str, object]]:
     """Return the vault's new, changed and missing raw files, sorted by path."""
     mapped: dict[str, tuple[str, str]] = {}
     sources = vault / "wiki" / "sources"
@@ -141,7 +145,7 @@ def pending(vault: Path) -> list[dict[str, str | None]]:
                 page_rel = page.relative_to(vault).as_posix()
                 mapped[rel] = (page_rel, meta.get("sha256", "").lower())
 
-    entries: list[dict[str, str | None]] = []
+    entries: list[dict[str, object]] = []
     raw_dir = vault / "raw"
     seen: set[str] = set()
     if raw_dir.is_dir():
@@ -154,24 +158,35 @@ def pending(vault: Path) -> list[dict[str, str | None]]:
             seen.add(rel)
             digest = _sha256(path)
             if rel not in mapped:
-                entries.append(
-                    {"path": rel, "status": "new", "source": None, "sha256": digest}
-                )
+                status, src = "new", None
             elif digest != mapped[rel][1]:
-                entries.append(
-                    {
-                        "path": rel,
-                        "status": "changed",
-                        "source": mapped[rel][0],
-                        "sha256": digest,
-                    }
-                )
+                status, src = "changed", mapped[rel][0]
+            else:
+                continue
+            scanned, flags = scan(path)
+            entries.append(
+                {
+                    "path": rel,
+                    "status": status,
+                    "source": src,
+                    "sha256": digest,
+                    "scanned": scanned,
+                    "flags": flags,
+                }
+            )
     for rel, (page_rel, _sha) in mapped.items():
         if rel not in seen and not (vault / rel).is_file():
             entries.append(
-                {"path": rel, "status": "missing", "source": page_rel, "sha256": None}
+                {
+                    "path": rel,
+                    "status": "missing",
+                    "source": page_rel,
+                    "sha256": None,
+                    "scanned": False,
+                    "flags": [],
+                }
             )
-    entries.sort(key=lambda e: e["path"] or "")
+    entries.sort(key=lambda e: str(e["path"]))
     return entries
 
 
@@ -369,7 +384,11 @@ def main(argv: list[str] | None = None) -> int:
         print(json.dumps(entries))
     else:
         for entry in entries:
-            print(f"{entry['status']}\t{entry['path']}")
+            line = f"{entry['status']}\t{entry['path']}"
+            n = sum(f["kind"] != "truncated" for f in entry["flags"])
+            if n >= 1:
+                line += f"\t{n} flag(s)"
+            print(line)
     return 0
 
 
