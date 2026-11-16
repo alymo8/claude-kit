@@ -25,3 +25,10 @@ A minified page may be withheld whole, since all of it sits on one flagged line.
 `.pdf` files are not scanned and are reported as unscanned. The flags are
 heuristic: they catch common patterns, not every possible injection, and can flag
 harmless text.
+
+The spec's precision check on real study notes gave 36 false flags, so its phrase
+list was narrowed before merge: "system prompt" became "your system prompt", and
+"assistant:" counts only as a speaker turn at the start of a line. Prose about
+prompts no longer flags; an injected "assistant:" in the middle of a line is left
+to ingest's reader rule. A hidden element that never closes is withheld only to
+the end of its opening line, as the spec defines.

@@ -91,11 +91,15 @@ INSTRUCTION_PATTERNS = [_phrase_pattern(p) for p in INSTRUCTION_PHRASES] + [
     re.compile(r"(?<![\w.])(?:Bash|WebFetch|Write|Edit)\(|(?<!\w)mcp__")
 ]
 # "assistant:" only as a speaker turn at the start of a raw line (a WebVTT
-# voice tag may come first); in prose it is a title or a label
-ROLE_MARKER_RE = re.compile(r"^[ \t]*(?:<v[^>]*>[ \t]*)?assistant:", re.I | re.M)
+# voice tag, or Markdown quote, list or bold marks, may come first); in prose
+# it is a title or a label
+ROLE_MARKER_RE = re.compile(r"^[ \t>*_-]*(?:<v[^>]*>[ \t]*)?assistant:", re.I | re.M)
 COMMENT_RE = re.compile(r"<!--(.*?)(?:-->|\Z)", re.S)
-TAG_RE = re.compile(r"<([A-Za-z][\w-]*)\b([^>]*)>", re.S)
-STYLE_RE = re.compile(r"""(?<![\w-])style\s*=\s*(?:"([^"]*)"|'([^']*)')""", re.I)
+# [^<>] keeps a stray "<" from rescanning to the end of the file
+TAG_RE = re.compile(r"<([A-Za-z][\w-]*)\b([^<>]*)>", re.S)
+STYLE_RE = re.compile(
+    r"""(?<![\w-])style\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>"']+))""", re.I
+)
 HIDDEN_STYLE_RE = re.compile(
     r"display:none|visibility:hidden|font-size:0(?![.\d])"
     r"|(?:left|top|text-indent):-\d{4,}"
@@ -239,20 +243,24 @@ def _excerpt(text: str, index: int) -> str:
     )
 
 
-def _hidden_element_end(text: str, name: str, after: int) -> int | None:
-    """Return the index of the closing tag that matches an opening tag."""
+def _closing_tags(text: str, name: str) -> dict[int, int]:
+    """Map the end of each opening tag of ``name`` to its matching closing tag.
+
+    One pass with a stack, so every opening tag gets the closing tag where
+    depth counting from it returns to 0; unclosed tags are left out.
+    """
     pattern = re.compile(
-        rf"<(/?){re.escape(name)}(?=[\s/>])([^>]*)>", re.IGNORECASE | re.S
+        rf"<(/?){re.escape(name)}(?=[\s/>])([^<>]*)>", re.IGNORECASE | re.S
     )
-    depth = 1
-    for m in pattern.finditer(text, after):
+    stack: list[int] = []
+    closers: dict[int, int] = {}
+    for m in pattern.finditer(text):
         if m.group(1):
-            depth -= 1
-            if depth == 0:
-                return m.end() - 1
+            if stack:
+                closers[stack.pop()] = m.end() - 1
         elif not m.group(2).rstrip().endswith("/"):
-            depth += 1
-    return None
+            stack.append(m.end())
+    return closers
 
 
 def scan(path: Path) -> tuple[bool, list[dict]]:
@@ -316,24 +324,36 @@ def scan(path: Path) -> tuple[bool, list[dict]]:
 
     # hidden-html
     if path.suffix.lower() in HIDDEN_HTML_SUFFIXES:
+        # tags inside comments are not elements: blank comments out, same length
+        parts: list[str] = []
+        done = 0
         for m in COMMENT_RE.finditer(text):
             if sum(ch.isalpha() for ch in m.group(1)) >= 20:
                 flags.append(flag("hidden-html", m.start(), max(m.end() - 1, 0)))
-        for m in TAG_RE.finditer(text):
+            parts += [text[done : m.start()], re.sub(r"[^\n]", " ", m.group())]
+            done = m.end()
+        masked = "".join(parts) + text[done:]
+        closers: dict[str, dict[int, int]] = {}
+        for m in TAG_RE.finditer(masked):
             name, attrs = m.group(1), m.group(2)
             style = STYLE_RE.search(attrs)
             if not style:
                 continue
-            value = "".join((style.group(1) or style.group(2) or "").lower().split())
+            value = "".join(
+                (style.group(1) or style.group(2) or style.group(3) or "")
+                .lower()
+                .split()
+            )
             if not HIDDEN_STYLE_RE.search(value):
                 continue
             tag_end = m.end() - 1
             if attrs.rstrip().endswith("/") or name.lower() in VOID_ELEMENTS:
                 end = tag_end
             else:
-                end = _hidden_element_end(text, name, m.end())
-                if end is None:
-                    end = tag_end
+                key = name.lower()
+                if key not in closers:
+                    closers[key] = _closing_tags(masked, name)
+                end = closers[key].get(m.end(), tag_end)
             flags.append(flag("hidden-html", m.start(), end))
 
     # invisible-char: the first one on each line
