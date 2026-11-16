@@ -203,7 +203,7 @@ def test_bullet_after_first_section_is_ignored(repo, tmp_path):
     )
     r = check(repo, path)
     assert r.returncode == 0, r.stderr
-    assert r.stdout.strip() == "frozen: none declared"
+    assert r.stdout.strip().splitlines()[-1] == "frozen: none declared"
 
 
 def test_unmatched_pattern_warns_and_passes(repo, tmp_path):
@@ -314,3 +314,58 @@ def test_pattern_regex_unit():
     assert fc.pattern_regex("a/**/c.py").fullmatch("a/c.py")
     assert fc.pattern_regex("a/**").fullmatch("a/b/c")
     assert fc.pattern_regex("a/?.py").fullmatch("a/bc.py") is None
+
+
+def merge_adding(repo: Path, rel: str, content: str) -> None:
+    """Merge a side branch into `feat`, adding `rel` in the merge commit itself."""
+    git("checkout", "-q", "-b", "side", cwd=repo)
+    commit(repo, "side", {"src/side.py": "s\n"})
+    git("checkout", "-q", "feat", cwd=repo)
+    commit(repo, "feat", {"src/feat.py": "f\n"})
+    git("merge", "-q", "--no-ff", "--no-commit", "side", cwd=repo)
+    path = repo / rel
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(content, encoding="utf-8")
+    git("add", "-A", cwd=repo)
+    git("commit", "-q", "-m", "merge side", cwd=repo)
+
+
+def test_file_added_in_merge_commit_never_edited_is_ok(repo, tmp_path):
+    merge_adding(repo, "tests/m.py", "m\n")
+    r = check(repo, spec(tmp_path, "- **Frozen:** `tests/m.py`"))
+    assert r.returncode == 0, r.stdout + r.stderr
+    assert "frozen: ok (1 files)" in r.stdout
+
+
+def test_file_added_in_merge_commit_edited_later_is_a_violation(repo, tmp_path):
+    merge_adding(repo, "tests/m.py", "m\n")
+    commit(repo, "edit", {"tests/m.py": "changed\n"})
+    r = check(repo, spec(tmp_path, "- **Frozen:** `tests/m.py`"))
+    assert r.returncode == 1
+    assert "frozen: changed tests/m.py since" in r.stdout
+
+
+def test_bullet_after_first_section_warns(repo, tmp_path):
+    path = tmp_path / "plan.md"
+    path.write_text(
+        "# P\n\n- **Status:** approved\n\n## Task 1\n\n- **Frozen:** `tests/a.py`\n",
+        encoding="utf-8",
+    )
+    r = check(repo, path)
+    assert r.returncode == 0, r.stderr
+    lines = r.stdout.strip().splitlines()
+    assert lines[0] == (
+        f"frozen: warning: Frozen bullet after the header is ignored in {path}: "
+        "- **Frozen:** `tests/a.py`"
+    )
+    assert lines[-1] == "frozen: none declared"
+
+
+def test_bullet_after_section_in_code_fence_does_not_warn(repo, tmp_path):
+    path = tmp_path / "plan.md"
+    path.write_text(
+        "# P\n\n## Task 1\n\n```\n- **Frozen:** `tests/a.py`\n```\n",
+        encoding="utf-8",
+    )
+    r = check(repo, path)
+    assert r.stdout.strip() == "frozen: none declared"
