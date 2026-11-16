@@ -30,15 +30,70 @@ file that is not a readable ``.docx``; 2 usage error, or ``VAULT`` has no
 from __future__ import annotations
 
 import argparse
+import bisect
 import hashlib
 import json
+import re
 import sys
 import tomllib
+import unicodedata
 import zipfile
 from pathlib import Path
 from xml.etree import ElementTree
 
 W = "{http://schemas.openxmlformats.org/wordprocessingml/2006/main}"
+
+MAX_FLAGS = 50
+INSTRUCTION_PHRASES: tuple[str, ...] = (
+    "ignore previous instructions",
+    "ignore all previous",
+    "disregard the above",
+    "disregard your instructions",
+    "you are claude",
+    "you are an ai",
+    "as an ai assistant",
+    "system prompt",
+    "new instructions:",
+    "assistant:",
+    "<system>",
+    "</system>",
+)
+TEXT_SUFFIXES = {".md", ".txt", ".vtt", ".html"}
+HIDDEN_HTML_SUFFIXES = {".md", ".html"}
+VOID_ELEMENTS = frozenset(
+    "area base br col embed hr img input link meta source track wbr".split()
+)
+INVISIBLE = frozenset(
+    chr(c)
+    for c in [
+        *range(0x200B, 0x200E),
+        0x2060,
+        0xFEFF,
+        *range(0x202A, 0x202F),
+        *range(0x2066, 0x206A),
+    ]
+)
+
+
+def _phrase_pattern(phrase: str) -> re.Pattern[str]:
+    body = re.escape(phrase)
+    if re.match(r"\w", phrase[0]):
+        body = r"\b" + body
+    if re.match(r"\w", phrase[-1]):
+        body = body + r"\b"
+    return re.compile(body, re.IGNORECASE)
+
+
+INSTRUCTION_PATTERNS = [_phrase_pattern(p) for p in INSTRUCTION_PHRASES] + [
+    re.compile(r"(?<![\w.])(?:Bash|WebFetch|Write|Edit)\(|(?<!\w)mcp__")
+]
+COMMENT_RE = re.compile(r"<!--(.*?)(?:-->|\Z)", re.S)
+TAG_RE = re.compile(r"<([A-Za-z][\w-]*)\b([^>]*)>", re.S)
+STYLE_RE = re.compile(r"""(?<![\w-])style\s*=\s*(?:"([^"]*)"|'([^']*)')""", re.I)
+HIDDEN_STYLE_RE = re.compile(
+    r"display:none|visibility:hidden|font-size:0(?![.\d])"
+    r"|(?:left|top|text-indent):-\d{4,}"
+)
 
 
 def _unquote(value: str) -> str:
@@ -134,6 +189,144 @@ def extract_docx(path: Path) -> list[str]:
         if text.strip():
             paragraphs.append(text)
     return paragraphs
+
+
+def _read_scan_text(path: Path) -> str | None:
+    suffix = path.suffix.lower()
+    if suffix in TEXT_SUFFIXES:
+        try:
+            return path.read_bytes().decode("utf-8", errors="replace")
+        except OSError:
+            return None
+    if suffix == ".docx":
+        try:
+            return "\n".join(extract_docx(path))
+        except ValueError:
+            return None
+    return None
+
+
+def _excerpt(text: str, index: int) -> str:
+    start = text.rfind("\n", 0, index) + 1
+    end = text.find("\n", index)
+    if end == -1:
+        end = len(text)
+    line = text[start:end]
+    if line.endswith("\r"):
+        line = line[:-1]
+    col = max(0, index - start - 20)
+    chunk = line[col : col + 80]
+    return "".join(
+        "?" if ch in INVISIBLE or unicodedata.category(ch) == "Cc" else ch
+        for ch in chunk
+    )
+
+
+def _hidden_element_end(text: str, name: str, after: int) -> int | None:
+    """Return the index of the closing tag that matches an opening tag."""
+    pattern = re.compile(
+        rf"<(/?){re.escape(name)}(?=[\s/>])([^>]*)>", re.IGNORECASE | re.S
+    )
+    depth = 1
+    for m in pattern.finditer(text, after):
+        if m.group(1):
+            depth -= 1
+            if depth == 0:
+                return m.end() - 1
+        elif not m.group(2).rstrip().endswith("/"):
+            depth += 1
+    return None
+
+
+def scan(path: Path) -> tuple[bool, list[dict]]:
+    """Flag hidden HTML, invisible characters and instruction-like text.
+
+    Returns ``(scanned, flags)``; ``scanned`` is False for formats that are not
+    scanned and for a ``.docx`` that cannot be read.
+    """
+    text = _read_scan_text(path)
+    if text is None:
+        return False, []
+
+    newlines = [m.start() for m in re.finditer("\n", text)]
+
+    def line_of(index: int) -> int:
+        return bisect.bisect_left(newlines, index) + 1
+
+    def flag(kind: str, start: int, last: int) -> dict:
+        return {
+            "kind": kind,
+            "line": line_of(start),
+            "end_line": line_of(last),
+            "excerpt": _excerpt(text, start),
+        }
+
+    flags: list[dict] = []
+
+    # instruction: search a whitespace-collapsed copy, mapped back to raw indexes
+    chars: list[str] = []
+    raw_index: list[int] = []
+    for m in re.finditer(r"\s+|\S+", text):
+        if m.group().isspace():
+            chars.append(" ")
+            raw_index.append(m.start())
+        else:
+            chars.extend(m.group())
+            raw_index.extend(range(m.start(), m.end()))
+    collapsed = "".join(chars)
+    found: dict[tuple[int, int], int] = {}
+    for pattern in INSTRUCTION_PATTERNS:
+        for m in pattern.finditer(collapsed):
+            first = raw_index[m.start()]
+            last = raw_index[m.end() - 1]
+            span = (line_of(first), line_of(last))
+            if span not in found or first < found[span]:
+                found[span] = first
+    for (line, end_line), first in found.items():
+        flags.append(
+            {
+                "kind": "instruction",
+                "line": line,
+                "end_line": end_line,
+                "excerpt": _excerpt(text, first),
+            }
+        )
+
+    # hidden-html
+    if path.suffix.lower() in HIDDEN_HTML_SUFFIXES:
+        for m in COMMENT_RE.finditer(text):
+            if sum(ch.isalpha() for ch in m.group(1)) >= 20:
+                flags.append(flag("hidden-html", m.start(), max(m.end() - 1, 0)))
+        for m in TAG_RE.finditer(text):
+            name, attrs = m.group(1), m.group(2)
+            style = STYLE_RE.search(attrs)
+            if not style:
+                continue
+            value = "".join((style.group(1) or style.group(2) or "").lower().split())
+            if not HIDDEN_STYLE_RE.search(value):
+                continue
+            tag_end = m.end() - 1
+            if attrs.rstrip().endswith("/") or name.lower() in VOID_ELEMENTS:
+                end = tag_end
+            else:
+                end = _hidden_element_end(text, name, m.end())
+                if end is None:
+                    end = tag_end
+            flags.append(flag("hidden-html", m.start(), end))
+
+    # invisible-char: the first one on each line
+    seen_lines: set[int] = set()
+    for index, ch in enumerate(text):
+        if ch in INVISIBLE and not (index == 0 and ch == "\ufeff"):
+            line = line_of(index)
+            if line not in seen_lines:
+                seen_lines.add(line)
+                flags.append(flag("invisible-char", index, index))
+
+    flags.sort(key=lambda f: (f["line"], f["end_line"], f["kind"]))
+    if len(flags) > MAX_FLAGS:
+        flags = flags[:MAX_FLAGS] + [{"kind": "truncated"}]
+    return True, flags
 
 
 def main(argv: list[str] | None = None) -> int:
