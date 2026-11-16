@@ -42,6 +42,8 @@ Things that cost time in past runs and are not obvious from the code.
   about 60 exact phrases, and one pins a line break
   (`"one\n   copy, the only one the run starts"` in step 5 of
   `ship-fast.md`), so rewrapping that sentence fails the test.
+- The kit version lives in `plugin/.claude-plugin/plugin.json` and is
+  pinned in `tests/test_plugin_manifest.py`; bump both in the same commit.
 - Measure a tracked file's size with `git show HEAD:<path> | wc -c`, not
   `wc -c <path>`: the working copy is checked out with CRLF and reads a
   few hundred bytes larger than the stored LF file.
