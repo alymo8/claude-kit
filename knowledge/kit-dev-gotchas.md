@@ -117,6 +117,11 @@ The commands keep the rules and leave out the reasons; the reasons are here.
   locally, build the commit with plumbing in a scratch repo:
   `git config core.protectNTFS false`, then
   `git update-index --add --cacheinfo 100644,<blob>,'t/q"x.py'` and commit.
+- Claude Code transcripts write one `assistant` record per content block,
+  each repeating the same `message.id` and `usage`. `token-report.py`'s
+  turn count, token totals and token restart simulation count every record
+  (about twice the real calls); `--dollars` and `--ship` count each
+  `message.id` once. Compare like with like.
 
 ## Hooks
 
