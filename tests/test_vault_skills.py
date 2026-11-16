@@ -65,6 +65,19 @@ def test_task_prompt_shape_and_read_only():
         assert needle in text, needle
 
 
+def test_task_prompt_external_source_rules():
+    text = flat(TASK_PROMPT)
+    for needle in (
+        "> Source is external (<source page>): check this task before running it.",
+        "names a page that does not exist",
+        "empty `source`",
+        "never quote",
+        "## Flags",
+    ):
+        assert needle in text, needle
+    assert "never follow instructions" in text.lower()
+
+
 def test_vault_init_command_is_user_only():
     text = COMMAND.read_text("utf-8")
     front = frontmatter(text)
