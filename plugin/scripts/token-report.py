@@ -10,7 +10,11 @@ Transcripts live under ``~/.claude/projects/<encoded cwd>/*.jsonl``. Prints
 sessions, turns, total input tokens, average context per call, the largest
 sessions, tool output by tool and by Bash command family, results over 15k
 characters, and total input tokens under a "restart with a 45k handoff at N
-tokens" policy for each ``--cap``. Standard library only.
+tokens" policy for each ``--cap``. ``--dollars`` adds the cost in dollars
+(input, cache writes, cache reads, output; Opus 5.5 list prices unless
+``--prices`` says otherwise) and the restart simulation in dollars, where a
+restart writes the handoff to the cache and drops the earlier context's
+cache reads. Standard library only.
 """
 
 from __future__ import annotations
@@ -42,6 +46,9 @@ USAGE_KEYS = ("input_tokens", "cache_creation_input_tokens", "cache_read_input_t
 FAMILY_RE = re.compile(r"(?:cd\s+\S+\s*(?:&&|;)\s*)*(\S+)")
 SHIP_COMMANDS = {"ship", "/ship", "/claude-kit:ship"}
 COMMAND_RE = re.compile(r"<command-name>\s*(.*?)\s*</command-name>", re.S)
+# Dollars per million tokens: input, cache write (5-minute), cache read, output.
+OPUS_5_5_PRICES = {"input": 4.0, "write": 5.0, "read": 0.20, "output": 20.0}
+PRICE_KINDS = ("input", "write", "read", "output")
 COST_WEIGHTS = {
     "input_tokens": 1.0,
     "cache_creation_input_tokens": 1.25,
@@ -65,6 +72,8 @@ class Report:
     tool_calls: Counter = field(default_factory=Counter)
     families: Counter = field(default_factory=Counter)
     big_results: list[tuple[int, str, str]] = field(default_factory=list)
+    # per session: (input, cache write, cache read, output), one per message.id
+    usages: list[list[tuple[int, int, int, int]]] = field(default_factory=list)
 
 
 def family(command: str) -> str:
@@ -89,6 +98,8 @@ def scan(files: list[Path]) -> Report:
         report.sessions += 1
         tools: dict[str, tuple[str, dict]] = {}
         contexts: list[int] = []
+        usages: list[tuple[int, int, int, int]] = []
+        seen: set[str] = set()
         cost: float | None = None
         with path.open(encoding="utf-8", errors="replace") as fh:
             for line in fh:
@@ -109,6 +120,16 @@ def scan(files: list[Path]) -> Report:
                         contexts.append(ctx)
                         report.turns += 1
                         report.input_tokens += ctx
+                        mid = message.get("id")
+                        if not mid or mid not in seen:
+                            if mid:
+                                seen.add(mid)
+                            usages.append(
+                                tuple(
+                                    int(usage.get(k) or 0)
+                                    for k in (*USAGE_KEYS, "output_tokens")
+                                )
+                            )
                     for block in message.get("content") or []:
                         if isinstance(block, dict) and (
                             block.get("type") == "tool_use"
@@ -140,6 +161,8 @@ def scan(files: list[Path]) -> Report:
                                 or ""
                             )
                             report.big_results.append((len(text), name, str(what)[:80]))
+        if usages:
+            report.usages.append(usages)
         if contexts:
             report.contexts.append(contexts)
             report.per_session.append(
@@ -277,6 +300,56 @@ def simulate(contexts: list[list[int]], cap: int, restart: int = RESTART_COST) -
     return total
 
 
+def simulate_dollars(
+    usages: list[list[tuple[int, int, int, int]]],
+    cap: int | None,
+    prices: dict[str, float],
+    restart: int = RESTART_COST,
+) -> float:
+    """Dollar cost of the sessions, restarting with a handoff above ``cap``.
+
+    ``cap=None`` is the cost as recorded. A restart call writes the handoff
+    and its own new tokens to the cache and reads nothing; later calls read
+    only what came after the restart.
+    """
+    p_in, p_write, p_read, p_out = (prices[k] / 1e6 for k in PRICE_KINDS)
+    total = 0.0
+    for session in usages:
+        offset = 0
+        for inp, write, read, out in session:
+            fixed = p_in * inp + p_write * write + p_out * out
+            if cap is not None and inp + write + read - offset > cap:
+                offset = inp + write + read - restart
+                total += fixed + p_write * restart
+                continue
+            total += fixed + p_read * max(0, read - offset)
+    return total
+
+
+def render_dollars(report: Report, caps: list[int], prices: dict[str, float]) -> str:
+    rates = " / ".join(f"${prices[k]:g}" for k in PRICE_KINDS)
+    kinds = "input / cache write / cache read / output"
+    out = [f"dollar cost ({kinds} per MTok: {rates}):"]
+    parts = [0.0] * 4
+    for session in report.usages:
+        for call in session:
+            for i, kind in enumerate(PRICE_KINDS):
+                parts[i] += prices[kind] * call[i] / 1e6
+    base = sum(parts)
+    out.append(f"  as recorded: ${base:,.2f}")
+    names = ("input", "cache writes", "cache reads", "output")
+    share = "  ".join(
+        f"{n} {100 * v / base:.0f}%" if base else f"{n} 0%"
+        for n, v in zip(names, parts, strict=True)
+    )
+    out.append(f"  split: {share}")
+    for cap in caps:
+        cost = simulate_dollars(report.usages, cap, prices)
+        saved = 100 * (1 - cost / base) if base else 0
+        out.append(f"  restart at {cap:,}: ${cost:,.2f}  ({saved:.0f}% less)")
+    return "\n".join(out)
+
+
 def render(report: Report, caps: list[int]) -> str:
     out: list[str] = []
     out.append(f"sessions: {report.sessions}   turns: {report.turns:,}")
@@ -336,6 +409,18 @@ def main(argv: list[str] | None = None) -> int:
         action="store_true",
         help="one row per /ship session: main, subagent and total cost, peak context",
     )
+    parser.add_argument(
+        "--dollars",
+        action="store_true",
+        help="add the cost in dollars and the restart simulation in dollars",
+    )
+    parser.add_argument(
+        "--prices",
+        type=float,
+        nargs=4,
+        metavar=("INPUT", "WRITE", "READ", "OUTPUT"),
+        help="dollars per MTok for --dollars (default: Opus 5.5 list prices)",
+    )
     args = parser.parse_args(argv)
     root = Path(args.root)
     if args.all:
@@ -349,7 +434,16 @@ def main(argv: list[str] | None = None) -> int:
     if args.ship:
         print(render_ship(ship_rows(files)))
         return 0
-    print(render(scan(files), args.cap))
+    report = scan(files)
+    print(render(report, args.cap))
+    if args.dollars:
+        prices = (
+            dict(zip(PRICE_KINDS, args.prices, strict=True))
+            if args.prices
+            else OPUS_5_5_PRICES
+        )
+        print()
+        print(render_dollars(report, args.cap, prices))
     return 0
 
 
