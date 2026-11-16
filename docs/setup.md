@@ -102,6 +102,34 @@ already built up: it asks first, stops Docker and needs one UAC prompt.
 The work profile keeps `raw/` out of git. Check the employer's policy on
 sending call content to an LLM before ingesting work calls.
 
+The vault holds content only (pages, raw files, `vault.toml`, Obsidian
+settings). The code that scaffolds it, ingests into it and points sessions at
+it is the kit plugin, so a machine with the kit installed has all of it.
+
+### Bringing an existing vault to another machine
+
+`/vault-init` creates no remote, so a vault exists only where you made it.
+
+1. Install the kit on the new machine (see Install).
+2. Copy the vault folder over, or push it to a **private** remote and clone it.
+   Never push a work vault anywhere the employer's policy does not allow.
+3. Set `CLAUDE_KIT_VAULT` on the new machine to the vault's path there.
+4. Open the folder as a vault in Obsidian, and set up the Web Clipper again
+   if you use it.
+
+### Daily ingest (optional)
+
+The kit does not schedule ingests. To run one each day, create a scheduled
+task in the Claude desktop app (Schedule) whose prompt:
+
+1. runs `python ~/.claude/skills/claude-kit/scripts/vault-pending.py <vault> --json`
+   and stops if it prints an empty list;
+2. otherwise runs the `claude-kit:ingest` skill on the vault;
+3. does not commit, push or create a remote, so you review the diff first.
+
+Scheduled tasks live on one machine; recreate the task, with that machine's
+paths, on each machine that should run it.
+
 ## How changes ship
 
 The flow is in the [README](../README.md): brainstorm, spec, spec gate,

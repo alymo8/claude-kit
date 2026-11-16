@@ -1,6 +1,7 @@
 import json
 from pathlib import Path
 
+import pytest
 from helpers import PLUGIN, load_module, run_script
 
 SCRIPT = PLUGIN / "scripts" / "token-report.py"
@@ -192,3 +193,45 @@ def test_render_ship_keeps_large_values_in_separate_columns():
     lines = mod.render_ship(rows).splitlines()
     assert all(len(line.split()) == 6 for line in lines[2:]), lines
     assert lines[3].split()[2:] == ["12,345,678", "6,000,000", "18,345,678", "391,000"]
+
+
+PER_TOKEN = {k: 1e6 for k in ("input", "write", "read", "output")}
+
+
+def test_dollar_cost_prices_each_usage_kind():
+    mod = load_module(SCRIPT, "token_report")
+    usages = [[(1_000_000, 1_000_000, 1_000_000, 1_000_000)]]
+    cost = mod.simulate_dollars(usages, None, mod.OPUS_5_5_PRICES)
+    assert cost == pytest.approx(4.0 + 5.0 + 0.2 + 20.0)
+
+
+def test_simulate_dollars_restart_rewrites_handoff_and_drops_reads():
+    mod = load_module(SCRIPT, "token_report")
+    session = [(0, 100, 0, 0), (0, 100, 100, 0), (0, 100, 200, 0)]
+    assert mod.simulate_dollars([session], None, PER_TOKEN, restart=50) == 600
+    # third call crosses the 250 cap: it writes the 50-token handoff plus its
+    # own 100 new tokens and reads nothing.
+    assert mod.simulate_dollars([session], 250, PER_TOKEN, restart=50) == 450
+
+
+def test_scan_keeps_one_usage_per_message_id(tmp_path):
+    mod = load_module(SCRIPT, "token_report")
+    usage = {
+        "input_tokens": 1,
+        "cache_creation_input_tokens": 2,
+        "cache_read_input_tokens": 3,
+        "output_tokens": 4,
+    }
+    rec = {"type": "assistant", "message": {"id": "m1", "usage": usage}}
+    path = tmp_path / "s.jsonl"
+    path.write_text(json.dumps(rec) + "\n" + json.dumps(rec) + "\n", encoding="utf-8")
+    report = mod.scan([path])
+    assert report.usages == [[(1, 2, 3, 4)]]
+
+
+def test_cli_dollars_prints_cost_split_and_restart_savings(tmp_path):
+    make_project(tmp_path)
+    out = run_script(SCRIPT, "--all", "--root", str(tmp_path), "--dollars")
+    assert "dollar cost" in out.stdout
+    assert "cache reads" in out.stdout
+    assert "restart at 150,000: $" in out.stdout
