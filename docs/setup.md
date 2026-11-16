@@ -15,8 +15,10 @@ work the same way as everyone else on the team.
   `python`, so `python3` alone is not enough:
   - Windows: install Python from python.org with "Add python.exe to PATH"
     ticked.
-  - macOS: install Homebrew `python@3` and put its `libexec/bin` folder on
-    `PATH`, or make `python` an alias of `python3`.
+  - macOS: install Homebrew `python@3` and put its `libexec/bin` folder
+    (`$(brew --prefix)/opt/python@3/libexec/bin`) on `PATH` in
+    `~/.zprofile`, then restart the Claude app. A shell alias does not work:
+    hooks run in a non-interactive shell, which ignores aliases.
   - Linux: install the `python-is-python3` package, or link `python` to
     `python3` on your `PATH`.
 
@@ -28,8 +30,10 @@ cd claude-kit
 python plugin/install.py
 ```
 
-The installer checks `python` first and stops with the fix if it is missing
-or older than 3.11, changing nothing. It then links
+The installer detects the OS (Windows, macOS or Linux) and prints it; it
+never asks. It checks `python` first and stops with the fix for that OS if it
+is missing or older than 3.11, changing nothing. On macOS the fix names the
+exact Homebrew folder to add when one is installed. It then links
 `~/.claude/skills/claude-kit` to the checkout's `plugin/` folder (a junction
 on Windows, a symlink elsewhere), so the kit loads in place and edits are
 live. It adds the kit's status line to `~/.claude/settings.json` when none is
