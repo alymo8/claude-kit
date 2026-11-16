@@ -39,8 +39,28 @@ TREE = sorted(
 FRONTMATTER = {
     "person": ["type", "role", "organization", "aliases", "topics", "last_interaction"],
     "topic": ["type", "kind", "status", "aliases", "people"],
-    "source": ["type", "source_kind", "raw", "sha256", "date", "people", "topics"],
-    "call": ["type", "source_kind", "raw", "sha256", "date", "people", "topics"],
+    "source": [
+        "type",
+        "source_kind",
+        "raw",
+        "sha256",
+        "date",
+        "people",
+        "topics",
+        "trust",
+        "flags",
+    ],
+    "call": [
+        "type",
+        "source_kind",
+        "raw",
+        "sha256",
+        "date",
+        "people",
+        "topics",
+        "trust",
+        "flags",
+    ],
     "task": ["type", "status", "owner", "topic", "source", "due"],
 }
 SECTIONS = {
