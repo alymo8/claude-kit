@@ -5,7 +5,7 @@ import subprocess
 import sys
 
 import pytest
-from helpers import PLUGIN
+from helpers import PLUGIN, load_module
 
 INSTALL = PLUGIN / "install.py"
 WRAPPER = PLUGIN / "install.ps1"
@@ -190,3 +190,56 @@ def test_powershell_wrapper_runs_installer(tmp_path):
     )
     assert result.returncode == 0, out(result)
     assert os.path.samefile(tmp_path / "skills" / "claude-kit", PLUGIN)
+
+
+def installer():
+    return load_module(INSTALL, "kit_install")
+
+
+@pytest.mark.parametrize(
+    ("platform", "name"),
+    [
+        ("win32", "Windows"),
+        ("darwin", "macOS"),
+        ("linux", "Linux"),
+        ("freebsd14", "freebsd14"),
+    ],
+)
+def test_os_name(platform, name):
+    assert installer().os_name(platform) == name
+
+
+def test_prints_detected_os(tmp_path):
+    result = run_install(tmp_path)
+    expected = installer().os_name(sys.platform)
+    assert f"Detected: {expected}" in result.stdout
+
+
+def test_mac_fix_points_at_brew_libexec_on_path(tmp_path):
+    libexec = tmp_path / "opt" / "python@3" / "libexec" / "bin"
+    libexec.mkdir(parents=True)
+    (libexec / "python").write_text("")
+    fix = installer().fix_for("darwin", "python", libexec_dirs=[libexec])
+    assert str(libexec) in fix
+    assert "~/.zprofile" in fix
+    assert "alias" not in fix
+
+
+def test_mac_fix_without_brew_python(tmp_path):
+    fix = installer().fix_for("darwin", "python", libexec_dirs=[tmp_path / "none"])
+    assert "brew install python@3" in fix
+    assert "libexec/bin" in fix
+    assert "alias" not in fix
+
+
+@pytest.mark.parametrize("platform", ["win32", "linux", "darwin"])
+def test_no_platform_fix_suggests_an_alias(platform, tmp_path):
+    fix = installer().fix_for(platform, "python", libexec_dirs=[tmp_path / "none"])
+    assert "alias" not in fix
+    assert fix
+
+
+def test_docs_do_not_suggest_a_python_alias():
+    setup = (PLUGIN.parent / "docs" / "setup.md").read_text(encoding="utf-8")
+    assert "alias of `python3`" not in setup
+    assert "~/.zprofile" in setup

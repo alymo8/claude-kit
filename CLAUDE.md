@@ -81,8 +81,9 @@ switches are in `docs/setup.md` (ADR 0014).
 ## Open files and folders for me
 
 Whenever you want me to update a file or look at a specific folder structure,
-open the file / folder for me (`Invoke-Item <path>` for a file, `explorer <path>`
-for a folder) rather than only telling me the path. Exception: specs and plans
+open the file / folder for me rather than only telling me the path, with the
+command for the session's OS: Windows `Invoke-Item <path>` (file) or
+`explorer <path>` (folder); macOS `open <path>`; Linux `xdg-open <path>`. Exception: specs and plans
 are never opened unless I ask (see "Specs and plans").
 
 ## Building a new feature: pre-flight, worktree, clean up

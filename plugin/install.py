@@ -28,18 +28,46 @@ from pathlib import Path
 PLUGIN = Path(__file__).resolve().parent
 MIN_VERSION = (3, 11)
 SUPERPOWERS = "superpowers@claude-plugins-official"
-FIXES = {
-    "win32": (
-        'install Python 3.11+ from python.org with "Add python.exe to PATH" ticked.'
-    ),
-    "darwin": (
-        "install Homebrew python@3 and put its libexec/bin folder on PATH, "
-        "or make python an alias of python3."
-    ),
-    "linux": (
+OS_NAMES = {"win32": "Windows", "darwin": "macOS", "linux": "Linux"}
+# Where Homebrew keeps the unversioned python -> python3 links (Apple silicon,
+# then Intel).
+BREW_LIBEXEC = [
+    Path("/opt/homebrew/opt/python@3/libexec/bin"),
+    Path("/usr/local/opt/python@3/libexec/bin"),
+]
+
+
+def os_name(platform: str) -> str:
+    """Readable OS name for a sys.platform value ('linux' covers 'linux2')."""
+    key = "linux" if platform.startswith("linux") else platform
+    return OS_NAMES.get(key, platform)
+
+
+def fix_for(platform: str, command: str, libexec_dirs: list[Path] | None = None) -> str:
+    """How to make `command` a Python 3.11+ on this OS. Shell aliases are never
+    suggested: hooks run in a non-interactive shell, which ignores them."""
+    name = os_name(platform)
+    if name == "Windows":
+        return (
+            'install Python 3.11+ from python.org with "Add python.exe to PATH" ticked.'
+        )
+    if name == "macOS":
+        dirs = BREW_LIBEXEC if libexec_dirs is None else libexec_dirs
+        found = next((d for d in dirs if (d / command).exists()), None)
+        if found is not None:
+            return (
+                f"Homebrew's {command} is in {found}. Put it on PATH, then open a "
+                "new terminal and restart the Claude app:\n"
+                f"  echo 'export PATH=\"{found}:$PATH\"' >> ~/.zprofile"
+            )
+        return (
+            "run `brew install python@3`, then add "
+            '"$(brew --prefix)/opt/python@3/libexec/bin" to PATH in ~/.zprofile '
+            "and restart the Claude app."
+        )
+    return (
         "install the python-is-python3 package, or link python to python3 on your PATH."
-    ),
-}
+    )
 
 
 def python_version(command: str) -> tuple[int, int] | None:
@@ -72,9 +100,8 @@ def check_python(command: str) -> bool:
         problem = "is not on PATH"
     else:
         problem = f"is {version[0]}.{version[1]}"
-    key = "linux" if sys.platform.startswith("linux") else sys.platform
     print(f'ERROR: hooks run "{command}", which {problem}.')
-    print(f"Fix: {FIXES.get(key, FIXES['linux'])}")
+    print(f"Fix: {fix_for(sys.platform, command)}")
     return False
 
 
@@ -171,6 +198,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--settings", default=str(home / "settings.json"))
     parser.add_argument("--python", default="python", help="the command the hooks run")
     args = parser.parse_args(argv)
+    print(f"Detected: {os_name(sys.platform)}")
     if not check_python(args.python):
         return 1
     warn_missing_tools()

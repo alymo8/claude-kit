@@ -51,3 +51,4 @@ the next number; superseded ones are never deleted.
 | [0043](0043-harden-in-capture-learnings.md) | Harden step in capture-learnings | accepted | 2026-11-10 |
 | [0044](0044-surgical-diffs-and-simplicity.md) | Surgical diffs and simplicity | accepted | 2026-11-10 |
 | [0045](0045-merge-danger-in-pr-bodies.md) | Merge Danger in PR bodies | accepted | 2026-11-10 |
+| [0046](0046-installer-detects-os.md) | The installer detects the OS and never asks | accepted | 2026-11-15 |
