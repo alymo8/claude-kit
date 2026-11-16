@@ -129,7 +129,7 @@ is in [`plugin/`](plugin/).
   renders a spec or plan (the latest one when no path is given) and opens
   its HTML view. `/docker-compact` reclaims unused space in
   Docker Desktop's virtual disk on Windows, after asking (see
-  [`docs/setup.md`](docs/setup.md#docker-desktop-on-windows)). `/vault-init <path> [personal|work]` scaffolds a personal vault (plain Markdown opened in Obsidian) that the `ingest` skill fills from raw pages, documents and call transcripts and the `task-prompt` skill turns tasks into prompts (see [`docs/setup.md`](docs/setup.md#personal-vault)). `/present [repo | spec.md [plan.md]]` (the
+  [`docs/setup.md`](docs/setup.md#docker-desktop-on-windows)). `/vault-init <path> [personal|work]` scaffolds a personal vault (plain Markdown opened in Obsidian) that the `ingest` skill fills from raw pages, documents and call transcripts and the `task-prompt` skill turns tasks into prompts (see [`docs/setup.md`](docs/setup.md#personal-vault)). Raw files are treated as data: `vault-pending.py` flags hidden HTML, invisible characters and instruction-like text, ingest keeps flagged lines out of the wiki, and `task-prompt` warns when a task comes from an external source. `/present [repo | spec.md [plan.md]]` (the
   `present` skill) builds a timed, self-contained HTML deck from a repo, spec or
   plan, with every slide rendered and checked by `check-deck.py`. Every deck
   closes with what was built, what was out of scope, a path-to-production
