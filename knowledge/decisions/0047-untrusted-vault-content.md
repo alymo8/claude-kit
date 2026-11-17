@@ -32,3 +32,11 @@ list was narrowed before merge: "system prompt" became "your system prompt", and
 prompts no longer flags; an injected "assistant:" in the middle of a line is left
 to ingest's reader rule. A hidden element that never closes is withheld only to
 the end of its opening line, as the spec defines.
+
+The branch review added three cases the spec did not list. Unicode tag
+characters (U+E0000 to U+E007F) count as `invisible-char`, since models read
+them while screens do not show them. Text with a UTF-16 or UTF-32 byte-order
+mark is decoded with that codec, and text that still holds NUL bytes after
+decoding is reported as unscanned. A `.docx` the reader cannot decompress is
+unscanned rather than an error. Variation selectors stay unflagged (emoji use
+U+FE0F), and the zero-width joiner the spec names flags emoji sequences too.

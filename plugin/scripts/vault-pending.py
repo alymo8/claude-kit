@@ -352,6 +352,7 @@ def scan(path: Path) -> tuple[bool, list[dict]]:
             parts += [text[done : m.start()], re.sub(r"[^\n]", " ", m.group())]
             done = m.end()
         masked = "".join(parts) + text[done:]
+        # one _closing_tags pass per tag name keeps the scan linear
         closers: dict[str, dict[int, int]] = {}
         for m in TAG_RE.finditer(masked):
             name, attrs = m.group(1), m.group(2)
