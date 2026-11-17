@@ -222,3 +222,26 @@ def test_design_phase_leaves_duplicate_functions_to_phase_h():
     text = flat(DEEP / "phases" / "E-design.md")
     assert "Phase H" in text
     assert "duplicated blocks inside functions" in text
+
+
+def test_audit_skill_has_user_mode():
+    body = read(AUDIT / "SKILL.md")
+    front = frontmatter(AUDIT / "SKILL.md")
+    assert "--user" in body and "user-mode.md" in body
+    assert "--user" in front["description"]
+    assert "--user" in front["argument-hint"]
+    assert (AUDIT / "user-mode.md").is_file()
+
+
+def test_user_mode_names_script_report_and_checker():
+    text = read(AUDIT / "user-mode.md")
+    assert "user-config-inventory.py" in text
+    assert "~/.claude/claude-kit/audit/user-config.md" in text
+    assert "check-findings.py" in text
+    assert "never inside a repo" in text
+    assert "`~/.claude/claude-kit/audit/` replaces `<repo>/docs/audit/`" in text
+    assert (
+        "Never read `.claude/settings.json`, `.claude/settings.local.json` "
+        "or `.claude.json` in full"
+    ) in text
+    assert (PLUGIN / "scripts" / "user-config-inventory.py").is_file()

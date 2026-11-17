@@ -1,13 +1,18 @@
 ---
 name: audit
-description: Use when asked to audit or health-check a whole repository, or a Claude Code setup (CLAUDE.md, .claude/, hooks, skills, commands, plugin), in one pass. Read-only; writes one report of cited, checked findings to docs/audit/audit.md. For a large or unfamiliar codebase the user can run /audit-deep instead.
-argument-hint: [path-to-repo]
+description: Use when asked to audit or health-check a whole repository, or a Claude Code setup (CLAUDE.md, .claude/, hooks, skills, commands, plugin), in one pass. Read-only; writes one report of cited, checked findings to docs/audit/audit.md. For a large or unfamiliar codebase the user can run /audit-deep instead. With --user, audits the user-scope setup outside any repo (settings, MCP servers, plugins, hooks, skills, scheduled tasks, instructions) and writes ~/.claude/claude-kit/audit/user-config.md.
+argument-hint: [path-to-repo | --user]
 ---
 
 # Audit
 
 A one-session audit: does the repo work, is it built well, is it safe. The
 output is one report of findings, each tied to a `path:line` and a quote.
+
+## User mode
+
+If `$ARGUMENTS` is `--user`, read `user-mode.md` in this skill's directory and
+follow it instead of everything below (Setup, the four passes and Output).
 
 ## Setup
 
