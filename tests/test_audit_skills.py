@@ -245,3 +245,9 @@ def test_user_mode_names_script_report_and_checker():
         "or `.claude.json` in full"
     ) in text
     assert (PLUGIN / "scripts" / "user-config-inventory.py").is_file()
+
+
+def test_user_mode_self_check_searches_report_for_env_values():
+    self_check = read(AUDIT / "user-mode.md").split("## Self-check", 1)[1]
+    assert "prints only counts and key names, never a value" in self_check
+    assert "<redacted: KEY>" in self_check

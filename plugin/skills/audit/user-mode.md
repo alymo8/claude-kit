@@ -95,6 +95,14 @@ value.
 
 ## Self-check
 
+A file the report quotes (a scheduled task, a hook script) can hold an env
+value. Search the report for every `env` value in the two settings files and
+every `env` and `headers` value in `.claude.json` with a throwaway script in
+`audit-scratch`, run with `python -I`, that
+prints only counts and key names, never a value; skip values shorter than 4 characters, which match ordinary
+words. Replace each hit in the report with `<redacted: KEY>` and search again
+until none is found.
+
 Run `python <dir of rules.md>/../../scripts/check-findings.py <home> <report>`
 until it exits 0. In chat: counts by severity, the top five from Fix first, the
 checker's summary line and the report path. Open the report (`Invoke-Item` on
