@@ -299,28 +299,20 @@ def scan(path: Path) -> tuple[bool, list[dict]]:
             chars.extend(m.group())
             raw_index.extend(range(m.start(), m.end()))
     collapsed = "".join(chars)
-    found: dict[tuple[int, int], int] = {}
+    # one flag per (line, end_line) span, at its earliest match
+    found: dict[tuple[int, int], tuple[int, int]] = {}
+
+    def record(first: int, last: int) -> None:
+        span = (line_of(first), line_of(last))
+        if span not in found or first < found[span][0]:
+            found[span] = (first, last)
+
     for pattern in INSTRUCTION_PATTERNS:
         for m in pattern.finditer(collapsed):
-            first = raw_index[m.start()]
-            last = raw_index[m.end() - 1]
-            span = (line_of(first), line_of(last))
-            if span not in found or first < found[span]:
-                found[span] = first
+            record(raw_index[m.start()], raw_index[m.end() - 1])
     for m in ROLE_MARKER_RE.finditer(text):
-        first = m.start() + len(m.group()) - len("assistant:")
-        span = (line_of(first), line_of(first))
-        if span not in found or first < found[span]:
-            found[span] = first
-    for (line, end_line), first in found.items():
-        flags.append(
-            {
-                "kind": "instruction",
-                "line": line,
-                "end_line": end_line,
-                "excerpt": _excerpt(text, first),
-            }
-        )
+        record(m.end() - len("assistant:"), m.end() - 1)
+    flags += [flag("instruction", first, last) for first, last in found.values()]
 
     # hidden-html
     if path.suffix.lower() in HIDDEN_HTML_SUFFIXES:
@@ -329,7 +321,7 @@ def scan(path: Path) -> tuple[bool, list[dict]]:
         done = 0
         for m in COMMENT_RE.finditer(text):
             if sum(ch.isalpha() for ch in m.group(1)) >= 20:
-                flags.append(flag("hidden-html", m.start(), max(m.end() - 1, 0)))
+                flags.append(flag("hidden-html", m.start(), m.end() - 1))
             parts += [text[done : m.start()], re.sub(r"[^\n]", " ", m.group())]
             done = m.end()
         masked = "".join(parts) + text[done:]
