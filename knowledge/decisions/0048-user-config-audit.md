@@ -18,12 +18,17 @@ D3: the report goes to `~/.claude/claude-kit/audit/user-config.md`, never into
 a repo, because it holds private paths and settings; rejected
 `<repo>/docs/audit/`, where it could be committed to a public repo.
 D4: the inventory (`user-config-inventory.py`) prints env and header key names
-only, and the session reads the settings files and `.claude.json` only at the
-lines the inventory cites; rejected reading them in full, which would load
-secrets into context.
+only and masks secrets in hook and `statusLine` commands and MCP `args` and
+`url` (`NAME=value` values, URL passwords and query values become `***`, key
+names kept); the session reads the settings files and `.claude.json` only at
+the lines the inventory cites, never a command, `args` or `url` line; rejected
+reading them in full, and printing those fields verbatim with a wider report
+self-check, both of which would load secrets into context.
 
 ## Consequences
 The user-scope audit reuses the repo audit's rules and citation checker, and
-secrets never enter the session's context or the report. The cost: whether the
-session really keeps to cited lines is a behavioural rule, checked only by a
-manual run, not by a test.
+env and header values and secrets in `NAME=value` or URL form never enter the
+session's context or the report. The costs: a secret passed as a bare argument
+(`--token x`) is not masked, and ordinary `--flag=value` values are masked too;
+whether the session really keeps to cited lines is a behavioural rule, checked
+only by a manual run, not by a test.

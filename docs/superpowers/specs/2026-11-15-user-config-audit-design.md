@@ -85,6 +85,17 @@ line in that file where the item appears, or null:
   session in every repo), and each file under `.claude/agents/`,
   `.claude/commands/` and `.claude/output-styles/`.
 
+Every hook command (settings, installed plugins and skills-dir
+plugins), the `statusLine` command and each MCP server's `args` and
+`url` are printed masked: the value of each `NAME=value` pair (an
+inline `VAR=value` before a command, `-e NAME=value`, `--flag=value`,
+a URL query parameter) and a URL's password (or its whole userinfo
+when it has no password) become `***`. Key names, flags, user names
+and paths stay visible, so a hook's target script still resolves. A
+secret passed as a bare argument (`--token x`) is not detected.
+Permission rules, skill files, scheduled-task files and hook scripts
+are read verbatim and are not masked.
+
 A missing file or key yields an empty list, not an error. Malformed
 JSON yields an `errors` entry `{file, error}` and the rest is still
 printed. Exit 0, or 2 when `--home` is not a directory.
@@ -105,7 +116,9 @@ repo passes. `user-mode.md` says:
   folder, with the usual `${CLAUDE_PLUGIN_ROOT}` fallback). Never read
   `.claude/settings.json`, `.claude/settings.local.json` or
   `.claude.json` in full: read only the line ranges the inventory
-  cites, and never an `env` or `headers` block. Read in full every hook
+  cites, never an `env` or `headers` block, and never the line of a
+  hook or `statusLine` command or an MCP server's `args` or `url` (the
+  inventory gives them masked). Read in full every hook
   command's target script (the kit's, skills-dir plugins' and installed
   plugins'), the `statusLine` command's target script, skill files,
   scheduled-task files and every `instructions` file.
@@ -143,10 +156,17 @@ repo passes. `user-mode.md` says:
   outside every repo: the report holds private paths
   and settings and must never land in a repo.
 - **D4. Neither the inventory nor the audit reads env or header
-  values.** (My call.) The inventory lists key names only, and the audit
-  reads the settings files and `.claude.json` only at the cited lines,
-  never an `env` or `headers` block, so secrets never enter the model's
-  context.
+  values, and the inventory masks secrets in commands, args and URLs.**
+  (My call; masking: user's answer to a review finding.) The inventory
+  lists env and header key names only and masks `NAME=value` values,
+  URL passwords (or a whole password-less userinfo) and query values in hook and `statusLine` commands and
+  MCP `args` and `url` (see Inventory). The audit reads the settings
+  files and `.claude.json` only at the cited lines, never an `env` or
+  `headers` block, and never the line of a hook or `statusLine` command
+  or an MCP server's `args` or `url`: it takes those from the
+  inventory. So secrets in those forms never enter the model's context.
+  Rejected: printing those fields verbatim and widening the report's
+  Self-check to them, which still loads the secrets into context.
 - **D5. Nothing is frozen.** (My call.) The assertions go into test
   files this change creates or must edit, and the behavioural check
   (Success criterion 2) is a manual run.
@@ -171,7 +191,11 @@ each under `agents/`, `commands/` and `output-styles/`, and asserts:
 every rule, hook, server and plugin is listed with the right file and
 line; `statusLine` and `autoMode` are listed; the `instructions`
 files are listed; the skills-dir plugin is marked `plugin: true` with its hooks;
-env and header values appear nowhere in the output; a malformed
+env and header values appear nowhere in the output; `NAME=value`
+values, URL passwords and query values in hook, plugin-hook and
+`statusLine` commands and MCP `args` and `url` are printed as `***`
+with their names kept, and the secrets appear nowhere in the output;
+a malformed
 `settings.json` yields an `errors` entry and the rest still prints; a
 missing home yields exit 2.
 
@@ -193,5 +217,7 @@ Agreed evaluation and verification criteria:
    exits 0 on it with the home directory as root; its inventory lists
    every plugin in `enabledPlugins`, every skills-dir plugin and every
    hook command; a search of the report for each env value in the user
-   settings and each env and header value in `.claude.json` finds none. The report itself is not pasted in the PR
+   settings and each env and header value in `.claude.json` finds none,
+   and the inventory's output holds no unmasked `NAME=value` value or
+   URL password or query value in a command, `args` or `url`. The report itself is not pasted in the PR
    (private); the PR states the counts by severity.

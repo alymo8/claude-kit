@@ -36,7 +36,7 @@ findings on files outside the home directory still check.
 Gotchas (`knowledge/kit-dev-gotchas.md`): test code must fit ruff's 88-character
 lines; edit test files with the Edit/Write tools, not bash heredocs; run plain
 `pytest` (not `-q`) to see the pass count. The installed kit is loaded through a
-junction to the main checkout, not this worktree, so the manual run in Task 5
+junction to the main checkout, not this worktree, so the manual run in Task 6
 follows the worktree's files directly, not the installed skill.
 
 Setup: `pip install "markdown~=3.10" "pytest>=8" "ruff~=0.16"`. Full checks:
@@ -47,10 +47,11 @@ Setup: `pip install "markdown~=3.10" "pytest>=8" "ruff~=0.16"`. Full checks:
 - Script: standard library only, Python 3.11; `sys.stdout.reconfigure(encoding="utf-8")`; CLI `user-config-inventory.py [--home DIR]`, `--home` defaulting to `Path.home()`.
 - Every `file` is a posix path relative to the home directory (or absolute posix when outside it, see Plan questions); `line` is 1-based or `null`.
 - Env and header values never appear in the inventory output; only key names (D4).
+- Hook commands (settings, installed plugins, skills-dir plugins), the `statusLine` command and MCP `args` and `url` are printed through `redact()`: `NAME=value` values, URL passwords (or a whole password-less userinfo) and URL query values become `***`; names, flags, user names and paths stay (D4). user-mode.md never reads those lines from the files (D4).
 - A missing file or key yields an empty list (or `null` for a single-valued field), never an error. Malformed JSON yields an `errors` entry `{file, error}` and the rest still prints. Exit 0, or 2 when `--home` is not a directory.
 - The audit stays read-only; it writes only `~/.claude/claude-kit/audit/` (the report) and the `audit-scratch` temp folder of `rules.md` section 1. `rules.md` and `check-findings.py` are not changed. `audit-deep` is not changed (D2).
 - Report path, verbatim: `~/.claude/claude-kit/audit/user-config.md`; never inside a repo.
-- ADR number: one above the highest in `knowledge/decisions/` on `origin/main` at implementation time (today `0047`). Version: one minor above `origin/main`'s `plugin.json` version at implementation time (today `0.31.1` → `0.32.0`).
+- ADR number: one above the highest in `knowledge/decisions/` on `origin/main` at implementation time (today `0048`). Version: one minor above `origin/main`'s `plugin.json` version at implementation time (today `0.32.0` → `0.33.0`).
 - Public repo: no machine username or private repo names in tracked files; fixtures use generic names.
 
 ## Plan-level answers to the spec gate's plan questions
@@ -61,7 +62,8 @@ Setup: `pip install "markdown~=3.10" "pytest>=8" "ruff~=0.16"`. Full checks:
 - **`hooks` in a plugin's `plugin.json`:** the inventory does not parse it; it sets `manifest_hooks: true` on that plugin or skills entry. user-mode.md tells the session to read that `plugin.json` in full and every hooks file it names, and to treat those hooks like listed ones. (Task 2, Task 3)
 - **Resolving hook commands:** the model, from the raw `command` the inventory prints. Plugin and skills-dir hooks carry the plugin's `root` (home-relative or absolute posix) so `${CLAUDE_PLUGIN_ROOT}` can be substituted. user-mode.md gives the rule: substitute `${CLAUDE_PLUGIN_ROOT}` with `root` and `~`, `$HOME`, `%USERPROFILE%` with the home directory; skip the interpreter (`python`, `python3`, `py`, `node`, `bash`, `sh`, `pwsh`, `powershell -File`, `uv run`); the first remaining path argument is the target, relative to `root` for plugin hooks and to the home directory otherwise; a command with no resolvable script (inline shell, a program on PATH) is judged on its text and listed under what was not read. (Task 3)
 - **Setup steps and production bar:** the `--user` branch replaces everything in SKILL.md after the branch (Setup steps 1-5, Passes 1-4 and Output); user-mode.md carries its own setup. Production bar: the user's if given, else "one person's workstation: agents with tool access to their private repos, accounts and credentials", stated in the report header marked default. (Task 3)
-- **Criterion 2's secret search:** a throwaway Python snippet in the `audit-scratch` temp folder loads the env values of both user settings files and every `env`/`headers` value in `.claude.json`, searches the report for each, and prints only `checked <n> values, found <m>` plus the key names (never values) of any hit. The model never reads the values. (Task 5)
+- **Criterion 2's secret search:** a throwaway Python snippet in the `audit-scratch` temp folder loads the env values of both user settings files and every `env`/`headers` value in `.claude.json`, searches the report for each, and prints only `checked <n> values, found <m>` plus the key names (never values) of any hit. The model never reads the values. (Task 6)
+- **Citing masked items (re-gate question):** a finding on a hook or `statusLine` command or an MCP `args`/`url` cites the inventory's `file:line`; its Evidence is the inventory's masked text with each `***` written as `...` (`check-findings.py` skips the middle at `...`), and any part holding a `"` or `\`, which the JSON file escapes, written as `...` too; Confidence `inferred (from: inventory)`, since the line is not read. (Task 5)
 
 ## Review Focus
 
@@ -302,7 +304,7 @@ git commit -m "Add audit --user mode for the user-scope setup"
 ### Task 4: ADR, README, version bump and spec index
 
 **Files:**
-- Create: `knowledge/decisions/0047-user-config-audit.md` (number per Global Constraints)
+- Create: `knowledge/decisions/0048-user-config-audit.md` (number per Global Constraints)
 - Modify: `knowledge/decisions/README.md`
 - Modify: `README.md`
 - Modify: `plugin/.claude-plugin/plugin.json`
@@ -317,10 +319,10 @@ git commit -m "Add audit --user mode for the user-scope setup"
 
 - [ ] **Step 1: Pin the new version in the test (failing)**
 
-Run `git fetch origin` and read `origin/main`'s version (`git show origin/main:plugin/.claude-plugin/plugin.json`); the new version is the next minor (`0.31.1` → `0.32.0` today). In `tests/test_plugin_manifest.py`, `test_version_is_0_30_0` asserts `data["version"] == "0.31.1"`; change it to the new version.
+Run `git fetch origin` and read `origin/main`'s version (`git show origin/main:plugin/.claude-plugin/plugin.json`); the new version is the next minor (`0.32.0` → `0.33.0` today). In `tests/test_plugin_manifest.py`, `test_version_is_0_32_0` asserts `data["version"] == "0.32.0"` (the test is named after `origin/main`'s version); change the asserted string to the new version and rename the test to match (`test_version_is_0_33_0` today).
 
 Run: `pytest tests/test_plugin_manifest.py -v -k version_is`
-Expected: FAIL (`0.31.1 != 0.32.0`).
+Expected: FAIL (`0.32.0 != 0.33.0` today: the file still holds `origin/main`'s version).
 
 - [ ] **Step 2: Bump `plugin.json`**
 
@@ -331,7 +333,7 @@ Expected: all PASS.
 
 - [ ] **Step 3: Write the ADR and its index row**
 
-Take the number from `git ls-tree --name-only origin/main knowledge/decisions/` (highest + 1; rename the file if it is not 0047). Format of `knowledge/decisions/0000-template.md`: `# ADR 0047: User-config audit is a mode of audit, reports outside repos, never reads secrets`, Status `accepted`, Date the implementation date. Context: the repo audit covers one repo's config; most exposure (user settings, MCP servers in `~/.claude.json`, plugin hooks, skills, scheduled tasks) is outside any repo; idea from ECC's AgentShield, ideas only. Decision: one sentence each on reason and rejected option for D1 (a `--user` mode of `audit` reusing `rules.md` and `check-findings.py`; rejected a separate `config-audit` skill and the inventory script alone), D3 (report under `~/.claude/claude-kit/audit/`, never in a repo, because it holds private paths and settings; rejected `<repo>/docs/audit/`) and D4 (key names only, settings files and `.claude.json` read only at cited lines; rejected reading them in full, which would load secrets into context). Consequences: reuse and safety vs. a manual-only behavioural check. Add the row `| [0047](0047-user-config-audit.md) | User-config audit is a mode of audit, reports outside repos, never reads secrets | accepted | <date> |` at the end of the table in `knowledge/decisions/README.md`.
+Take the number from `git ls-tree --name-only origin/main knowledge/decisions/` (highest + 1; rename the file if it is not 0048). Format of `knowledge/decisions/0000-template.md`: `# ADR 0048: User-config audit is a mode of audit, reports outside repos, never reads secrets`, Status `accepted`, Date the implementation date. Context: the repo audit covers one repo's config; most exposure (user settings, MCP servers in `~/.claude.json`, plugin hooks, skills, scheduled tasks) is outside any repo; idea from ECC's AgentShield, ideas only. Decision: one sentence each on reason and rejected option for D1 (a `--user` mode of `audit` reusing `rules.md` and `check-findings.py`; rejected a separate `config-audit` skill and the inventory script alone), D3 (report under `~/.claude/claude-kit/audit/`, never in a repo, because it holds private paths and settings; rejected `<repo>/docs/audit/`) and D4 (key names only, secrets in commands, `args` and `url` masked, settings files and `.claude.json` read only at cited lines and never at a command, `args` or `url` line; rejected reading them in full, and printing those fields verbatim with a wider report self-check, both of which would load secrets into context). Consequences: reuse and safety vs. a manual-only behavioural check. Add the row `| [0048](0048-user-config-audit.md) | User-config audit is a mode of audit, reports outside repos, never reads secrets | accepted | <date> |` at the end of the table in `knowledge/decisions/README.md`.
 
 - [ ] **Step 4: README sentence**
 
@@ -348,15 +350,53 @@ Run: `git diff main | grep -i -E "<username>|<private-repo-names>"`, filling in 
 Expected: the grep prints nothing.
 
 ```bash
-git add knowledge/decisions/0047-user-config-audit.md knowledge/decisions/README.md README.md plugin/.claude-plugin/plugin.json tests/test_plugin_manifest.py docs/superpowers/README.md
+git add knowledge/decisions/0048-user-config-audit.md knowledge/decisions/README.md README.md plugin/.claude-plugin/plugin.json tests/test_plugin_manifest.py docs/superpowers/README.md
 git commit -m "ADR, README and version bump for audit --user"
 ```
 
-### Task 5: Verify the success criteria
+### Task 5: Mask secrets in commands, `args` and `url`
+
+**Files:**
+- Modify: `plugin/scripts/user-config-inventory.py`
+- Modify: `tests/test_user_config_inventory.py`
+- Modify: `plugin/skills/audit/user-mode.md`
+
+**Depends on:** Task 1, Task 2, Task 3
+
+**Interfaces:**
+- Consumes: `hooks_from` (Task 1) and the code that builds each settings item's `statusLine` (Task 1) and each MCP server item (Task 2, inside `mcp_servers`). If those are not already separate functions, factor them out as `settings_item(data: object, lines: dict, file: str) -> dict` and `mcp_item(name: str, server: dict, scope: str, project: str | None, line) -> dict` first, with no change in output.
+- Produces: `redact(text: str) -> str`, applied to every hook `command`, `statusLine.command`, each MCP `args` item and MCP `url`.
+
+- [ ] **Step 1: Failing tests**
+
+In `tests/test_user_config_inventory.py` add `test_redact`, parametrized over (input → expected): `TOKEN=abc node x.js` → `TOKEN=*** node x.js`; `A="b c" B='d' run` → `A=*** B=*** run`; `--api-key=abc` → `--api-key=***`; `-e` unchanged; `GITHUB_TOKEN=ghp_1` → `GITHUB_TOKEN=***`; `https://u:pw@h.io/p?k=v&t=x` → `https://u:***@h.io/p?k=***&t=***`; `https://tok@h.io` → `https://***@h.io`; `https://mcp.example.com`, `node ${CLAUDE_PLUGIN_ROOT}/a.js --x`, `a == b` and `FOO= cmd` unchanged. Add `test_secrets_in_args_url_and_commands_are_masked`: a fake home with a settings hook `API_KEY=SECRET-HOOK-1 python ~/h.py`, a `statusLine` `TOKEN='SECRET-STATUS-2' node ~/s.js`, MCP servers `gh` (`docker`, args `["-e", "GH=SECRET-ARG-3"]`) and `web` (url `https://me:SECRET-PW-4@x.io/m?key=SECRET-Q-5`), a skills-dir plugin hook `X=SECRET-PLUGIN-6 sh run.sh`, and an installed plugin (an `installed_plugins.json` entry whose `installPath` holds `hooks/hooks.json`) with hook `Y=SECRET-INSTALLED-7 node x.js`; assert `SECRET-` is absent from stdout and the masked forms `X=*** sh run.sh`, `Y=*** node x.js`, `API_KEY=*** python ~/h.py`, `TOKEN=*** node ~/s.js`, `["-e", "GH=***"]`, `https://me:***@x.io/m?key=***`.
+
+Run: `pytest tests/test_user_config_inventory.py -v -k "redact or masked"`
+Expected: FAIL (`redact` missing).
+
+- [ ] **Step 2: Implement**
+
+Add module-level `USERINFO_RE = re.compile(r"(://)([^/?#@\s:]*)(:[^/?#@\s]*)?@")`, `ASSIGN_RE = re.compile(r"""(?<![\w-])(-{0,2}[A-Za-z_][\w.-]*)=("[^"]*"|'[^']*'|[^\s&;#"']+)""")` and `MASK = "***"`. `redact` first replaces userinfo with `<user>:***@` (password present) or `***@`, then each `NAME=value` with `NAME=***`. Call it on the hook `command` in `hooks_from`, on `statusLine.command` in `settings_item`, and on each `args` string and the `url` in `mcp_item`. Extend the module docstring's secrets sentence to say so.
+
+- [ ] **Step 3: user-mode.md**
+
+In `## Inventory` say commands, `args` and `url` come masked. In `## Reading` add: never read the line of a hook or `statusLine` command or an MCP server's `args` or `url`; take those from the inventory. Then add: A finding on such an item cites the inventory's `file:line` for it. Its Evidence quotes the inventory's masked text with each `***` written as `...` (`check-findings.py` skips the text at a `...`), and any part holding a `"` or `\`, which the JSON file escapes, written as `...` too. Its Confidence is `inferred (from: inventory)`. In the hook-resolving rule, resolve from the inventory's masked command (paths are kept).
+
+- [ ] **Step 4: Verify and commit**
+
+Run: `pytest; ruff check plugin tests; ruff format --check plugin tests`
+Expected: all passed; ruff clean.
+
+```bash
+git add plugin/scripts/user-config-inventory.py tests/test_user_config_inventory.py plugin/skills/audit/user-mode.md
+git commit -m "user-config-inventory: mask secrets in hook commands and MCP args and url"
+```
+
+### Task 6: Verify the success criteria
 
 **Files:** none (the report is written outside the repo; scratch files go to the `audit-scratch` temp folder and are deleted)
 
-**Depends on:** Task 1, Task 2, Task 3, Task 4
+**Depends on:** Task 1, Task 2, Task 3, Task 4, Task 5
 
 **Interfaces:**
 - Consumes: everything above.
@@ -371,13 +411,42 @@ Expected: pytest reports all passed with no failures or errors; ruff prints `All
 
 If `~/.claude/claude-kit/audit/user-config.md` already exists, stop and ask the user before overwriting it (user-mode.md's rule). Otherwise follow this worktree's `plugin/skills/audit/user-mode.md` from start to finish, running this worktree's `plugin/scripts/user-config-inventory.py` and `plugin/scripts/check-findings.py` (not the installed kit's copies).
 
-Run: `python plugin/scripts/check-findings.py ~ ~/.claude/claude-kit/audit/user-config.md`
+Run: `python plugin/scripts/check-findings.py "$HOME" "$HOME/.claude/claude-kit/audit/user-config.md"` (spelled with `$HOME`, which both PowerShell and Bash expand; PowerShell passes a bare `~` to a native program unexpanded)
 Expected: exit 0 and a summary line with no rejected findings.
 
 - [ ] **Step 3: Inventory coverage check**
 
 Run: `python plugin/scripts/user-config-inventory.py` and compare against the report's `## Inventory` tables.
 Expected: every plugin listed under any settings item's `enabledPlugins`, every skills item with `plugin: true`, and every hook `command` (settings, installed plugins, skills-dir plugins) appears in the report's inventory.
+
+- [ ] **Step 3b: Masking check**
+
+Write this snippet to `<temp>/audit-scratch/mask_check.py` (outside the repo) and run it with `python -I <temp>/audit-scratch/mask_check.py <worktree>/plugin/scripts/user-config-inventory.py`. A field is unmasked when the script's own `redact()` would still change it (on masked text `redact` is a no-op, since `NAME=***` and `user:***@` map to themselves); it prints only counts:
+
+```python
+import importlib.util, json, subprocess, sys
+script = sys.argv[1]
+spec = importlib.util.spec_from_file_location("inv", script)
+inv = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(inv)
+out = subprocess.run([sys.executable, script], capture_output=True, text=True, encoding="utf-8")
+data = json.loads(out.stdout)
+fields = []
+for item in data["settings"]:
+    fields += [h["command"] for h in item["hooks"]]
+    if item.get("statusLine"):
+        fields.append(item["statusLine"]["command"])
+for group in ("plugins", "skills"):
+    for item in data[group]:
+        fields += [h["command"] for h in item.get("hooks") or []]
+for server in data["mcp_servers"]:
+    fields += list(server["args"]) + ([server["url"]] if server["url"] else [])
+unmasked = sum(1 for f in fields if isinstance(f, str) and inv.redact(f) != f)
+print(f"fields {len(fields)}, unmasked {unmasked}")
+sys.exit(1 if unmasked else 0)
+```
+
+Expected: `fields <n>, unmasked 0` and exit 0.
 
 - [ ] **Step 4: Secret search without reading values**
 
@@ -402,15 +471,17 @@ if cj.is_file():
         for sname, s in group.items():
             for field in ("env", "headers"):
                 values += [(f"{scope}:{sname}", f"{field}.{k}", str(v)) for k, v in (s.get(field) or {}).items()]
-hits = [(where, key) for where, key, v in values if v and v in report]
-print(f"checked {len(values)} values, found {len(hits)}")
+MIN = 8  # shorter values ("1", "true") match by chance and are not secrets
+short = [x for x in values if len(x[2]) < MIN]
+hits = [(where, key) for where, key, v in values if len(v) >= MIN and v in report]
+print(f"checked {len(values) - len(short)} values, skipped {len(short)} short values, found {len(hits)}")
 for where, key in hits:
     print("hit:", key)
 sys.exit(1 if hits else 0)
 ```
 
 Run: `python -I <temp>/audit-scratch/secret_check.py`
-Expected: `checked <n> values, found 0` and exit 0. Then delete the `audit-scratch` folder.
+Expected: `checked <n> values, skipped <k> short values, found 0` and exit 0. Values shorter than 8 characters are skipped on purpose: a substring hit on them is chance, not a leak. Any `hit:` line on a checked value is a leak: fix user-mode.md or the report and rerun. Then delete the `audit-scratch` folder.
 
 - [ ] **Step 5: Record the counts**
 

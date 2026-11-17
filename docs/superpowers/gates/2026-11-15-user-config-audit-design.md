@@ -1,21 +1,24 @@
 # Gate: User-config audit: `audit --user` checks the setup outside any repo
 
 - **Spec:** docs/superpowers/specs/2026-11-15-user-config-audit-design.md
-- **Spec SHA-256:** 808f7597738726423f325ec335cb53d29d367c49ee07a2c934129044f2f76a82
+- **Spec SHA-256:** cff7d31a17b3865f20accd4eb175b117405751d21824653a955894b8cac1cccf
 - **Verdict:** pass
-- **Date:** 2026-11-15
-- **Rounds:** 3 discovery + 1 verification
+- **Date:** 2026-11-17
+- **Rounds:** 1 discovery + 0 verification
 
 Round 1 reviewed the combined agent-config security spec, which was split
 into this spec and `2026-11-15-untrusted-vault-content-design.md` on that
-round's too-large finding.
+round's too-large finding. The first gate (2026-11-15) took 3 discovery +
+1 verification rounds; this re-gate (1 discovery round) follows the D4
+change to mask secrets in commands, `args` and `url`, the user's answer to
+a final-review finding. Its findings are listed as "regate".
 
 ## Key decisions
 
 - The user audit is a `--user` mode of `audit`, reusing `rules.md` and `check-findings.py` unchanged; not a new skill (D1)
 - `audit-deep` gets no user mode (D2)
 - The report goes to `~/.claude/claude-kit/audit/user-config.md` (folder created if absent), never inside a repo; user mode overrides `rules.md`'s one write folder and repo root (home) itself (D3, Design)
-- Neither the inventory nor the audit reads env or header values: key names only, and the settings files and `.claude.json` are read only at cited lines (D4)
+- Neither the inventory nor the audit reads env or header values: key names only; the inventory masks `NAME=value` values, URL passwords (or a password-less userinfo) and query values in hook, plugin-hook and `statusLine` commands and MCP `args`/`url`, keeping names; the settings files and `.claude.json` are read only at cited lines, never a command, `args` or `url` line; bare-argument secrets (`--token x`) are not detected (D4)
 - The audit covers settings (permissions, hooks, `statusLine`, `autoMode`), MCP servers, installed and skills-dir plugins with their hooks, skills, scheduled tasks, and user instructions (`~/.claude/CLAUDE.md`, agents, commands, output styles)
 - Nothing is frozen; behaviour is checked by a manual run (D5)
 - Shipped separately from untrusted vault content (D6)
@@ -34,6 +37,8 @@ round's too-large finding.
 - round 2 [minor] Criterion 2 only checked user-settings env values: now also every env and header value in `.claude.json`.
 - round 3 [blocking] User CLAUDE.md, agents, commands and output styles neither in nor out: added as the `instructions` inventory field, read in full, reported, tested.
 - round 3 [minor] Source of "kit version": the `version` in the kit's `plugin.json`.
+- regate [minor] Permission rules are not masked: Inventory states that permission rules, skill files, scheduled-task files and hook scripts are read verbatim, unmasked.
+- regate [minor] D4's masking list shorter than Inventory's: D4 adds "or a whole password-less userinfo".
 
 ## Plan questions
 
@@ -44,6 +49,7 @@ round's too-large finding.
 - Who resolves a hook command (with `${CLAUDE_PLUGIN_ROOT}`, interpreters, relative paths) to its target script: the inventory or the model? (Design: Audit `--user` mode)
 - Does the `--user` branch replace SKILL.md Setup steps 1-5, and which production bar does user mode state? (Design: Audit `--user` mode)
 - How is the env/header value search in criterion 2 run without loading values into the model's context (a script that does not echo them)? (Success criteria 2)
+- What Where, Evidence and Confidence does a finding on a hook or `statusLine` command or an MCP `args`/`url` use, when the audit may not read that line and the masked text does not match the file? (Design: Audit `--user` mode)
 
 ## Open
 
