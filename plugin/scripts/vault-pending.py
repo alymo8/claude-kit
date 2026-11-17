@@ -35,6 +35,7 @@ from __future__ import annotations
 
 import argparse
 import bisect
+import codecs
 import hashlib
 import json
 import re
@@ -42,6 +43,7 @@ import sys
 import tomllib
 import unicodedata
 import zipfile
+import zlib
 from pathlib import Path
 from xml.etree import ElementTree
 
@@ -62,6 +64,13 @@ INSTRUCTION_PHRASES: tuple[str, ...] = (
     "</system>",
 )
 TEXT_SUFFIXES = {".md", ".txt", ".vtt", ".html"}
+# UTF-32 first: its little-endian BOM starts with the UTF-16 one
+UTF_BOMS = (
+    (codecs.BOM_UTF32_LE, "utf-32"),
+    (codecs.BOM_UTF32_BE, "utf-32"),
+    (codecs.BOM_UTF16_LE, "utf-16"),
+    (codecs.BOM_UTF16_BE, "utf-16"),
+)
 HIDDEN_HTML_SUFFIXES = {".md", ".html"}
 VOID_ELEMENTS = frozenset(
     "area base br col embed hr img input link meta source track wbr".split()
@@ -74,6 +83,7 @@ INVISIBLE = frozenset(
         0xFEFF,
         *range(0x202A, 0x202F),
         *range(0x2066, 0x206A),
+        *range(0xE0000, 0xE0080),  # Unicode tag characters
     ]
 )
 
@@ -202,7 +212,16 @@ def extract_docx(path: Path) -> list[str]:
         with zipfile.ZipFile(path) as z:
             data = z.read("word/document.xml")
         root = ElementTree.fromstring(data)
-    except (zipfile.BadZipFile, KeyError, ElementTree.ParseError, OSError) as exc:
+    except (
+        zipfile.BadZipFile,
+        KeyError,
+        ElementTree.ParseError,
+        OSError,
+        zlib.error,
+        NotImplementedError,  # unsupported compression method
+        RuntimeError,  # encrypted entry
+        EOFError,
+    ) as exc:
         raise ValueError(f"{path} is not a readable .docx file: {exc}") from exc
     paragraphs = []
     for para in root.iter(f"{W}p"):
@@ -216,9 +235,17 @@ def _read_scan_text(path: Path) -> str | None:
     suffix = path.suffix.lower()
     if suffix in TEXT_SUFFIXES:
         try:
-            return path.read_bytes().decode("utf-8", errors="replace")
+            data = path.read_bytes()
         except OSError:
             return None
+        encoding = "utf-8"
+        for bom, name in UTF_BOMS:
+            if data.startswith(bom):
+                encoding = name
+                break
+        text = data.decode(encoding, errors="replace")
+        # NUL left after decoding: an encoding the phrases cannot match in
+        return None if "\x00" in text else text
     if suffix == ".docx":
         try:
             return "\n".join(extract_docx(path))

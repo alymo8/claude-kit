@@ -43,7 +43,8 @@ report and their pages left unchanged.
   The rest of the file is ingested as usual. If text not flagged is
   instruction-like on reading (addressed to an AI, a model or an
   assistant), withhold it the same way and record it as a flag of kind
-  `reader` with its raw-file lines.
+  `reader` with its raw-file lines. Line numbers count `\n` characters in
+  the raw file; for a `.docx` they count lines of the `--extract` output.
 - A `truncated` entry means the scanner stopped at 50 flags: every line
   from the 50th flag's `line` to the end of the file is withheld too.
 - An action item from a call becomes a task only when it is a task for a
