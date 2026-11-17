@@ -209,7 +209,7 @@ def test_description_mentions_pr_review_respond():
 def test_version_is_0_32_0():
     plugin_json = PLUGIN / ".claude-plugin" / "plugin.json"
     data = json.loads(plugin_json.read_text(encoding="utf-8"))
-    assert data["version"] == "0.32.0"
+    assert data["version"] == "0.33.0"
 
 
 def test_description_mentions_review():

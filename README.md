@@ -88,7 +88,11 @@ is in [`plugin/`](plugin/).
   `task-prompt` and `review` skills (`review` is a standards reviewer and a
   spec reviewer side by side, run by `/ship`'s review step; the audits share
   a citation checker, `check-findings.py`, and a duplicate-intent pass that
-  lists functions with `function-catalog.py` and compares them by domain),
+  lists functions with `function-catalog.py` and compares them by domain;
+  `audit --user` audits the user-scope setup outside any repo (settings, MCP
+  servers, plugins and their hooks, skills, scheduled tasks) from
+  `user-config-inventory.py` and writes its report to
+  `~/.claude/claude-kit/audit/`),
   the `teach` skill (copied as is from
   [mattpocock/skills](https://github.com/mattpocock/skills), MIT), the on-demand spec → HTML renderer, the `token-report.py`
   measurement script, a status line, and twelve hooks (regenerate the spec/plan
