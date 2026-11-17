@@ -224,6 +224,73 @@ def test_secret_values_absent_from_output(home):
     assert "SECRET-" not in result.stdout
 
 
+@pytest.mark.parametrize(
+    ("text", "expected"),
+    [
+        ("TOKEN=abc node x.js", "TOKEN=*** node x.js"),
+        ("A=\"b c\" B='d' run", "A=*** B=*** run"),
+        ("--api-key=abc", "--api-key=***"),
+        ("-e", "-e"),
+        ("GITHUB_TOKEN=ghp_1", "GITHUB_TOKEN=***"),
+        ("https://u:pw@h.io/p?k=v&t=x", "https://u:***@h.io/p?k=***&t=***"),
+        ("https://tok@h.io", "https://***@h.io"),
+        ("https://mcp.example.com", "https://mcp.example.com"),
+        ("node ${CLAUDE_PLUGIN_ROOT}/a.js --x", "node ${CLAUDE_PLUGIN_ROOT}/a.js --x"),
+        ("a == b", "a == b"),
+        ("FOO= cmd", "FOO= cmd"),
+    ],
+)
+def test_redact(text, expected):
+    assert inv.redact(text) == expected
+
+
+def test_secrets_in_args_url_and_commands_are_masked(tmp_path):
+    home = tmp_path / "home"
+    write_json(
+        home / ".claude" / "settings.json",
+        {
+            "hooks": hooks_file("Stop", "API_KEY=SECRET-HOOK-1 python ~/h.py")["hooks"],
+            "statusLine": {"command": "TOKEN='SECRET-STATUS-2' node ~/s.js"},
+        },
+    )
+    write_json(
+        home / ".claude.json",
+        {
+            "mcpServers": {
+                "gh": {"command": "docker", "args": ["-e", "GH=SECRET-ARG-3"]},
+                "web": {"url": "https://me:SECRET-PW-4@x.io/m?key=SECRET-Q-5"},
+            }
+        },
+    )
+    plugin = home / ".claude" / "skills" / "kp"
+    write_json(plugin / ".claude-plugin" / "plugin.json", {"name": "kp"})
+    write_json(
+        plugin / "hooks" / "hooks.json",
+        hooks_file("Stop", "X=SECRET-PLUGIN-6 sh run.sh"),
+    )
+    install = home / ".claude" / "plugins" / "cache" / "m" / "ip" / "1"
+    write_json(
+        home / ".claude" / "plugins" / "installed_plugins.json",
+        {"plugins": {"ip@m": [{"scope": "user", "installPath": str(install)}]}},
+    )
+    write_json(
+        install / "hooks" / "hooks.json",
+        hooks_file("Stop", "Y=SECRET-INSTALLED-7 node x.js"),
+    )
+    result = run_script(SCRIPT, "--home", str(home))
+    assert result.returncode == 0, result.stderr
+    assert "SECRET-" not in result.stdout
+    out = json.loads(result.stdout)
+    assert by_name(out["skills"], "kp")["hooks"][0]["command"] == "X=*** sh run.sh"
+    assert by_name(out["plugins"], "ip@m")["hooks"][0]["command"] == "Y=*** node x.js"
+    item = settings_item(out, ".claude/settings.json")
+    assert item["hooks"][0]["command"] == "API_KEY=*** python ~/h.py"
+    assert item["statusLine"]["command"] == "TOKEN=*** node ~/s.js"
+    servers = out["mcp_servers"]
+    assert by_name(servers, "gh")["args"] == ["-e", "GH=***"]
+    assert by_name(servers, "web")["url"] == "https://me:***@x.io/m?key=***"
+
+
 def test_malformed_settings_reports_error_and_continues(home):
     (home / ".claude" / "settings.json").write_text(
         '{"permissions": ', encoding="utf-8"

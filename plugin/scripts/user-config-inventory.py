@@ -10,7 +10,9 @@ keys ``settings``, ``mcp_servers``, ``plugins``, ``skills``,
 path when the file lies outside it) and a 1-based ``line`` (``null`` when it is
 not known).
 
-Env and header values never appear in the output: only their key names.
+Env and header values never appear in the output: only their key names. Hook
+and statusLine commands and MCP ``args`` and ``url`` are masked by ``redact``:
+``NAME=value`` values, URL passwords and query values become ``***``.
 
 A missing file or key yields an empty list (or ``null`` for a single-valued
 field), never an error. A file that is not valid JSON adds an ``errors`` entry
@@ -32,6 +34,19 @@ PERMISSION_KINDS = ("allow", "ask", "deny")
 SETTINGS_FILES = (".claude/settings.json", ".claude/settings.local.json")
 WHITESPACE = " \t\r\n"
 SCALAR_RE = re.compile(r"-?\d+(\.\d+)?([eE][-+]?\d+)?|true|false|null")
+USERINFO_RE = re.compile(r"(://)([^/?#@\s:]*)(:[^/?#@\s]*)?@")
+ASSIGN_RE = re.compile(
+    r"""(?<![\w-])(-{0,2}[A-Za-z_][\w.-]*)=("[^"]*"|'[^']*'|[^\s&;#"']+)"""
+)
+MASK = "***"
+
+
+def redact(text: str) -> str:
+    """Mask URL passwords, ``NAME=value`` values and query values; keep names."""
+    text = USERINFO_RE.sub(
+        lambda m: f"{m[1]}{m[2]}:{MASK}@" if m[3] else f"{m[1]}{MASK}@", text
+    )
+    return ASSIGN_RE.sub(lambda m: f"{m[1]}={MASK}", text)
 
 
 def value_lines(text: str) -> dict[tuple[str | int, ...], int]:
@@ -173,7 +188,7 @@ def hooks_from(
                     {
                         "event": event,
                         "matcher": matcher if isinstance(matcher, str) else None,
-                        "command": command,
+                        "command": redact(command),
                         "file": file,
                         "line": lines.get((*prefix, event, gi, "hooks", hi, "command")),
                     }
@@ -224,7 +239,10 @@ def settings_item(data: object, lines: dict, file: str) -> dict:
     status_line = None
     status = data.get("statusLine")
     if isinstance(status, dict) and isinstance(status.get("command"), str):
-        status_line = {"command": status["command"], **at("statusLine", "command")}
+        status_line = {
+            "command": redact(status["command"]),
+            **at("statusLine", "command"),
+        }
 
     auto_mode = None
     auto = data.get("autoMode")
@@ -260,10 +278,10 @@ def mcp_item(name: str, server: dict, scope: str, project: str | None, line) -> 
         "project": project,
         "type": string_or_none(server.get("type")) or ("stdio" if command else None),
         "command": command,
-        "args": [a for a in args if isinstance(a, str)]
+        "args": [redact(a) for a in args if isinstance(a, str)]
         if isinstance(args, list)
         else [],
-        "url": string_or_none(server.get("url")),
+        "url": redact(url) if isinstance(url := server.get("url"), str) else None,
         "env_keys": sorted_keys(server.get("env")),
         "header_keys": sorted_keys(server.get("headers")),
         "file": ".claude.json",
