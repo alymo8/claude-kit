@@ -368,6 +368,19 @@ def test_linked_skill_reports_link_and_target(home, tmp_path):
     assert item["hooks"][0]["file"] == ".claude/skills/linked/hooks/hooks.json"
 
 
+def test_relative_symlink_target_resolves_from_link_folder(home):
+    target = home / "repo" / "plug"
+    target.mkdir(parents=True)
+    link = home / ".claude" / "skills" / "rel"
+    try:
+        os.symlink(Path("../../repo/plug"), link, target_is_directory=True)
+    except OSError:
+        pytest.skip("symlinks need privileges on this machine")
+    item = by_name(run(home)["skills"], "rel")
+    assert item["link"] == "symlink"
+    assert item["target"] == "repo/plug"
+
+
 def test_install_path_outside_home_is_absolute(home, tmp_path):
     outside = tmp_path / "outside" / "p"
     write_json(outside / "hooks" / "hooks.json", hooks_file("Stop", "python s.py"))

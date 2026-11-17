@@ -360,8 +360,10 @@ def link_info(entry: Path, home: Path) -> tuple[str | None, str | None]:
         target = os.readlink(entry)
     except (OSError, ValueError):
         return None, None
-    target = str(target).removeprefix("\\\\?\\")
-    return ("symlink" if entry.is_symlink() else "junction"), rel(Path(target), home)
+    target = Path(str(target).removeprefix("\\\\?\\"))
+    if not target.is_absolute():
+        target = entry.parent / target
+    return ("symlink" if entry.is_symlink() else "junction"), rel(target, home)
 
 
 def skills(home: Path, errors: list[dict]) -> list[dict]:
