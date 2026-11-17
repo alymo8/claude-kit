@@ -243,22 +243,198 @@ def settings_item(data: object, lines: dict, file: str) -> dict:
     }
 
 
+def string_or_none(value: object) -> str | None:
+    return value if isinstance(value, str) else None
+
+
+def sorted_keys(value: object) -> list[str]:
+    return sorted(value) if isinstance(value, dict) else []
+
+
+def mcp_item(name: str, server: dict, scope: str, project: str | None, line) -> dict:
+    command = string_or_none(server.get("command"))
+    args = server.get("args")
+    return {
+        "name": name,
+        "scope": scope,
+        "project": project,
+        "type": string_or_none(server.get("type")) or ("stdio" if command else None),
+        "command": command,
+        "args": [a for a in args if isinstance(a, str)]
+        if isinstance(args, list)
+        else [],
+        "url": string_or_none(server.get("url")),
+        "env_keys": sorted_keys(server.get("env")),
+        "header_keys": sorted_keys(server.get("headers")),
+        "file": ".claude.json",
+        "line": line,
+    }
+
+
+def mcp_servers(home: Path, errors: list[dict]) -> list[dict]:
+    """MCP servers of ``.claude.json``: user scope, then each project's."""
+    loaded = load_json(home / ".claude.json", home, errors)
+    if loaded is None or not isinstance(loaded[0], dict):
+        return []
+    data, lines = loaded
+    items = []
+
+    def collect(servers: object, scope: str, project: str | None, prefix: tuple):
+        if not isinstance(servers, dict):
+            return
+        for name, server in servers.items():
+            if isinstance(server, dict):
+                line = lines.get((*prefix, "mcpServers", name))
+                items.append(mcp_item(name, server, scope, project, line))
+
+    collect(data.get("mcpServers"), "user", None, ())
+    projects = data.get("projects")
+    if isinstance(projects, dict):
+        for path, project in projects.items():
+            if isinstance(project, dict):
+                collect(project.get("mcpServers"), "local", path, ("projects", path))
+    return items
+
+
+def plugin_hooks(root: Path, home: Path, errors: list[dict]) -> list[dict]:
+    """Hook items of ``<root>/hooks/hooks.json``, cited through ``root``."""
+    path = root / "hooks" / "hooks.json"
+    loaded = load_json(path, home, errors)
+    if loaded is None:
+        return []
+    return hooks_from(loaded[0], loaded[1], rel(path, home))
+
+
+def has_manifest_hooks(root: Path, home: Path, errors: list[dict]) -> bool:
+    loaded = load_json(root / ".claude-plugin" / "plugin.json", home, errors)
+    return loaded is not None and isinstance(loaded[0], dict) and "hooks" in loaded[0]
+
+
+def plugins(home: Path, errors: list[dict], enabled: dict) -> list[dict]:
+    """One item per install entry of ``installed_plugins.json``."""
+    file = ".claude/plugins/installed_plugins.json"
+    loaded = load_json(home / file, home, errors)
+    if loaded is None or not isinstance(loaded[0], dict):
+        return []
+    data, lines = loaded
+    installed = data.get("plugins")
+    if not isinstance(installed, dict):
+        return []
+    items = []
+    for name, value in installed.items():
+        if isinstance(value, dict):
+            entries = [(("plugins", name), value)]
+        elif isinstance(value, list):
+            entries = [(("plugins", name, i), v) for i, v in enumerate(value)]
+        else:
+            continue
+        for path, entry in entries:
+            if not isinstance(entry, dict):
+                continue
+            install = string_or_none(entry.get("installPath"))
+            root = Path(install) if install else None
+            shown = rel(root, home) if root else None
+            items.append(
+                {
+                    "name": name,
+                    "scope": string_or_none(entry.get("scope")),
+                    "project_path": string_or_none(entry.get("projectPath")),
+                    "version": string_or_none(entry.get("version")),
+                    "git_commit_sha": string_or_none(entry.get("gitCommitSha")),
+                    "install_path": shown,
+                    "root": shown,
+                    "enabled": enabled.get(name),
+                    "file": file,
+                    "line": lines.get(path),
+                    "manifest_hooks": bool(root)
+                    and has_manifest_hooks(root, home, errors),
+                    "hooks": plugin_hooks(root, home, errors) if root else [],
+                }
+            )
+    return items
+
+
+def link_info(entry: Path, home: Path) -> tuple[str | None, str | None]:
+    """``(link kind, target)`` of a symlink or Windows junction, else nulls."""
+    try:
+        target = os.readlink(entry)
+    except (OSError, ValueError):
+        return None, None
+    target = str(target).removeprefix("\\\\?\\")
+    return ("symlink" if entry.is_symlink() else "junction"), rel(Path(target), home)
+
+
+def skills(home: Path, errors: list[dict]) -> list[dict]:
+    """One item per entry of ``.claude/skills/``."""
+    folder = home / ".claude" / "skills"
+    if not folder.is_dir():
+        return []
+    items = []
+    for entry in sorted(folder.iterdir(), key=lambda p: p.name):
+        file = rel(entry, home)
+        link, target = link_info(entry, home)
+        plugin = (entry / ".claude-plugin" / "plugin.json").exists()
+        items.append(
+            {
+                "name": entry.name,
+                "file": file,
+                "link": link,
+                "target": target,
+                "plugin": plugin,
+                "root": file if plugin else None,
+                "manifest_hooks": plugin and has_manifest_hooks(entry, home, errors),
+                "hooks": plugin_hooks(entry, home, errors) if plugin else [],
+            }
+        )
+    return items
+
+
+def files_under(folder: Path, home: Path) -> list[str]:
+    if not folder.is_dir():
+        return []
+    return sorted(rel(p, home) for p in folder.rglob("*") if p.is_file())
+
+
+def scheduled_tasks(home: Path) -> list[dict]:
+    folder = home / ".claude" / "scheduled-tasks"
+    if not folder.is_dir():
+        return []
+    return [
+        {"name": task.name, "file": rel(task, home), "files": files_under(task, home)}
+        for task in sorted(folder.iterdir(), key=lambda p: p.name)
+        if task.is_dir()
+    ]
+
+
+def instructions(home: Path) -> list[dict]:
+    files = []
+    if (home / ".claude" / "CLAUDE.md").is_file():
+        files.append(".claude/CLAUDE.md")
+    for sub in ("agents", "commands", "output-styles"):
+        files.extend(files_under(home / ".claude" / sub, home))
+    return [{"file": file} for file in files]
+
+
 def inventory(home: Path) -> dict:
     """The full inventory of the user-scope setup under ``home``."""
     errors: list[dict] = []
     settings = []
+    enabled: dict = {}
     for name in SETTINGS_FILES:
         loaded = load_json(home / name, home, errors)
         if loaded is not None:
             data, lines = loaded
             settings.append(settings_item(data, lines, name))
+            flags = data.get("enabledPlugins") if isinstance(data, dict) else None
+            if isinstance(flags, dict):
+                enabled.update({k: v for k, v in flags.items() if isinstance(v, bool)})
     return {
         "settings": settings,
-        "mcp_servers": [],
-        "plugins": [],
-        "skills": [],
-        "scheduled_tasks": [],
-        "instructions": [],
+        "mcp_servers": mcp_servers(home, errors),
+        "plugins": plugins(home, errors, enabled),
+        "skills": skills(home, errors),
+        "scheduled_tasks": scheduled_tasks(home),
+        "instructions": instructions(home),
         "errors": errors,
     }
 
