@@ -36,14 +36,18 @@ Things that cost time in past runs and are not obvious from the code.
   pointer test fails.
 - Writing test code through a bash heredoc into a Python script turns
   `\n` escapes inside string literals into real line breaks, so the
-  test file no longer parses. Edit test files with the Edit tool.
+  test file no longer parses. Edit test files with the Edit tool. The
+  same goes for `\x00` in a patch run through `python -c` or a heredoc:
+  it lands as a real NUL byte and Python fails with `source code string
+  cannot contain null bytes`. Put patch scripts in a file first.
 - Before promising how much a command can shrink, read its tests:
   `tests/test_ship_command.py` and `tests/test_ship_fast_command.py` pin
   about 60 exact phrases, and one pins a line break
   (`"one\n   copy, the only one the run starts"` in step 5 of
   `ship-fast.md`), so rewrapping that sentence fails the test.
 - The kit version lives in `plugin/.claude-plugin/plugin.json` and is
-  pinned in `tests/test_plugin_manifest.py`; bump both in the same commit.
+  pinned in `tests/test_plugin_manifest.py`; bump both in the same commit,
+  and rename the test (`test_version_is_0_32_0`) to the new version.
 - Measure a tracked file's size with `git show HEAD:<path> | wc -c`, not
   `wc -c <path>`: the working copy is checked out with CRLF and reads a
   few hundred bytes larger than the stored LF file.
