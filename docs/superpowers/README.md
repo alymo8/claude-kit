@@ -6,8 +6,8 @@
 
 | Date | Spec | Status |
 |---|---|---|
-| 2026-11-15 | [User-config audit: `audit --user` checks the setup outside any repo](specs/2026-11-15-user-config-audit-design.md) | approved |
 | 2026-11-15 | [Untrusted vault content: scan raw files and keep injected text out of the wiki](specs/2026-11-15-untrusted-vault-content-design.md) | approved |
+| 2026-11-15 | [User-config audit: `audit --user` checks the setup outside any repo](specs/2026-11-15-user-config-audit-design.md) | approved |
 | 2026-11-10 | [Duplicate-intent pass in `audit` and `audit-deep`](specs/2026-11-10-duplicate-functions-audit-design.md) | approved |
 | 2026-11-10 | [Two-axis review, surgical diffs, frozen evaluators, Merge Danger and a hardening retro](specs/2026-11-10-review-and-guardrails-design.md) | approved |
 | 2026-11-10 | [Vault: a personal knowledge vault the kit scaffolds, ingests into and points every session at](specs/2026-11-10-vault-design.md) | approved |
@@ -39,8 +39,8 @@
 
 | Date | Plan | Status |
 |---|---|---|
-| 2026-11-16 | [User-config audit (`audit --user`) Implementation Plan](plans/2026-11-16-user-config-audit.md) | approved |
 | 2026-11-16 | [Untrusted vault content Implementation Plan](plans/2026-11-16-untrusted-vault-content.md) | approved |
+| 2026-11-16 | [User-config audit (`audit --user`) Implementation Plan](plans/2026-11-16-user-config-audit.md) | approved |
 | 2026-11-11 | [Duplicate-intent pass in `audit` and `audit-deep` Implementation Plan](plans/2026-11-11-duplicate-functions-audit.md) | approved |
 | 2026-11-10 | [Two-axis review, surgical diffs, frozen evaluators, Merge Danger and a hardening retro Implementation Plan](plans/2026-11-10-review-and-guardrails.md) | approved |
 | 2026-11-10 | [Personal vault Implementation Plan](plans/2026-11-10-vault.md) | approved |

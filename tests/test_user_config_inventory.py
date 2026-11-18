@@ -238,6 +238,11 @@ def test_secret_values_absent_from_output(home):
         ("node ${CLAUDE_PLUGIN_ROOT}/a.js --x", "node ${CLAUDE_PLUGIN_ROOT}/a.js --x"),
         ("a == b", "a == b"),
         ("FOO= cmd", "FOO= cmd"),
+        ('curl -H "Authorization: Bearer abc" x', 'curl -H "Authorization: ***" x'),
+        ("--header Authorization:Basic abc", "--header Authorization:***"),
+        ("x-api-key: abc", "x-api-key: ***"),
+        ('$env:TOK = "abc"; node a.js', "$env:TOK = ***; node a.js"),
+        ("$env:TOK='abc'", "$env:TOK=***"),
     ],
 )
 def test_redact(text, expected):
@@ -493,3 +498,27 @@ def test_wrong_types_do_not_crash(tmp_path):
     assert item["permissions"] == [] and item["hooks"] == [] and item["env"] == []
     assert out["mcp_servers"] == []
     assert out["errors"] == []
+
+
+def test_value_lines_accepts_nan_and_infinity():
+    assert inv.value_lines('{"a": NaN, "b": -Infinity}') == {("a",): 1, ("b",): 1}
+
+
+def test_deep_nesting_is_an_error_not_a_crash(tmp_path):
+    home = tmp_path / "home"
+    path = home / ".claude" / "settings.json"
+    path.parent.mkdir(parents=True)
+    path.write_text("[" * 100_000 + "]" * 100_000, encoding="utf-8")
+    result = run_script(SCRIPT, "--home", str(home))
+    assert result.returncode == 0, result.stderr
+    assert json.loads(result.stdout)["errors"]
+
+
+def test_mcp_command_is_masked(tmp_path):
+    home = tmp_path / "home"
+    write_json(
+        home / ".claude.json", {"mcpServers": {"s": {"command": "X=SECRET-CMD-8 node"}}}
+    )
+    result = run_script(SCRIPT, "--home", str(home))
+    assert result.returncode == 0, result.stderr
+    assert "SECRET-" not in result.stdout

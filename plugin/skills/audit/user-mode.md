@@ -27,13 +27,14 @@ stdout; redirect long output to the `audit-scratch` folder. It prints one JSON
 object with the keys `settings`, `mcp_servers`, `plugins`, `skills`,
 `scheduled_tasks`, `instructions` and `errors`. Every item has `file` and a
 1-based `line`; env and header values never appear, only key names. Hook and
-`statusLine` commands and MCP `args` and `url` come masked: `NAME=value`
-values, URL passwords and query values read `***`. Report each
+`statusLine` commands and MCP `command`, `args` and `url` come masked:
+`NAME=value` and `$env:NAME = value` values, URL passwords, query values and
+auth header values read `***`. Report each
 `errors` entry as unread.
 
 ## Reading
 
-Never read `.claude/settings.json`, `.claude/settings.local.json` or `.claude.json` in full: read only the line ranges the inventory cites, never an `env` or `headers` block, and never the line of a hook or `statusLine` command or an MCP server's `args` or `url`: take those from the inventory, which masks them. A finding on such an item cites the inventory's `file:line` for it. Its Evidence quotes the inventory's masked text with each `***` written as `...` (`check-findings.py` skips the text at a `...`), and any part holding a `"` or `\`, which the JSON file escapes, written as `...` too. Its Confidence is `inferred (from: inventory)`.
+Never read `.claude/settings.json`, `.claude/settings.local.json` or `.claude.json` in full: read only the line ranges the inventory cites (for an MCP server, its cited line only, never a range), never an `env` or `headers` block, and never the line of a hook or `statusLine` command or an MCP server's `args` or `url`: take those from the inventory, which masks them. A finding on such an item cites the inventory's `file:line` for it. Its Evidence quotes the inventory's masked text with each `***` written as `...` (`check-findings.py` skips the text at a `...`), and any part holding a `"` or `\`, which the JSON file escapes, written as `...` too. Its Confidence is `inferred (from: inventory)`.
 
 Read in full:
 

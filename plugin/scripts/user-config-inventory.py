@@ -11,8 +11,9 @@ path when the file lies outside it) and a 1-based ``line`` (``null`` when it is
 not known).
 
 Env and header values never appear in the output: only their key names. Hook
-and statusLine commands and MCP ``args`` and ``url`` are masked by ``redact``:
-``NAME=value`` values, URL passwords and query values become ``***``.
+and statusLine commands and MCP ``command``, ``args`` and ``url`` are masked by
+``redact``: ``NAME=value`` and ``$env:NAME = value`` values, URL passwords, query
+values and auth header values become ``***``.
 
 A missing file or key yields an empty list (or ``null`` for a single-valued
 field), never an error. A file that is not valid JSON adds an ``errors`` entry
@@ -33,16 +34,24 @@ from pathlib import Path
 PERMISSION_KINDS = ("allow", "ask", "deny")
 SETTINGS_FILES = (".claude/settings.json", ".claude/settings.local.json")
 WHITESPACE = " \t\r\n"
-SCALAR_RE = re.compile(r"-?\d+(\.\d+)?([eE][-+]?\d+)?|true|false|null")
+SCALAR_RE = re.compile(r"-?\d+(\.\d+)?([eE][-+]?\d+)?|true|false|null|NaN|-?Infinity")
 USERINFO_RE = re.compile(r"(://)([^/?#@\s:]*)(:[^/?#@\s]*)?@")
 ASSIGN_RE = re.compile(
     r"""(?<![\w-])(-{0,2}[A-Za-z_][\w.-]*)=("[^"]*"|'[^']*'|[^\s&;#"']+)"""
 )
+HEADER_RE = re.compile(
+    r"""(?i)\b(authorization|proxy-authorization|x-api-key|api-key)(\s*:\s*)"""
+    r"""(?:(?:bearer|basic|token)\s+)?[^\s"']+"""
+)
+PS_ENV_RE = re.compile(r"""(\$env:[A-Za-z_]\w*\s*=\s*)("[^"]*"|'[^']*'|[^\s;&|"']+)""")
 MASK = "***"
 
 
 def redact(text: str) -> str:
-    """Mask URL passwords, ``NAME=value`` values and query values; keep names."""
+    """Mask URL passwords, ``NAME=value`` and ``$env:NAME = value`` values, query
+    values and auth header values; keep names."""
+    text = HEADER_RE.sub(lambda m: f"{m[1]}{m[2]}{MASK}", text)
+    text = PS_ENV_RE.sub(lambda m: f"{m[1]}{MASK}", text)
     text = USERINFO_RE.sub(
         lambda m: f"{m[1]}{m[2]}:{MASK}@" if m[3] else f"{m[1]}{MASK}@", text
     )
@@ -153,7 +162,7 @@ def load_json(path: Path, home: Path, errors: list[dict]) -> tuple[object, dict]
         text = path.read_text(encoding="utf-8-sig")
         data = json.loads(text)
         return data, value_lines(text)
-    except (OSError, UnicodeDecodeError, ValueError) as exc:
+    except (OSError, UnicodeDecodeError, ValueError, RecursionError) as exc:
         errors.append({"file": rel(path, home), "error": str(exc)})
         return None
 
@@ -277,7 +286,7 @@ def mcp_item(name: str, server: dict, scope: str, project: str | None, line) -> 
         "scope": scope,
         "project": project,
         "type": string_or_none(server.get("type")) or ("stdio" if command else None),
-        "command": command,
+        "command": redact(command) if command else command,
         "args": [redact(a) for a in args if isinstance(a, str)]
         if isinstance(args, list)
         else [],
