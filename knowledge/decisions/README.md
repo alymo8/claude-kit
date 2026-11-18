@@ -53,3 +53,4 @@ the next number; superseded ones are never deleted.
 | [0045](0045-merge-danger-in-pr-bodies.md) | Merge Danger in PR bodies | accepted | 2026-11-10 |
 | [0046](0046-installer-detects-os.md) | The installer detects the OS and never asks | accepted | 2026-11-15 |
 | [0047](0047-untrusted-vault-content.md) | Untrusted vault content | accepted | 2026-11-16 |
+| [0048](0048-user-config-audit.md) | User-config audit is a mode of audit, reports outside repos, never reads secrets | accepted | 2026-11-16 |
