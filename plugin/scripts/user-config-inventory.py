@@ -286,7 +286,7 @@ def mcp_item(name: str, server: dict, scope: str, project: str | None, line) -> 
         "scope": scope,
         "project": project,
         "type": string_or_none(server.get("type")) or ("stdio" if command else None),
-        "command": redact(command) if command else command,
+        "command": redact(command) if command else None,
         "args": [redact(a) for a in args if isinstance(a, str)]
         if isinstance(args, list)
         else [],
