@@ -54,3 +54,4 @@ the next number; superseded ones are never deleted.
 | [0046](0046-installer-detects-os.md) | The installer detects the OS and never asks | accepted | 2026-11-15 |
 | [0047](0047-untrusted-vault-content.md) | Untrusted vault content | accepted | 2026-11-16 |
 | [0048](0048-user-config-audit.md) | User-config audit is a mode of audit, reports outside repos, never reads secrets | accepted | 2026-11-16 |
+| [0049](0049-ship-many-child-runner.md) | `/ship-many` children run through a runner with a time limit, one resume and keep-awake | accepted | 2026-11-18 |

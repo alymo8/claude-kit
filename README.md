@@ -123,6 +123,9 @@ is in [`plugin/`](plugin/).
   ships several approved specs at once: it gates each, groups the ones whose
   Scope In lists share no file, and runs each group as concurrent headless
   `/ship` runs (at most 3 by default); `--dry-run` shows the waves first.
+  Each child gets 2 hours per attempt and one automatic resume when it ends
+  without a merged PR or a stop rule, and the run keeps the machine awake (a
+  closed laptop lid still sleeps it).
   `/ship-fast [spec.md | idea]` is the light
   path for an hour-sized POC: given an idea it first interviews you for the
   spec (at most 7 questions) and opens it for you to approve, then runs
