@@ -55,6 +55,7 @@ def test_step_5_reads_status_file():
     text = step(5)
     for needle in ("status.json", "attempts", "timed_out"):
         assert needle in text, needle
+    assert "number of entries in the `attempts` list" in " ".join(text.split())
 
 
 def test_step_6_drops_timed_out_recheck():
@@ -62,6 +63,7 @@ def test_step_6_drops_timed_out_recheck():
     assert "may still be running" not in text
     assert "look up its PR once more" not in text
     assert "attempts" in text and "2 (resumed)" in text
+    assert "`unknown`" in text
 
 
 def test_dry_run_never_gates():

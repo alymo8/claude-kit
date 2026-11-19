@@ -92,8 +92,9 @@ without launching any child.
    stops the others or later waves.
 5. **Collect.** An excluded spec keeps status `excluded`. For each child that
    ran:
-   - Its exit code, cost (`cost`), attempts (`attempts`) and `resume` come
-     from `<log>/<log-name>.status.json` when the file holds a JSON object;
+   - Its exit code, cost (`cost`), attempts (the number of entries in the
+     `attempts` list) and `resume` come from
+     `<log>/<log-name>.status.json` when the file holds a JSON object;
      otherwise the exit code is the background command's, cost and attempts
      are unknown, and `timed_out` counts as false. Its `result` text comes
      from its last attempt's JSON file (`<log-name>.resume.json` when it has
@@ -115,4 +116,6 @@ without launching any child.
    `/ship` step 11's safe fast-forward rule. Report one table (spec, wave,
    status, attempts, exit code, PR, merge commit, cost, log file), the total
    cost, every `overlaps` entry from step 3, and the leftovers. attempts is
-   `1`, or `2 (resumed)`; the total cost sums the status files' `cost`.
+   `1`, `2 (resumed)` when the `attempts` list has 2 entries, or `unknown`
+   when the status file is missing or not a JSON object; the total cost sums
+   the status files' `cost`.
