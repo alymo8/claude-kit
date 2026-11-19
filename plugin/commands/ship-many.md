@@ -79,7 +79,7 @@ without launching any child.
    as its working directory:
 
    ```
-   python "${CLAUDE_PLUGIN_ROOT}/scripts/ship-child.py" --spec <spec> --main <main checkout> --log <log> --name <log-name>
+   python "${CLAUDE_PLUGIN_ROOT}/scripts/ship-child.py" --spec "<spec>" --main "<main checkout>" --log "<log>" --name "<log-name>"
    ```
 
    `<spec>` is the path relative to the main checkout and `<log-name>` the

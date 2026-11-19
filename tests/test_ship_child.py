@@ -5,6 +5,7 @@ import subprocess
 import sys
 import time
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 from helpers import PLUGIN, clean_env, load_module, run_script
@@ -51,6 +52,13 @@ def test_stop_rule_handoff(mod, tmp_path, text, expected):
         handoffs.mkdir(parents=True)
         (handoffs / "feat_demo.md").write_text(text, encoding="utf-8")
     assert mod.stop_rule_handoff(tmp_path, "demo") is expected
+
+
+def test_stop_rule_handoff_not_utf8(mod, tmp_path):
+    handoffs = tmp_path / ".claude" / "handoffs"
+    handoffs.mkdir(parents=True)
+    (handoffs / "feat_demo.md").write_bytes(b"- **Written:** \xff\xfe by /handoff\n")
+    assert mod.stop_rule_handoff(tmp_path, "demo") is False
 
 
 def test_stop_rule_handoff_crlf(mod, tmp_path):
@@ -133,8 +141,10 @@ def test_keep_awake_linux(mod, monkeypatch):
         "systemd-inhibit",
         "--what=sleep",
         "--mode=block",
-        "sleep",
-        "infinity",
+        "tail",
+        f"--pid={os.getpid()}",
+        "-f",
+        "/dev/null",
     ]
     assert kwargs.get("start_new_session") is True
     assert k.active is True
@@ -185,6 +195,65 @@ def test_keep_awake_windows(mod):
     assert not set_state(es_continuous) & es_system_required
 
 
+class InterruptedProc:
+    pid = 4343
+
+    def __init__(self):
+        self.waits = []
+
+    def wait(self, timeout=None):
+        self.waits.append(timeout)
+        if len(self.waits) == 1:
+            raise KeyboardInterrupt
+        return 0
+
+    def kill(self):
+        pass
+
+
+def test_run_attempt_interrupt_kills_tree(mod, monkeypatch, tmp_path):
+    proc = InterruptedProc()
+    monkeypatch.setattr(mod.subprocess, "Popen", lambda cmd, **kw: proc)
+    killed = []
+    monkeypatch.setattr(mod, "_kill_tree", killed.append)
+    with pytest.raises(KeyboardInterrupt):
+        mod.run_attempt("claude", "s.md", tmp_path, tmp_path / "o", tmp_path / "e", 5)
+    assert killed == [proc]
+    assert len(proc.waits) == 2  # reaped after the kill
+
+
+def test_run_attempt_cannot_start(mod, tmp_path):
+    entry = mod.run_attempt(
+        sys.executable,
+        "s.md",
+        tmp_path / "missing",
+        tmp_path / "o.json",
+        tmp_path / "o.err",
+        5,
+    )
+    assert entry["exit"] == 127
+    assert entry["timed_out"] is False
+    assert entry["cost"] is None
+
+
+def test_worktrees_git_failure_is_none(mod, tmp_path):
+    assert mod._worktrees("git", tmp_path / "missing") is None
+
+
+def test_decide_resume_without_worktree_list(mod, tmp_path):
+    first = {"timed_out": False}
+    args = SimpleNamespace(main=tmp_path, spec="s.md")
+    (tmp_path / "s.md").write_text("x", encoding="utf-8")
+    assert mod.decide_resume(first, False, None, "", args, "s") == (
+        "no worktree",
+        None,
+    )
+    assert mod.decide_resume(first, False, "", None, args, "s") == (
+        "no worktree",
+        None,
+    )
+
+
 # --- Task 2: the runner end to end, with fake claude and gh ---------------
 
 SHIP_CHILD = PLUGIN / "scripts" / "ship-child.py"
@@ -193,6 +262,7 @@ WIN = sys.platform == "win32"
 FAKE_CLAUDE = r"""
 import json
 import os
+import shutil
 import subprocess
 import sys
 import time
@@ -222,12 +292,25 @@ if "handoff" in attempt:
     handoff = wt / ".claude" / "handoffs" / "feat_demo.md"
     handoff.parent.mkdir(parents=True, exist_ok=True)
     handoff.write_text(attempt["handoff"], encoding="utf-8")
+if attempt.get("remove_worktree"):
+    shutil.rmtree(wt)
 if attempt.get("delete_spec"):
     (Path(main) / cfg["rel"]).unlink()
 if attempt.get("grandchild"):
     kid = subprocess.Popen([sys.executable, "-c", "import time; time.sleep(60)"])
     (fake / "grandchild.pid").write_text(str(kid.pid), encoding="utf-8")
     (fake / "child.pid").write_text(str(os.getpid()), encoding="utf-8")
+if attempt.get("stubborn"):
+    ready = fake / "grandchild.pid"
+    code = (
+        "import os, signal, sys, time\n"
+        "signal.signal(signal.SIGTERM, signal.SIG_IGN)\n"
+        "open(sys.argv[1], 'w').write(str(os.getpid()))\n"
+        "time.sleep(60)\n"
+    )
+    subprocess.Popen([sys.executable, "-c", code, str(ready)])
+    while not ready.exists():
+        time.sleep(0.05)
 if "sleep" in attempt:
     time.sleep(attempt["sleep"])
 sys.stdout.write(attempt.get("stdout", ""))
@@ -326,6 +409,23 @@ class Rig:
             status = json.loads(status_file.read_text(encoding="utf-8"))
         return proc, status
 
+    def start(self, attempts, *extra) -> subprocess.Popen:
+        """Start the runner without waiting for it."""
+        cfg = {"main": str(self.main), "rel": self.rel, "attempts": attempts}
+        (self.fake / "claude.json").write_text(json.dumps(cfg), encoding="utf-8")
+        gh_cfg = {"exit": 0, "stdout": "[]"}
+        (self.fake / "gh.json").write_text(json.dumps(gh_cfg), encoding="utf-8")
+        cmd = [sys.executable, str(SHIP_CHILD), "--spec", self.rel]
+        cmd += ["--main", str(self.main), "--log", str(self.log)]
+        cmd += ["--name", "demo", "--resume-wait", "0", *extra]
+        return subprocess.Popen(
+            cmd,
+            env=self.env,
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
+
     @property
     def calls(self) -> list[dict]:
         return read_jsonl(self.fake / "calls.jsonl")
@@ -421,6 +521,47 @@ def test_timeout_kills_tree(rig):
     assert status["exit"] == 124
     assert status["resume"] == "timed out"
     assert len(status["attempts"]) == 1
+    assert len(rig.calls) == 1
+
+
+def test_timeout_kills_grandchild_ignoring_sigterm(rig):
+    proc, status = rig.run([{"stubborn": True, "sleep": 60}], "--timeout", "2")
+    assert proc.returncode == 124, proc.stderr
+    grandchild = int((rig.fake / "grandchild.pid").read_text(encoding="utf-8"))
+    assert gone_within(grandchild)
+    assert status["timed_out"] is True
+
+
+@pytest.mark.skipif(WIN, reason="POSIX signals")
+@pytest.mark.parametrize("signame", ["SIGTERM", "SIGHUP"])
+def test_runner_signal_kills_child_tree(rig, signame):
+    runner = rig.start([{"grandchild": True, "sleep": 60}], "--timeout", "60")
+    child_pid = rig.fake / "child.pid"
+    deadline = time.monotonic() + 20
+    while not child_pid.exists() and time.monotonic() < deadline:
+        time.sleep(0.1)
+    assert child_pid.exists()
+    runner.send_signal(getattr(signal, signame))
+    try:
+        assert runner.wait(30) != 0
+    finally:
+        if runner.poll() is None:
+            runner.kill()
+    child = int(child_pid.read_text(encoding="utf-8"))
+    grandchild = int((rig.fake / "grandchild.pid").read_text(encoding="utf-8"))
+    assert gone_within(child)
+    assert gone_within(grandchild)
+
+
+def test_resume_cannot_start_records_127(rig):
+    attempts = [{"exit": 1, "worktree": True, "remove_worktree": True}, {}]
+    proc, status = rig.run(attempts)
+    assert proc.returncode == 127, proc.stderr
+    assert status["resume"] == "resumed"
+    assert len(status["attempts"]) == 2
+    assert status["attempts"][1]["exit"] == 127
+    assert status["attempts"][1]["timed_out"] is False
+    assert status["exit"] == 127
     assert len(rig.calls) == 1
 
 

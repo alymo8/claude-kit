@@ -43,6 +43,13 @@ def test_step_4_launches_the_runner():
     text = step(4)
     for needle in ("ship-child.py", "--spec", "--main", "--log", "--name"):
         assert needle in text, needle
+    for quoted in (
+        '--spec "<spec>"',
+        '--main "<main checkout>"',
+        '--log "<log>"',
+        '--name "<log-name>"',
+    ):
+        assert quoted in text, quoted
     assert "not enforced" in text
     assert "`-2`" not in text
 

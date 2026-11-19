@@ -8,13 +8,16 @@ Usage::
         [--claude claude] [--gh gh] [--git git]
 
 1. Keep-awake for the runner's lifetime: ``SetThreadExecutionState`` on
-   Windows, ``caffeinate`` on macOS, ``systemd-inhibit`` elsewhere when found;
+   Windows, ``caffeinate -w`` on macOS, ``systemd-inhibit`` around
+   ``tail --pid`` elsewhere when found (both end with the runner);
    when none applies, carry on and record ``"keep_awake": false``.
 2. Attempt: ``claude -p "/claude-kit:ship <rel>" --permission-mode auto
    --permission-prompts none --output-format json`` with
    ``CLAUDE_CODE_PRINT_BG_WAIT_CEILING_MS=0``, in its own process group,
    stdout to ``<log>/<name>.json`` and stderr to ``<log>/<name>.err``. After
-   ``--timeout`` seconds the whole process tree is killed.
+   ``--timeout`` seconds the whole process tree is killed, as it is when the
+   runner itself is interrupted (Ctrl+C, SIGTERM, SIGHUP). A child that
+   cannot start counts as exit 127.
 3. Decide once on a resume from the merged-PR state (``gh``), a stop-rule
    handoff in the child's ``feat/<slug>`` worktree, and whether that worktree
    existed before the run.
@@ -76,7 +79,7 @@ def stop_rule_handoff(worktree: Path, slug: str) -> bool:
     path = worktree / ".claude" / "handoffs" / f"feat_{slug}.md"
     try:
         text = path.read_text(encoding="utf-8")
-    except OSError:
+    except (OSError, ValueError):
         return False
     for match in WRITTEN_RE.finditer(text):
         if match.group(1).replace("\r", "").strip() != SNAPSHOT_BY:
@@ -181,8 +184,10 @@ def keep_awake(platform: str) -> KeepAwake:
     if platform == "darwin":
         return _start_holder(["caffeinate", "-i", "-w", str(os.getpid())], False)
     if platform.startswith("linux") and shutil.which("systemd-inhibit"):
+        # The holder ends with the runner, even if the runner is killed.
         cmd = ["systemd-inhibit", "--what=sleep", "--mode=block"]
-        return _start_holder([*cmd, "sleep", "infinity"], True)
+        cmd += ["tail", f"--pid={os.getpid()}", "-f", "/dev/null"]
+        return _start_holder(cmd, True)
     return KeepAwake()
 
 
@@ -202,15 +207,26 @@ def _kill_tree(proc: subprocess.Popen) -> None:
         return
     try:
         os.killpg(proc.pid, signal.SIGTERM)
-    except ProcessLookupError:
-        return
+    except (ProcessLookupError, PermissionError):
+        pass
     try:
         proc.wait(10)
     except subprocess.TimeoutExpired:
-        try:
-            os.killpg(proc.pid, signal.SIGKILL)
-        except ProcessLookupError:
-            pass
+        pass
+    # Always: a process in the group may ignore SIGTERM.
+    try:
+        os.killpg(proc.pid, signal.SIGKILL)
+    except (ProcessLookupError, PermissionError):
+        pass
+
+
+def _reap(proc: subprocess.Popen) -> None:
+    """Wait for a killed child, forcing it if it lingers."""
+    try:
+        proc.wait(30)
+    except subprocess.TimeoutExpired:
+        proc.kill()
+        proc.wait(30)
 
 
 def run_attempt(
@@ -228,21 +244,31 @@ def run_attempt(
     start = _now()
     timed_out = False
     with out.open("wb") as fout, err.open("wb") as ferr:
-        proc = subprocess.Popen(
-            cmd,
-            cwd=cwd,
-            env=env,
-            stdin=subprocess.DEVNULL,
-            stdout=fout,
-            stderr=ferr,
-            **group,
-        )
         try:
-            code = proc.wait(timeout=timeout)
-        except subprocess.TimeoutExpired:
-            _kill_tree(proc)
-            proc.wait()
-            code, timed_out = 124, True
+            proc = subprocess.Popen(
+                cmd,
+                cwd=cwd,
+                env=env,
+                stdin=subprocess.DEVNULL,
+                stdout=fout,
+                stderr=ferr,
+                **group,
+            )
+        except OSError as exc:
+            ferr.write(f"ship-child.py: cannot start the child: {exc}\n".encode())
+            proc, code = None, 127
+        if proc is not None:
+            try:
+                code = proc.wait(timeout=timeout)
+            except subprocess.TimeoutExpired:
+                _kill_tree(proc)
+                _reap(proc)
+                code, timed_out = 124, True
+            except BaseException:
+                # Ctrl+C or a signal on the runner: take the child tree with it.
+                _kill_tree(proc)
+                _reap(proc)
+                raise
     return {
         "cwd": str(cwd),
         "start": start.isoformat(timespec="seconds"),
@@ -292,19 +318,30 @@ def merged_since(gh: str, main: Path, branch: str, since: datetime) -> bool | No
     return False
 
 
-def _worktrees(git: str, main: Path) -> str:
-    res = subprocess.run(
-        [git, "-C", str(main), "worktree", "list", "--porcelain"],
-        stdin=subprocess.DEVNULL,
-        capture_output=True,
-        text=True,
-        encoding="utf-8",
-    )
+def _worktrees(git: str, main: Path) -> str | None:
+    """``git worktree list --porcelain`` output; None when git fails."""
+    try:
+        res = subprocess.run(
+            [git, "-C", str(main), "worktree", "list", "--porcelain"],
+            stdin=subprocess.DEVNULL,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+        )
+    except OSError:
+        return None
+    if res.returncode != 0:
+        return None
     return res.stdout or ""
 
 
 def decide_resume(
-    first: dict, merged: bool | None, before: str, now: str, args, slug: str
+    first: dict,
+    merged: bool | None,
+    before: str | None,
+    now: str | None,
+    args,
+    slug: str,
 ) -> tuple[str, Path | None]:
     """Return (resume reason, directory to resume in or None)."""
     branch = f"feat/{slug}"
@@ -314,6 +351,8 @@ def decide_resume(
         return "gh failed", None
     if merged:
         return "merged", None
+    if before is None or now is None:
+        return "no worktree", None
     if worktree_on(before, branch) is not None:
         return "no worktree", None
     worktree = worktree_on(now, branch)
@@ -340,6 +379,10 @@ def _parse(argv: list[str] | None) -> argparse.Namespace:
     return p.parse_args(argv)
 
 
+def _exit_on_signal(signum, frame) -> None:
+    raise SystemExit(128 + signum)
+
+
 def main(argv: list[str] | None = None) -> int:
     if hasattr(sys.stdout, "reconfigure"):
         sys.stdout.reconfigure(encoding="utf-8")
@@ -361,6 +404,11 @@ def main(argv: list[str] | None = None) -> int:
     args.log.mkdir(parents=True, exist_ok=True)
     slug = branch_slug(args.spec)
     log = args.log
+    previous = {}
+    if sys.platform != "win32":
+        # Turn SIGTERM/SIGHUP into SystemExit so the clean-up below runs.
+        for sig in (signal.SIGTERM, signal.SIGHUP):
+            previous[sig] = signal.signal(sig, _exit_on_signal)
     awake = keep_awake(sys.platform)
     try:
         before = _worktrees(exes["git"], args.main)
@@ -411,6 +459,8 @@ def main(argv: list[str] | None = None) -> int:
         return last["exit"]
     finally:
         awake.release()
+        for sig, handler in previous.items():
+            signal.signal(sig, handler)
 
 
 if __name__ == "__main__":
