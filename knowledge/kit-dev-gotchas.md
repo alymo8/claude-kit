@@ -85,6 +85,13 @@ Things that cost time in past runs and are not obvious from the code.
 - A heredoc fed to `python` inside a longer command line is refused even
   when it does not mention git. Write the script to the scratchpad with
   the Write tool and run `python <scratchpad>/script.py <args>`.
+- When `/ship` runs from a session worktree and makes a separate feature
+  worktree, an SDD implementer told to edit that feature worktree is refused
+  ("Do not write to other worktrees' files") and may fall back to checking
+  out its own branch in the session worktree. Give each implementer its own
+  `git worktree add <tmp>/claude-tasks/<branch-slug>/task-N
+  -b feat/<slug>-task-N HEAD`, as `parallel-tasks` does, then
+  `git merge --ff-only` it into the feature branch and remove it.
 - A feature worktree made with `git worktree add -b feat/<slug> <path>
   origin/main` tracks `origin/main`, so `handoff.py state` reports
   "upstream: origin/main". The first push must be
