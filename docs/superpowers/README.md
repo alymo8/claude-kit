@@ -6,6 +6,7 @@
 
 | Date | Spec | Status |
 |---|---|---|
+| 2026-11-18 | [`/ship-many` hardening: time limit, one resume, keep-awake](specs/2026-11-18-ship-many-hardening-design.md) | approved |
 | 2026-11-15 | [Untrusted vault content: scan raw files and keep injected text out of the wiki](specs/2026-11-15-untrusted-vault-content-design.md) | approved |
 | 2026-11-15 | [User-config audit: `audit --user` checks the setup outside any repo](specs/2026-11-15-user-config-audit-design.md) | approved |
 | 2026-11-10 | [Duplicate-intent pass in `audit` and `audit-deep`](specs/2026-11-10-duplicate-functions-audit-design.md) | approved |
@@ -39,6 +40,7 @@
 
 | Date | Plan | Status |
 |---|---|---|
+| 2026-11-18 | [`/ship-many` hardening Implementation Plan](plans/2026-11-18-ship-many-hardening.md) | approved |
 | 2026-11-16 | [Untrusted vault content Implementation Plan](plans/2026-11-16-untrusted-vault-content.md) | approved |
 | 2026-11-16 | [User-config audit (`audit --user`) Implementation Plan](plans/2026-11-16-user-config-audit.md) | approved |
 | 2026-11-11 | [Duplicate-intent pass in `audit` and `audit-deep` Implementation Plan](plans/2026-11-11-duplicate-functions-audit.md) | approved |

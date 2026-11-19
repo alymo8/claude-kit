@@ -85,6 +85,13 @@ Things that cost time in past runs and are not obvious from the code.
 - A heredoc fed to `python` inside a longer command line is refused even
   when it does not mention git. Write the script to the scratchpad with
   the Write tool and run `python <scratchpad>/script.py <args>`.
+- When `/ship` runs from a session worktree and makes a separate feature
+  worktree, an SDD implementer told to edit that feature worktree is refused
+  ("Do not write to other worktrees' files") and may fall back to checking
+  out its own branch in the session worktree. Give each implementer its own
+  `git worktree add <tmp>/claude-tasks/<branch-slug>/task-N
+  -b feat/<slug>-task-N HEAD`, as `parallel-tasks` does, then
+  `git merge --ff-only` it into the feature branch and remove it.
 - A feature worktree made with `git worktree add -b feat/<slug> <path>
   origin/main` tracks `origin/main`, so `handoff.py state` reports
   "upstream: origin/main". The first push must be
@@ -108,6 +115,17 @@ The commands keep the rules and leave out the reasons; the reasons are here.
   command text, so each long command states once that
   `~/.claude/skills/claude-kit` stands in for it (`tests/test_skill_size.py`
   accepts that line or a per-pointer fallback).
+- **Print-mode wait ceiling:** `claude -p` ends a `run_in_background`
+  command after 10 minutes (`CLAUDE_CODE_PRINT_BG_WAIT_CEILING_MS`), so
+  `ship-child.py` sets it to `0` for `/ship-many` children.
+- **Background Bash timeout is not enforced:** a `run_in_background`
+  command ignores its timeout (one child ran about 7 hours), so the 2-hour
+  limit lives in `ship-child.py`, which kills the whole process tree.
+- **Why a resume skips a child that wrote a handoff:** `/ship` writes a
+  `Written ... by /handoff` line only when a stop rule fires, which needs
+  the user; the SessionEnd snapshot also writes the file but marks its
+  lines `by session-end snapshot`, so only the `Written` line's author,
+  not the file's existence or time, tells a stop rule apart.
 
 ## Scripts on Windows
 

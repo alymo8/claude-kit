@@ -20,3 +20,8 @@ Read by the standards reviewer of `claude-kit:review`, not by implementers.
   `$env:NAME = value` (with spaces), URL userinfo and query values. Any form
   it leaves clear (a bare `--token x`, a webhook URL path) is named as a
   limit in the spec or ADR.
+- A POSIX process-tree kill must not treat the group leader's exit as the
+  group's: after `SIGTERM` to the group, poll `os.killpg(pgid, 0)` (reaping
+  the leader) until the grace ends, then `SIGKILL` the group. A child that
+  starts its own session also needs `SIGTERM`/`SIGHUP` handlers in the
+  parent, or it outlives a killed parent.

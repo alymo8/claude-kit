@@ -15,6 +15,12 @@ def test_feature_branch_is_cut_from_origin_main():
     assert re.search(r"feat/<slug>.{0,40}origin/main", _step(2), re.S)
 
 
+def test_step_2_defines_the_slug():
+    step = _step(2)
+    assert "2026-11-15-user-config-audit-design.md" in step
+    assert "user-config-audit" in step and "`-design`" in step
+
+
 def test_unclean_local_main_is_not_a_stop_rule():
     stops = SHIP.split("## Stop rules", 1)[1].split("## Steps", 1)[0]
     assert "pre-flight" not in stops.lower()

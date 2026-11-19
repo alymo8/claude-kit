@@ -61,51 +61,61 @@ without launching any child.
      whitespace removed. Step 5 uses this recorded title and never re-reads
      the file, because a child `/ship` deletes the main checkout's untracked
      copy. A spec whose title repeats an earlier one is excluded as
-     `duplicate title` (with `--dry-run`, it is only reported).
+     `duplicate title` (with `--dry-run`, it is only reported). Then compute
+     each remaining spec's slug as `/ship` step 2 defines it; a spec whose
+     slug repeats an earlier spec's is excluded as `duplicate slug` (with
+     `--dry-run`, it is only reported).
 3. **Group.** From the main checkout, run
    `python "${CLAUDE_PLUGIN_ROOT}/scripts/parallel-plan.py" specs <specs> --max N`
    on the specs not excluded (with
    `--dry-run`, on every spec not excluded in step 1). With `--dry-run`, print
-   the gate results, the waves, the overlaps, and the exact child command for
-   each spec, with the log directory step 4 would create (from the step 1
+   the gate results, the waves, the overlaps, and the exact `ship-child.py`
+   command for each spec, with the log directory step 4 would create (from the step 1
    start time, not created), then stop without launching anything.
 4. **Run.** Create `<tmp>/claude-ship-many/<repo>-<timestamp>/` (`<tmp>` the
    OS temp directory, `<repo>` the main checkout's directory name,
    `<timestamp>` the start time as `YYYYMMDD-HHMMSS`). For each wave, in
    order, start one background Bash command per spec, with the main checkout
-   as its working directory and a 2-hour timeout:
+   as its working directory:
 
    ```
-   claude -p "/claude-kit:ship <spec>" --permission-mode auto --permission-prompts none --output-format json > <log>/<log-name>.json 2> <log>/<log-name>.err
+   python "${CLAUDE_PLUGIN_ROOT}/scripts/ship-child.py" --spec "<spec>" --main "<main checkout>" --log "<log>" --name "<log-name>"
    ```
 
-   `<spec>` is the path relative to the main checkout. `<log-name>` is the
-   spec's file name without `.md`; repeated file names get `-2`, `-3`, … in
-   argument order. Wait for every command in the wave to end before starting
-   the next wave. One child failing never stops the others or later waves.
+   `<spec>` is the path relative to the main checkout and `<log-name>` the
+   spec's file name without `.md`. The runner gives each attempt 2 hours and
+   kills the child's whole process tree when they pass, resumes once when the
+   child ended with no merged PR, stop-rule handoff or timeout, and keeps the
+   machine awake. The limit is the runner's, not the Bash tool's: a
+   background Bash command's timeout is not enforced. Wait for every command
+   in the wave to end before starting the next wave. One child failing never
+   stops the others or later waves.
 5. **Collect.** An excluded spec keeps status `excluded`. For each child that
    ran:
-   - Its exit code comes from the background command's result; its cost
-     (`total_cost_usd`) and `result` text from its JSON file, when the file
-     holds a JSON object.
+   - Its exit code, cost (`cost`), attempts (the number of entries in the
+     `attempts` list) and `resume` come from
+     `<log>/<log-name>.status.json` when the file holds a JSON object;
+     otherwise the exit code is the background command's, cost and attempts
+     are unknown, and `timed_out` counts as false. Its `result` text comes
+     from its last attempt's JSON file (`<log-name>.resume.json` when it has
+     two attempts, else `<log-name>.json`).
    - Its PR: run
      `gh pr list --state all --limit 50 --json url,title,state,mergeCommit,headRefName,createdAt`
      and keep the PRs whose `title` equals the recorded title exactly
      (compared as strings) and whose `createdAt` is after the start time. If
      several remain, take the newest; if none, the child has no PR.
    - Its status is the first that applies: `merged` (its PR is `MERGED`),
-     `timed out` (the timeout ended the command), or `stopped` (any other
+     `timed out` (the status file's `timed_out` is true), or `stopped` (any other
      ending, including no PR; its handoff says why).
    - For `timed out` and `stopped` children, list the PR's head branch (if
      any) and any worktree on that branch as that child's leftovers. Also
      list as run-level leftovers every `feat/` worktree in
      `git worktree list --porcelain` that was not in the step 1 list. Never
      delete them.
-6. **Finish.** For each `timed out` child, look up its PR once more as in
-   step 5. If it is now `MERGED`, set the status to `merged`, fill in the PR
-   and merge commit, and drop its head branch from the leftovers; otherwise
-   keep `timed out` and note that it may still be running. Run
-   `git fetch origin`, then bring local `main` up with `/ship` step 11's safe
-   fast-forward rule. Report one table (spec, wave, status, exit code, PR,
-   merge commit, cost, log file), the total cost, every `overlaps` entry from
-   step 3, and the leftovers.
+6. **Finish.** Run `git fetch origin`, then bring local `main` up with
+   `/ship` step 11's safe fast-forward rule. Report one table (spec, wave,
+   status, attempts, exit code, PR, merge commit, cost, log file), the total
+   cost, every `overlaps` entry from step 3, and the leftovers. attempts is
+   `1`, `2 (resumed)` when the `attempts` list has 2 entries, or `unknown`
+   when the status file is missing or not a JSON object; the total cost sums
+   the status files' `cost`.
