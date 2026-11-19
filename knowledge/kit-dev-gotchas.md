@@ -108,6 +108,17 @@ The commands keep the rules and leave out the reasons; the reasons are here.
   command text, so each long command states once that
   `~/.claude/skills/claude-kit` stands in for it (`tests/test_skill_size.py`
   accepts that line or a per-pointer fallback).
+- **Print-mode wait ceiling:** `claude -p` ends a `run_in_background`
+  command after 10 minutes (`CLAUDE_CODE_PRINT_BG_WAIT_CEILING_MS`), so
+  `ship-child.py` sets it to `0` for `/ship-many` children.
+- **Background Bash timeout is not enforced:** a `run_in_background`
+  command ignores its timeout (one child ran about 7 hours), so the 2-hour
+  limit lives in `ship-child.py`, which kills the whole process tree.
+- **Why a resume skips a child that wrote a handoff:** `/ship` writes a
+  `Written ... by /handoff` line only when a stop rule fires, which needs
+  the user; the SessionEnd snapshot also writes the file but marks its
+  lines `by session-end snapshot`, so only the `Written` line's author,
+  not the file's existence or time, tells a stop rule apart.
 
 ## Scripts on Windows
 
