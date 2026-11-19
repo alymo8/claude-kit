@@ -82,7 +82,10 @@ rule.
    commits in it.
 2. **Worktree.** Use `superpowers:using-git-worktrees`. Branch `feat/<slug>` from
    `origin/main`, not local `main` (the git fallback is
-   `git worktree add <path> -b feat/<slug> origin/main`). If the spec or its
+   `git worktree add <path> -b feat/<slug> origin/main`). `<slug>` is the
+   spec's file name without `.md`, a leading `YYYY-MM-DD-` and a trailing
+   `-design` (`2026-11-15-user-config-audit-design.md` → `user-config-audit`);
+   `/ship-many`'s runner finds the branch by this rule. If the spec or its
    gate record (`docs/superpowers/gates/<spec file name>`) is missing from
    `origin/main` or differs from it, copy each to the same path in the
    worktree and commit them there. Then delete each from the main checkout
