@@ -209,11 +209,16 @@ def _kill_tree(proc: subprocess.Popen) -> None:
         os.killpg(proc.pid, signal.SIGTERM)
     except (ProcessLookupError, PermissionError):
         pass
-    try:
-        proc.wait(10)
-    except subprocess.TimeoutExpired:
-        pass
-    # Always: a process in the group may ignore SIGTERM.
+    # Give the whole group up to 10 seconds, then SIGKILL whatever is left
+    # (a process in the group may ignore SIGTERM).
+    deadline = time.monotonic() + 10
+    while time.monotonic() < deadline:
+        proc.poll()  # reap the leader so its zombie does not keep the group
+        try:
+            os.killpg(proc.pid, 0)
+        except (ProcessLookupError, PermissionError):
+            return
+        time.sleep(0.1)
     try:
         os.killpg(proc.pid, signal.SIGKILL)
     except (ProcessLookupError, PermissionError):
@@ -403,7 +408,6 @@ def main(argv: list[str] | None = None) -> int:
         return 2
     args.log.mkdir(parents=True, exist_ok=True)
     slug = branch_slug(args.spec)
-    log = args.log
     previous = {}
     if sys.platform != "win32":
         # Turn SIGTERM/SIGHUP into SystemExit so the clean-up below runs.
@@ -416,8 +420,8 @@ def main(argv: list[str] | None = None) -> int:
             exes["claude"],
             args.spec,
             args.main,
-            log / f"{args.name}.json",
-            log / f"{args.name}.err",
+            args.log / f"{args.name}.json",
+            args.log / f"{args.name}.err",
             args.timeout,
         )
         attempts = [first]
@@ -435,8 +439,8 @@ def main(argv: list[str] | None = None) -> int:
                     exes["claude"],
                     args.spec,
                     where,
-                    log / f"{args.name}.resume.json",
-                    log / f"{args.name}.resume.err",
+                    args.log / f"{args.name}.resume.json",
+                    args.log / f"{args.name}.resume.err",
                     args.timeout,
                 )
             )
@@ -454,7 +458,7 @@ def main(argv: list[str] | None = None) -> int:
             "exit": last["exit"],
             "cost": round(sum(costs), 6) if costs else None,
         }
-        path = log / f"{args.name}.status.json"
+        path = args.log / f"{args.name}.status.json"
         path.write_text(json.dumps(status, indent=2), encoding="utf-8")
         return last["exit"]
     finally:
