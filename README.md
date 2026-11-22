@@ -65,8 +65,9 @@ is in [`plugin/`](plugin/).
 
 ## What's here
 
-- **[`CLAUDE.md`](CLAUDE.md)** — the workspace instructions Claude Code reads: how we
-  work, decision verification, on-demand spec HTML views, environment, and file-opening
+- **[`AGENTS.md`](AGENTS.md)** — the workspace instructions every agent reads (Claude
+  Code through the [`CLAUDE.md`](CLAUDE.md) stub that imports it): how we work,
+  decision verification, on-demand spec HTML views, environment, and file-opening
   conventions.
 - **[`conventions/`](conventions/)** — six self-contained playbooks that generalize
   my way of working to any new project:
