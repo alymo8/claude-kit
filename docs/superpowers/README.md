@@ -41,6 +41,7 @@
 
 | Date | Plan | Status |
 |---|---|---|
+| 2026-11-18 | [Agent-agnostic kit Implementation Plan](plans/2026-11-18-agent-agnostic-kit.md) | approved |
 | 2026-11-18 | [`/ship-many` hardening Implementation Plan](plans/2026-11-18-ship-many-hardening.md) | approved |
 | 2026-11-16 | [Untrusted vault content Implementation Plan](plans/2026-11-16-untrusted-vault-content.md) | approved |
 | 2026-11-16 | [User-config audit (`audit --user`) Implementation Plan](plans/2026-11-16-user-config-audit.md) | approved |
