@@ -39,6 +39,8 @@ def test_every_reference_pointer_resolves_and_has_a_fallback():
 
 
 def test_every_reference_file_is_read_by_a_command():
-    texts = "".join(p.read_text(encoding="utf-8") for p in FILES)
+    # A reference read by a hook (such as hooks/run.py) counts too.
+    sources = FILES + sorted(PLUGIN.glob("hooks/*.py"))
+    texts = "".join(p.read_text(encoding="utf-8") for p in sources)
     for ref in (PLUGIN / "references").glob("*.md"):
         assert f"references/{ref.name}" in texts, ref.name
