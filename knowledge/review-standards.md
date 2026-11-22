@@ -1,7 +1,7 @@
 ---
 title: Review standards
 status: stable
-last_updated: 2026-11-17
+last_updated: 2026-11-22
 sources: []
 ---
 
@@ -25,3 +25,12 @@ Read by the standards reviewer of `claude-kit:review`, not by implementers.
   the leader) until the grace ends, then `SIGKILL` the group. A child that
   starts its own session also needs `SIGTERM`/`SIGHUP` handlers in the
   parent, or it outlives a killed parent.
+- A hook that joins several pieces of context guards each piece on its own
+  (try/except per piece, a `[claude-kit]` note on stderr): one unreadable
+  file must not silence every other piece through the outer catch-all.
+- Code that rewrites a managed block inside a user's file refuses (exit 1,
+  nothing written) when the begin/end markers are unpaired or repeated;
+  cutting between mismatched markers deletes the user's own text.
+- A value written into a user's TOML file goes in as a basic string
+  (`json.dumps(value)`), never a `'...'` literal: a path with `'` in it
+  breaks the file.

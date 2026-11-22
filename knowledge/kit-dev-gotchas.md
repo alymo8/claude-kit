@@ -64,6 +64,9 @@ Things that cost time in past runs and are not obvious from the code.
   fake `git` that matches `args[0] == "commit"` passes here and fails there.
   Match `"commit" in args`, and run identity-sensitive tests once with
   `GIT_CONFIG_GLOBAL`, `HOME` and `USERPROFILE` pointed at an empty folder.
+- A hook must exit 0, but argparse errors raise `SystemExit`, which
+  `except Exception` does not catch: a hook with argparse catches
+  `(Exception, SystemExit)` around `parse_args`.
 - `ruff format --check plugin tests` (ruff 0.16) includes `.md` files and
   formats the Python fences inside them, so a code block in a skill must be
   ruff-clean and its reformatting can push a line-capped skill over its cap.
