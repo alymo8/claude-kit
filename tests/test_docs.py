@@ -5,7 +5,8 @@ from helpers import REPO, broken_links
 
 SCRIPT_REF_RE = re.compile(r"python \.\./(\S+\.py)")
 # Plans embed snippets of other files; template links resolve only once rendered.
-SKIP_DIRS = ("docs/superpowers/plans/", "plugin/templates/")
+# vendor/ is an unchanged upstream copy.
+SKIP_DIRS = ("docs/superpowers/plans/", "plugin/templates/", "vendor/")
 
 
 def tracked_markdown():
