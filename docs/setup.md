@@ -61,6 +61,8 @@ Either works:
 ## Switches
 
 Set these under `env` in `~/.claude/settings.json`.
+`CLAUDE_KIT_AGENT` is not a switch to set by hand; `plugin/hooks/run.py` sets
+it to `vibe`, `codex` or `cursor` for the hooks it runs.
 
 | Variable | Default | Effect |
 |---|---|---|

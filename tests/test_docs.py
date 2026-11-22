@@ -28,15 +28,21 @@ def test_relative_markdown_links_resolve():
 
 
 def test_claude_md_script_paths_exist():
-    text = (REPO / "CLAUDE.md").read_text(encoding="utf-8")
+    text = (REPO / "AGENTS.md").read_text(encoding="utf-8")
     refs = SCRIPT_REF_RE.findall(text)
     assert refs, "CLAUDE.md should reference the renderer as python ../<path>.py"
     missing = [r for r in refs if not (REPO / r).exists()]
     assert not missing, missing
 
 
-def _claude_md_section(title):
+def test_claude_md_is_the_agents_stub():
     text = (REPO / "CLAUDE.md").read_text(encoding="utf-8")
+    assert text.strip() == "@AGENTS.md"
+    assert len(text.splitlines()) == 1
+
+
+def _claude_md_section(title):
+    text = (REPO / "AGENTS.md").read_text(encoding="utf-8")
     body = text.split(f"\n## {title}\n", 1)[1]
     return body.split("\n## ", 1)[0]
 
@@ -59,7 +65,7 @@ def test_docs_wire_ship_fast():
         encoding="utf-8"
     )
     assert "/ship-fast" in conv and adr in conv
-    for name in ("README.md", "CLAUDE.md"):
+    for name in ("README.md", "AGENTS.md"):
         assert "/ship-fast" in (REPO / name).read_text(encoding="utf-8"), name
     skill = (REPO / "plugin" / "skills" / "parallel-tasks" / "SKILL.md").read_text(
         encoding="utf-8"
@@ -84,14 +90,14 @@ def test_docs_wire_ship_fast_interview():
     assert "amended by 0022" in row_0021
     adr_0021 = (decisions / "0021-ship-fast-skips-gates.md").read_text("utf-8")
     assert "amended by 0022" in adr_0021 and adr in adr_0021
-    for name in ("README.md", "CLAUDE.md", "conventions/spec-driven-development.md"):
+    for name in ("README.md", "AGENTS.md", "conventions/spec-driven-development.md"):
         text = (REPO / name).read_text(encoding="utf-8")
         paragraphs = _paragraphs_with(text, "/ship-fast")
         assert any("interview" in p for p in paragraphs), name
 
 
 def test_learnings_capture_is_part_of_finishing():
-    claude = (REPO / "CLAUDE.md").read_text(encoding="utf-8")
+    claude = (REPO / "AGENTS.md").read_text(encoding="utf-8")
     para = claude.split(
         "**A feature is not finished until its workspace is gone.**", 1
     )[1]
@@ -105,7 +111,7 @@ def test_learnings_capture_is_part_of_finishing():
 
 
 def test_claude_md_has_rules_moved_from_memory():
-    text = " ".join((REPO / "CLAUDE.md").read_text(encoding="utf-8").split())
+    text = " ".join((REPO / "AGENTS.md").read_text(encoding="utf-8").split())
     for phrase in (
         "never suggests deleting",
         "Never write the names of private repos",

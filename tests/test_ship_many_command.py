@@ -126,7 +126,7 @@ def test_exact_title_match():
 
 
 def test_docs_wire_ship_many():
-    assert "/ship-many" in (REPO / "CLAUDE.md").read_text(encoding="utf-8")
+    assert "/ship-many" in (REPO / "AGENTS.md").read_text(encoding="utf-8")
     adr = "0018-ship-many-headless-children.md"
     assert (REPO / "knowledge" / "decisions" / adr).is_file()
     index = (REPO / "knowledge" / "decisions" / "README.md").read_text(encoding="utf-8")
