@@ -1,6 +1,6 @@
 # ADR 0035: Process rules move from personal memory into CLAUDE.md
 
-- **Status:** accepted
+- **Status:** accepted; amended by 0050 ([ADR 0050](0050-agent-agnostic-kit.md): the rules now live in AGENTS.md, which CLAUDE.md imports)
 - **Date:** 2026-10-13
 
 ## Context

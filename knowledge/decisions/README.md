@@ -39,8 +39,8 @@ the next number; superseded ones are never deleted.
 | [0031](0031-capture-learnings-at-feature-finish.md) | Capture learnings when a feature finishes, in its PR | accepted | 2026-10-12 |
 | [0032](0032-kit-map-inject.md) | Kit map injected at session start | accepted | 2026-10-13 |
 | [0033](0033-cross-platform-installer.md) | Cross-platform Python installer | accepted | 2026-10-13 |
-| [0034](0034-workspace-rules-inject.md) | Workspace rules injected outside the kit folder | accepted | 2026-10-13 |
-| [0035](0035-process-rules-in-claude-md.md) | Process rules move from personal memory into `CLAUDE.md` | accepted | 2026-10-13 |
+| [0034](0034-workspace-rules-inject.md) | Workspace rules injected outside the kit folder | accepted; amended by 0050 | 2026-10-13 |
+| [0035](0035-process-rules-in-claude-md.md) | Process rules move from personal memory into `CLAUDE.md` | accepted; amended by 0050 | 2026-10-13 |
 | [0036](0036-ship-auto-approves-plan-decisions.md) | `/ship` approves the plan gate's decisions itself | accepted | 2026-10-16 |
 | [0037](0037-lean-ship-orchestrator.md) | `/ship`'s main session coordinates; subagents write the plan and the code | accepted | 2026-10-20 |
 | [0038](0038-docker-disk-upkeep-outside-cleanup.md) | Docker disk upkeep runs outside the per-feature clean-up | accepted | 2026-10-21 |
@@ -55,3 +55,4 @@ the next number; superseded ones are never deleted.
 | [0047](0047-untrusted-vault-content.md) | Untrusted vault content | accepted | 2026-11-16 |
 | [0048](0048-user-config-audit.md) | User-config audit is a mode of audit, reports outside repos, never reads secrets | accepted | 2026-11-16 |
 | [0049](0049-ship-many-child-runner.md) | `/ship-many` children run through a runner with a time limit, one resume and keep-awake | accepted | 2026-11-18 |
+| [0050](0050-agent-agnostic-kit.md) | The kit runs in Mistral Vibe, Codex and Cursor from one source | accepted | 2026-11-22 |

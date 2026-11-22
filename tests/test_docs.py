@@ -182,3 +182,29 @@ def test_setup_guide_names_prerequisites_and_installer():
     assert "twelve hooks" in readme
     assert "CLAUDE_KIT_VAULT" in readme
     assert "CLAUDE_KIT_WORKSPACE_RULES=0" in readme
+
+
+def test_agent_agnostic_adr_amends_0034_and_0035():
+    decisions = REPO / "knowledge" / "decisions"
+    adr = "0050-agent-agnostic-kit.md"
+    assert (decisions / adr).is_file()
+    index = (decisions / "README.md").read_text(encoding="utf-8")
+    assert f"]({adr})" in index
+    amended = ("0034-workspace-rules-inject.md", "0035-process-rules-in-claude-md.md")
+    for old in amended:
+        row = next(line for line in index.splitlines() if old in line)
+        assert "amended by 0050" in row, old
+        assert "amended by 0050" in (decisions / old).read_text("utf-8"), old
+
+
+def test_docs_cover_other_agents():
+    guide = (REPO / "docs" / "setup.md").read_text(encoding="utf-8")
+    section = guide.split("## Using the kit with Vibe, Codex or Cursor", 1)[1]
+    section = section.split("\n## ", 1)[0]
+    for needle in ("--agent vibe", "--agent codex", "--agent cursor", "/hooks"):
+        assert needle in section, needle
+    for needle in ("vendor-superpowers.py", "agent-skills.py", "/ship-many"):
+        assert needle in section, needle
+    readme = " ".join((REPO / "README.md").read_text(encoding="utf-8").split())
+    para = readme.split("Mistral Vibe", 1)[1][:400]
+    assert "Codex" in para and "Cursor" in para and "docs/setup.md" in para
