@@ -259,7 +259,9 @@ def link_target(link: Path) -> str | None:
     return target
 
 
-def under_kit_roots(target: str) -> bool:
+def under_kit_roots(target: str, link: Path | None = None) -> bool:
+    if link is not None and not os.path.isabs(target):
+        target = os.path.join(str(link.parent), target)
     norm = os.path.normcase(os.path.abspath(target))
     for root in skill_roots():
         if norm.startswith(os.path.normcase(str(root)) + os.sep):
@@ -286,24 +288,37 @@ def link_skills(skills_dir: Path, sources: list[Path]) -> None:
         target = link_target(link)
         if target is not None and same_dir(link, folder):
             continue
-        if target is not None and under_kit_roots(target):
+        if target is not None and under_kit_roots(target, link):
             remove_link(link)
             make_link(link, folder)
             print(f"Relinked {name}")
             continue
-        print(f"Skipped {name}: {link} exists and is not this kit's link")
+        print(
+            f"Skipped {name}: {link} exists and is not a link into this kit"
+            " checkout (remove it by hand if it points into an old checkout)"
+        )
     for link in sorted(skills_dir.iterdir()):
         target = link_target(link)
-        if target is None or os.path.exists(link) or not under_kit_roots(target):
+        if target is None or os.path.exists(link):
+            continue
+        if not under_kit_roots(target, link):
             continue
         remove_link(link)
         print(f"Removed {link.name} (dangling)")
 
 
 def replace_block(text: str, begin: str, end: str, lines: list[str]) -> str:
-    """text without its managed block, then a fresh block at the end."""
+    """text without its managed block, then a fresh block at the end.
+
+    Raises ValueError when the markers are damaged (a marker missing its pair,
+    or more than one block): cutting there could delete the user's own text.
+    """
+    if text.count(begin) != text.count(end) or text.count(begin) > 1:
+        raise ValueError(f"the claude-kit block markers are damaged ({begin!r})")
     start = text.find(begin)
     stop = text.find(end, start) if start >= 0 else -1
+    if start >= 0 and stop < 0:
+        raise ValueError(f"the claude-kit block markers are damaged ({begin!r})")
     if stop >= 0:
         stop += len(end)
         if text[stop : stop + 1] == "\n":
@@ -321,13 +336,13 @@ def vibe_hooks(text: str, python: str) -> str:
         "[[hooks]]",
         'name = "claude-kit-session-start"',
         'type = "session_start"',
-        f"command = '{start}'",
+        f"command = {json.dumps(start)}",
         "",
         "[[hooks]]",
         'name = "claude-kit-stop"',
         'type = "post_agent"',
         'match = "main"',
-        f"command = '{stop}'",
+        f"command = {json.dumps(stop)}",
     ]
     return replace_block(text, TOML_BEGIN, TOML_END, lines)
 
@@ -395,20 +410,22 @@ def install_agent(agent: str, home: Path, skills_dir: Path, python: str) -> int:
     """Link the kit skills and merge its hooks for Vibe, Codex or Cursor."""
     base = home / f".{agent}"
     hooks = base / ("hooks.toml" if agent == "vibe" else "hooks.json")
-    old = read_text(hooks)
+    rules = base / "AGENTS.md"
+    current = hooks
     try:
+        old = read_text(hooks)
         if agent == "vibe":
             new = vibe_hooks(old, python)
         else:
             new = json_hooks(old, agent, python)
-    except ValueError:
-        print(f"ERROR: {hooks} is not valid JSON; nothing changed.")
+        files = [(hooks, old, new)]
+        if agent != "cursor":
+            current = rules
+            old = read_text(rules)
+            files.append((rules, old, agents_block(old, python, agent)))
+    except ValueError as exc:
+        print(f"ERROR: {current} cannot be updated ({exc}); nothing changed.")
         return 1
-    files = [(hooks, old, new)]
-    if agent != "cursor":
-        rules = base / "AGENTS.md"
-        old = read_text(rules)
-        files.append((rules, old, agents_block(old, python, agent)))
     link_skills(skills_dir, skill_sources())
     for path, old, new in files:
         if new == old:

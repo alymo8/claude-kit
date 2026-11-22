@@ -165,6 +165,22 @@ def test_project_with_agents_md_not_injected(tmp_path, project):
     assert "proj rules" not in text and "agents rules" not in text
 
 
+def test_unreadable_project_claude_md_keeps_the_rest(tmp_path, project):
+    (project / "CLAUDE.md").write_bytes("caf\xe9 rules\n".encode("latin-1"))
+    result = run(make_kit(tmp_path), "vibe", project)
+    text = context(result, "vibe")
+    assert "agent tools" in text and "json src" in text
+    assert "caf" not in text
+    assert "project_instructions skipped" in result.stderr
+
+
+def test_bad_arguments_exit_0(tmp_path, project):
+    result = run(make_kit(tmp_path), "bogus", project)
+    assert result.returncode == 0
+    assert result.stdout == ""
+    assert "[claude-kit]" in result.stderr
+
+
 @pytest.mark.parametrize("stdin", ["", "not json"])
 def test_empty_or_bad_stdin(tmp_path, project, stdin):
     result = run(make_kit(tmp_path), "vibe", project, stdin=stdin)

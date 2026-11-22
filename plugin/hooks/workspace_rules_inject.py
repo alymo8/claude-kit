@@ -78,6 +78,7 @@ def toplevel(project: Path) -> Path | None:
             ["git", "-C", str(project), "rev-parse", "--show-toplevel"],
             capture_output=True,
             text=True,
+            encoding="utf-8",
             timeout=10,
         )
     except (OSError, subprocess.SubprocessError):

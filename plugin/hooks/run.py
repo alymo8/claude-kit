@@ -187,6 +187,15 @@ def project_instructions(project: Path) -> str:
     return header + "\n\n" + "\n".join(lines).strip()
 
 
+def optional(piece, *args) -> str:
+    """piece(*args), or "" with a stderr note when it fails."""
+    try:
+        return piece(*args)
+    except (OSError, ValueError) as exc:
+        print(f"[claude-kit] run.py: {piece.__name__} skipped: {exc}", file=sys.stderr)
+        return ""
+
+
 def render(agent: str, event: str, text: str) -> str:
     """The context in the agent's hook output shape."""
     if agent == "vibe":
@@ -217,15 +226,15 @@ def main(argv: list[str] | None = None) -> int:
         env["CLAUDE_KIT_AGENT"] = args.agent
         pieces: list[str] = []
         if args.event == "SessionStart":
-            pieces.append(tool_mapping(PLUGIN))
-            pieces.append(project_instructions(project))
+            pieces.append(optional(tool_mapping, PLUGIN))
+            pieces.append(optional(project_instructions, project))
         stdin = json.dumps(event)
         for command in commands(hooks, args.event, event["source"], PLUGIN, project):
             pieces.append(run_one(command, stdin, env, cwd))
         text = "\n\n".join(p for p in pieces if p)
         if text:
             print(render(args.agent, args.event, text))
-    except Exception as exc:  # noqa: BLE001 - a hook must never fail the session
+    except (Exception, SystemExit) as exc:  # noqa: BLE001 - never fail the session
         print(f"[claude-kit] run.py error: {exc}", file=sys.stderr)
     return 0
 

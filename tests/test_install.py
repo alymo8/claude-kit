@@ -415,6 +415,42 @@ def test_malformed_hook_file_changes_nothing(tmp_path):
 
 
 @pytest.mark.parametrize(
+    ("name", "text"),
+    [
+        ("hooks.toml", "a = 1\n# >>> claude-kit hooks (managed by x) >>>\nold\n"),
+        ("hooks.toml", "# <<< claude-kit hooks <<<\nmine = 2\n"),
+        ("AGENTS.md", "mine\n<!-- claude-kit:begin (managed by x) -->\nold\n"),
+    ],
+)
+def test_damaged_block_markers_change_nothing(tmp_path, name, text):
+    begin = installer().TOML_BEGIN if "toml" in name else installer().MD_BEGIN
+    text = text.replace(begin.split("(")[0] + "(managed by x)", begin)
+    path = tmp_path / "home" / ".vibe" / name
+    path.parent.mkdir(parents=True)
+    path.write_text(text, encoding="utf-8")
+    result = run_agent(tmp_path, "vibe")
+    assert result.returncode == 1 and "markers are damaged" in result.stdout
+    assert path.read_text(encoding="utf-8") == text
+    assert not skills(tmp_path).exists()
+
+
+def test_vibe_toml_survives_quote_in_path():
+    text = installer().vibe_hooks("", "C:/Users/O'Neil/python.exe")
+    hooks = tomllib.loads(text)["hooks"]
+    assert hooks[0]["command"].startswith("C:/Users/O'Neil/python.exe ")
+
+
+def test_kit_link_to_moved_skill_relinked(tmp_path):
+    skills(tmp_path).mkdir(parents=True)
+    link = skills(tmp_path) / "ship"
+    make_dir_link(link, PLUGIN / "skills" / "spec-gate")
+    result = run_agent(tmp_path, "vibe")
+    assert result.returncode == 0, out(result)
+    assert "Relinked ship" in result.stdout
+    assert os.path.samefile(link, PLUGIN / "agent-skills" / "ship")
+
+
+@pytest.mark.parametrize(
     ("agent", "step"),
     [
         ("codex", "/hooks"),

@@ -73,7 +73,11 @@ same. For that agent the installer:
 
 `--home` changes the base of every default path, and `--skills-dir` and
 `--python` work as for Claude Code. Rerunning is safe: it relinks moved
-skills and removes links to skills that no longer exist.
+skills and removes links to skills that no longer exist. The installer does
+not read `CODEX_HOME` or `VIBE_HOME`: if you moved an agent's home, link the
+skills and edit its hook file by hand, or point `--home` at the folder that
+holds `.codex` or `.vibe`. Links into a kit checkout you have since deleted
+are reported as `Skipped`; remove them by hand and rerun.
 
 Next steps:
 
