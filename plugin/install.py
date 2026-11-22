@@ -259,8 +259,8 @@ def link_target(link: Path) -> str | None:
     return target
 
 
-def under_kit_roots(target: str, link: Path | None = None) -> bool:
-    if link is not None and not os.path.isabs(target):
+def under_kit_roots(target: str, link: Path) -> bool:
+    if not os.path.isabs(target):
         target = os.path.join(str(link.parent), target)
     norm = os.path.normcase(os.path.abspath(target))
     for root in skill_roots():

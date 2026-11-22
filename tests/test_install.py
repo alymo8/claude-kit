@@ -305,6 +305,14 @@ def test_agent_links_every_skill(tmp_path, agent):
     assert not (tmp_path / "home" / ".claude").exists()
 
 
+def test_agent_skills_dir_override(tmp_path):
+    other = tmp_path / "home" / "other-skills"
+    result = run_agent(tmp_path, "vibe", "--skills-dir", str(other))
+    assert result.returncode == 0, out(result)
+    assert os.path.samefile(other / "spec-gate", PLUGIN / "skills" / "spec-gate")
+    assert not skills(tmp_path).exists()
+
+
 def test_foreign_entry_left_alone(tmp_path):
     foreign = skills(tmp_path) / "spec-gate"
     foreign.mkdir(parents=True)

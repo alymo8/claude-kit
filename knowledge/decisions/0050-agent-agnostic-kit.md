@@ -60,3 +60,7 @@ that runs a command at session start. The design is in
 - Cursor runs `sessionStart` hooks fire-and-forget, so the kit map may not
   reach the model; the installer prints a line to paste into Cursor's user
   rules as a fallback.
+- Plan decisions beyond the spec's text: rerunning the installer relinks a
+  kit link whose skill moved between the kit's skill roots and removes a
+  dangling link into those roots; `run.py` swaps a leading `python` or
+  `python3` in a `hooks.json` command for the interpreter running it.
