@@ -3,6 +3,8 @@ import os
 import shutil
 import subprocess
 import sys
+import tomllib
+from pathlib import Path
 
 import pytest
 from helpers import PLUGIN, load_module
@@ -12,7 +14,7 @@ WRAPPER = PLUGIN / "install.ps1"
 SUPERPOWERS = "superpowers@claude-plugins-official"
 
 
-def run_install(tmp_path, python=sys.executable, env=None):
+def run_install(tmp_path, python=sys.executable, env=None, extra=()):
     return subprocess.run(
         [
             sys.executable,
@@ -23,6 +25,7 @@ def run_install(tmp_path, python=sys.executable, env=None):
             str(tmp_path / "settings.json"),
             "--python",
             python,
+            *extra,
         ],
         capture_output=True,
         text=True,
@@ -62,12 +65,20 @@ def remove_link(link):
         os.unlink(link)
 
 
+def drop_links(root):
+    for dirpath, dirnames, filenames in os.walk(root):
+        for name in list(dirnames) + filenames:
+            path = os.path.join(dirpath, name)
+            if is_link(path):
+                remove_link(path)
+                if name in dirnames:
+                    dirnames.remove(name)
+
+
 @pytest.fixture(autouse=True)
-def drop_kit_link(tmp_path):
+def drop_kit_links(tmp_path):
     yield
-    link = tmp_path / "skills" / "claude-kit"
-    if os.path.lexists(link) and is_link(link):
-        remove_link(link)
+    drop_links(tmp_path)
 
 
 def test_creates_link_to_plugin(tmp_path):
@@ -243,3 +254,261 @@ def test_docs_do_not_suggest_a_python_alias():
     setup = (PLUGIN.parent / "docs" / "setup.md").read_text(encoding="utf-8")
     assert "alias of `python3`" not in setup
     assert "~/.zprofile" in setup
+
+
+AGENTS = ("vibe", "codex", "cursor")
+VENDOR = PLUGIN.parent / "vendor" / "superpowers" / "skills"
+
+
+def run_agent(tmp_path, agent, *extra):
+    home = tmp_path / "home"
+    args = ["--agent", agent, "--home", str(home), "--python", sys.executable]
+    return subprocess.run(
+        [sys.executable, str(INSTALL), *args, *extra],
+        capture_output=True,
+        text=True,
+        timeout=120,
+    )
+
+
+def skills(tmp_path):
+    return tmp_path / "home" / ".agents" / "skills"
+
+
+def snapshot(root):
+    found = {}
+    for dirpath, dirnames, filenames in os.walk(root):
+        for name in list(dirnames) + filenames:
+            path = os.path.join(dirpath, name)
+            if is_link(path):
+                found[path] = "link:" + os.readlink(path)
+                if name in dirnames:
+                    dirnames.remove(name)
+            elif name in filenames:
+                with open(path, "rb") as handle:
+                    found[path] = handle.read()
+    return found
+
+
+@pytest.mark.parametrize("agent", AGENTS)
+def test_agent_links_every_skill(tmp_path, agent):
+    result = run_agent(tmp_path, agent)
+    assert result.returncode == 0, out(result)
+    expected = {
+        "spec-gate": PLUGIN / "skills" / "spec-gate",
+        "ship": PLUGIN / "agent-skills" / "ship",
+        "brainstorming": VENDOR / "brainstorming",
+    }
+    for name, target in expected.items():
+        link = skills(tmp_path) / name
+        assert is_link(link) and os.path.samefile(link, target), name
+    assert not (tmp_path / "home" / ".claude").exists()
+
+
+def test_agent_skills_dir_override(tmp_path):
+    other = tmp_path / "home" / "other-skills"
+    result = run_agent(tmp_path, "vibe", "--skills-dir", str(other))
+    assert result.returncode == 0, out(result)
+    assert os.path.samefile(other / "spec-gate", PLUGIN / "skills" / "spec-gate")
+    assert not skills(tmp_path).exists()
+
+
+def test_foreign_entry_left_alone(tmp_path):
+    foreign = skills(tmp_path) / "spec-gate"
+    foreign.mkdir(parents=True)
+    (foreign / "keep.txt").write_text("mine", encoding="utf-8")
+    result = run_agent(tmp_path, "vibe")
+    assert result.returncode == 0, out(result)
+    assert not is_link(foreign) and (foreign / "keep.txt").is_file()
+    assert "Skipped" in result.stdout and "spec-gate" in result.stdout
+
+
+def test_dangling_kit_link_removed(tmp_path):
+    skills(tmp_path).mkdir(parents=True)
+    old = skills(tmp_path) / "old-skill"
+    try:
+        make_dir_link(old, PLUGIN / "skills" / "no-such-skill")
+    except (OSError, subprocess.CalledProcessError):
+        pytest.skip("cannot create a dangling link here")
+    result = run_agent(tmp_path, "codex")
+    assert result.returncode == 0, out(result)
+    assert not os.path.lexists(old)
+
+
+def test_vibe_hooks_toml_keeps_other_entries(tmp_path):
+    path = tmp_path / "home" / ".vibe" / "hooks.toml"
+    path.parent.mkdir(parents=True)
+    path.write_text(
+        '[[hooks]]\nname = "mine"\ntype = "session_start"\ncommand = "echo hi"\n',
+        encoding="utf-8",
+    )
+    assert run_agent(tmp_path, "vibe").returncode == 0
+    hooks = tomllib.loads(path.read_text(encoding="utf-8"))["hooks"]
+    assert [h["name"] for h in hooks] == [
+        "mine",
+        "claude-kit-session-start",
+        "claude-kit-stop",
+    ]
+    assert hooks[1]["type"] == "session_start"
+    assert hooks[1]["command"].endswith('run.py" --agent vibe --event SessionStart')
+    assert hooks[2]["type"] == "post_agent" and hooks[2]["match"] == "main"
+    assert hooks[2]["command"].endswith('run.py" --agent vibe --event Stop')
+
+
+def test_codex_hooks_json(tmp_path):
+    path = tmp_path / "home" / ".codex" / "hooks.json"
+    path.parent.mkdir(parents=True)
+    mine = {"hooks": [{"type": "command", "command": "echo mine"}]}
+    path.write_text(json.dumps({"hooks": {"SessionStart": [mine]}, "x": 1}), "utf-8")
+    assert run_agent(tmp_path, "codex").returncode == 0
+    data = json.loads(path.read_text(encoding="utf-8"))
+    assert data["x"] == 1
+    start = data["hooks"]["SessionStart"]
+    assert start[0] == mine and len(start) == 2
+    command = start[1]["hooks"][0]["command"]
+    assert command.endswith('run.py" --agent codex --event SessionStart')
+    stop = data["hooks"]["Stop"][0]["hooks"][0]["command"]
+    assert stop.endswith('run.py" --agent codex --event Stop')
+
+
+def test_cursor_hooks_json(tmp_path):
+    path = tmp_path / "home" / ".cursor" / "hooks.json"
+    path.parent.mkdir(parents=True)
+    path.write_text(
+        json.dumps({"version": 1, "hooks": {"stop": [{"command": "echo mine"}]}}),
+        encoding="utf-8",
+    )
+    result = run_agent(tmp_path, "cursor")
+    assert result.returncode == 0, out(result)
+    data = json.loads(path.read_text(encoding="utf-8"))
+    assert data["version"] == 1
+    assert data["hooks"]["stop"][0] == {"command": "echo mine"}
+    assert data["hooks"]["stop"][1]["command"].endswith("--event Stop")
+    start = data["hooks"]["sessionStart"][0]["command"]
+    assert start.endswith('run.py" --agent cursor --event SessionStart')
+    assert "user rules" in result.stdout and "run.py" in result.stdout
+    assert not (tmp_path / "home" / ".cursor" / "AGENTS.md").exists()
+
+
+@pytest.mark.parametrize("agent", ["vibe", "codex"])
+def test_agents_md_block(tmp_path, agent):
+    path = tmp_path / "home" / f".{agent}" / "AGENTS.md"
+    path.parent.mkdir(parents=True)
+    path.write_text("my rules\n", encoding="utf-8")
+    run_agent(tmp_path, agent)
+    run_agent(tmp_path, agent)
+    text = path.read_text(encoding="utf-8")
+    assert text.startswith("my rules\n")
+    assert text.count("<!-- claude-kit:begin") == 1
+    assert "Kit map (claude-kit)" in text
+    assert f'run.py" --agent {agent} --event SessionStart' in text
+
+
+@pytest.mark.parametrize("agent", AGENTS)
+def test_second_run_changes_no_byte(tmp_path, agent):
+    assert run_agent(tmp_path, agent).returncode == 0
+    before = snapshot(tmp_path / "home")
+    assert run_agent(tmp_path, agent).returncode == 0
+    assert snapshot(tmp_path / "home") == before
+
+
+def test_malformed_hook_file_changes_nothing(tmp_path):
+    path = tmp_path / "home" / ".codex" / "hooks.json"
+    path.parent.mkdir(parents=True)
+    path.write_text("{oops", encoding="utf-8")
+    result = run_agent(tmp_path, "codex")
+    assert result.returncode == 1 and "ERROR" in result.stdout
+    assert path.read_text(encoding="utf-8") == "{oops"
+    assert not skills(tmp_path).exists()
+
+
+@pytest.mark.parametrize(
+    ("name", "text"),
+    [
+        ("hooks.toml", "a = 1\n# >>> claude-kit hooks (managed by x) >>>\nold\n"),
+        ("hooks.toml", "# <<< claude-kit hooks <<<\nmine = 2\n"),
+        ("AGENTS.md", "mine\n<!-- claude-kit:begin (managed by x) -->\nold\n"),
+    ],
+)
+def test_damaged_block_markers_change_nothing(tmp_path, name, text):
+    begin = installer().TOML_BEGIN if "toml" in name else installer().MD_BEGIN
+    text = text.replace(begin.split("(")[0] + "(managed by x)", begin)
+    path = tmp_path / "home" / ".vibe" / name
+    path.parent.mkdir(parents=True)
+    path.write_text(text, encoding="utf-8")
+    result = run_agent(tmp_path, "vibe")
+    assert result.returncode == 1 and "markers are damaged" in result.stdout
+    assert path.read_text(encoding="utf-8") == text
+    assert not skills(tmp_path).exists()
+
+
+def test_vibe_toml_survives_quote_in_path():
+    text = installer().vibe_hooks("", "C:/Users/O'Neil/python.exe")
+    hooks = tomllib.loads(text)["hooks"]
+    assert hooks[0]["command"].startswith("C:/Users/O'Neil/python.exe ")
+
+
+def test_kit_link_to_moved_skill_relinked(tmp_path):
+    skills(tmp_path).mkdir(parents=True)
+    link = skills(tmp_path) / "ship"
+    make_dir_link(link, PLUGIN / "skills" / "spec-gate")
+    result = run_agent(tmp_path, "vibe")
+    assert result.returncode == 0, out(result)
+    assert "Relinked ship" in result.stdout
+    assert os.path.samefile(link, PLUGIN / "agent-skills" / "ship")
+
+
+@pytest.mark.parametrize(
+    ("agent", "step"),
+    [
+        ("codex", "/hooks"),
+        ("vibe", "new Vibe session"),
+        ("cursor", "new Cursor agent chat"),
+    ],
+)
+def test_report_names_next_step(tmp_path, agent, step):
+    assert step in run_agent(tmp_path, agent).stdout
+
+
+# The existing test_install.py cases stay unedited (apart from the fixture and
+# run_install's extra parameter): they are the guard for today's behaviour.
+def test_agent_claude_matches_default(tmp_path):
+    results = []
+    for name, extra in (("a", ()), ("b", ("--agent", "claude"))):
+        root = tmp_path / name
+        result = run_install(root, extra=extra)
+        assert result.returncode == 0, out(result)
+        results.append((result.stdout.replace(str(root), "<t>"), root))
+    assert results[0][0] == results[1][0]
+    assert sorted(os.listdir(results[0][1])) == sorted(os.listdir(results[1][1]))
+
+
+POWERSHELL = shutil.which("pwsh") or shutil.which("powershell")
+
+
+@pytest.mark.skipif(POWERSHELL is None, reason="PowerShell not on PATH")
+def test_powershell_wrapper_agent_vibe(tmp_path):
+    env = dict(os.environ, HOME=str(tmp_path), USERPROFILE=str(tmp_path))
+    command = [POWERSHELL, "-NoProfile", "-ExecutionPolicy", "Bypass"]
+    command += ["-File", str(WRAPPER), "-Agent", "vibe", "-Home", str(tmp_path)]
+    result = subprocess.run(
+        command, capture_output=True, text=True, timeout=120, env=env
+    )
+    assert result.returncode == 0, out(result)
+    assert os.path.samefile(
+        tmp_path / ".agents" / "skills" / "spec-gate", PLUGIN / "skills" / "spec-gate"
+    )
+    assert (tmp_path / ".vibe" / "hooks.toml").is_file()
+    assert not (tmp_path / ".claude" / "skills").exists()
+    lines = result.stdout.splitlines()
+    written = {
+        Path(line.split(" ", 1)[1]).resolve()
+        for line in lines
+        if line.startswith(("Wrote ", "Unchanged "))
+    }
+    vibe = (tmp_path / ".vibe").resolve()
+    assert {vibe / "hooks.toml", vibe / "AGENTS.md"} <= written
+    for path in written:
+        assert path.is_relative_to(tmp_path.resolve()), path
+    linked = sum(1 for line in lines if line.startswith("Linked "))
+    assert linked == len(os.listdir(tmp_path / ".agents" / "skills"))

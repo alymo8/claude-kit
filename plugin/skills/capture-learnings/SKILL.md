@@ -52,6 +52,10 @@ build them only on a yes, as a separate commit with its tests.
    Fallbacks:
    - No root `CLAUDE.md`: create it holding only the new entries under
      their headings.
+   - Root `CLAUDE.md` is only `@AGENTS.md`: every rule here that names the
+     root `CLAUDE.md` (routing, line limit, links) applies to the root
+     `AGENTS.md`; write to the root `AGENTS.md` instead and leave the stub
+     unchanged.
    - `CLAUDE.md` would have more than 100 lines after the addition (a file
      already over that limit always qualifies): put the entry in
      `knowledge/` and link it from `CLAUDE.md` instead. If the repo has no

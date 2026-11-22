@@ -7,22 +7,42 @@
   same parameters. It junctions <SkillsDir>\claude-kit to this plugin folder,
   checks the prerequisites (python 3.11+, git, gh, the superpowers plugin) and
   adds the kit's status line when none is configured. Idempotent; refuses to
-  overwrite anything else at that path.
+  overwrite anything else at that path. With -Agent vibe, codex or cursor it
+  links the kit's skills into <Home>\.agents\skills and merges the kit's hook
+  runner into that agent's user hook file instead.
 
 .PARAMETER SkillsDir
-  Where Claude Code looks for skills-dir plugins. Default: ~\.claude\skills
+  Where the agent looks for skills. Default: <Home>\.claude\skills for
+  claude, <Home>\.agents\skills for the other agents.
 
 .PARAMETER Settings
-  Claude Code user settings file. Default: ~\.claude\settings.json
+  Claude Code user settings file. Default: <Home>\.claude\settings.json
+
+.PARAMETER Agent
+  The agent to install for: claude (default), vibe, codex or cursor.
+
+.PARAMETER Home
+  The home folder every default is built from. Default: ~
 #>
 param(
-  [string]$SkillsDir = (Join-Path $HOME ".claude\skills"),
-  [string]$Settings = (Join-Path $HOME ".claude\settings.json")
+  [string]$SkillsDir,
+  [string]$Settings,
+  [ValidateSet("claude", "vibe", "codex", "cursor")][string]$Agent = "claude",
+  [Alias("Home")][string]$HomeDir
 )
 
 if (-not (Get-Command python -ErrorAction SilentlyContinue)) {
   Write-Host "ERROR: python not found on PATH; install Python 3.11+."
   exit 1
 }
-& python (Join-Path $PSScriptRoot "install.py") --skills-dir $SkillsDir --settings $Settings
+$arguments = @((Join-Path $PSScriptRoot "install.py"), "--agent", $Agent)
+if ($HomeDir) { $arguments += @("--home", $HomeDir) }
+if ($Agent -eq "claude") {
+  $base = if ($HomeDir) { $HomeDir } else { $HOME }
+  if (-not $SkillsDir) { $SkillsDir = Join-Path $base ".claude\skills" }
+  if (-not $Settings) { $Settings = Join-Path $base ".claude\settings.json" }
+}
+if ($SkillsDir) { $arguments += @("--skills-dir", $SkillsDir) }
+if ($Settings) { $arguments += @("--settings", $Settings) }
+& python @arguments
 exit $LASTEXITCODE

@@ -162,3 +162,9 @@ def test_mechanical_proposals_are_built_only_on_a_hand_run():
         "separate commit",
     ):
         assert needle in text, needle
+
+
+def test_stub_claude_md_routes_to_agents_md():
+    text = flat()
+    assert "is only `@AGENTS.md`" in text
+    assert "write to the root `AGENTS.md` instead" in text

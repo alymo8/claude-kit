@@ -5,7 +5,8 @@ from helpers import REPO, broken_links
 
 SCRIPT_REF_RE = re.compile(r"python \.\./(\S+\.py)")
 # Plans embed snippets of other files; template links resolve only once rendered.
-SKIP_DIRS = ("docs/superpowers/plans/", "plugin/templates/")
+# vendor/ is an unchanged upstream copy.
+SKIP_DIRS = ("docs/superpowers/plans/", "plugin/templates/", "vendor/")
 
 
 def tracked_markdown():
@@ -28,15 +29,21 @@ def test_relative_markdown_links_resolve():
 
 
 def test_claude_md_script_paths_exist():
-    text = (REPO / "CLAUDE.md").read_text(encoding="utf-8")
+    text = (REPO / "AGENTS.md").read_text(encoding="utf-8")
     refs = SCRIPT_REF_RE.findall(text)
     assert refs, "CLAUDE.md should reference the renderer as python ../<path>.py"
     missing = [r for r in refs if not (REPO / r).exists()]
     assert not missing, missing
 
 
-def _claude_md_section(title):
+def test_claude_md_is_the_agents_stub():
     text = (REPO / "CLAUDE.md").read_text(encoding="utf-8")
+    assert text.strip() == "@AGENTS.md"
+    assert len(text.splitlines()) == 1
+
+
+def _claude_md_section(title):
+    text = (REPO / "AGENTS.md").read_text(encoding="utf-8")
     body = text.split(f"\n## {title}\n", 1)[1]
     return body.split("\n## ", 1)[0]
 
@@ -59,7 +66,7 @@ def test_docs_wire_ship_fast():
         encoding="utf-8"
     )
     assert "/ship-fast" in conv and adr in conv
-    for name in ("README.md", "CLAUDE.md"):
+    for name in ("README.md", "AGENTS.md"):
         assert "/ship-fast" in (REPO / name).read_text(encoding="utf-8"), name
     skill = (REPO / "plugin" / "skills" / "parallel-tasks" / "SKILL.md").read_text(
         encoding="utf-8"
@@ -84,14 +91,14 @@ def test_docs_wire_ship_fast_interview():
     assert "amended by 0022" in row_0021
     adr_0021 = (decisions / "0021-ship-fast-skips-gates.md").read_text("utf-8")
     assert "amended by 0022" in adr_0021 and adr in adr_0021
-    for name in ("README.md", "CLAUDE.md", "conventions/spec-driven-development.md"):
+    for name in ("README.md", "AGENTS.md", "conventions/spec-driven-development.md"):
         text = (REPO / name).read_text(encoding="utf-8")
         paragraphs = _paragraphs_with(text, "/ship-fast")
         assert any("interview" in p for p in paragraphs), name
 
 
 def test_learnings_capture_is_part_of_finishing():
-    claude = (REPO / "CLAUDE.md").read_text(encoding="utf-8")
+    claude = (REPO / "AGENTS.md").read_text(encoding="utf-8")
     para = claude.split(
         "**A feature is not finished until its workspace is gone.**", 1
     )[1]
@@ -105,7 +112,7 @@ def test_learnings_capture_is_part_of_finishing():
 
 
 def test_claude_md_has_rules_moved_from_memory():
-    text = " ".join((REPO / "CLAUDE.md").read_text(encoding="utf-8").split())
+    text = " ".join((REPO / "AGENTS.md").read_text(encoding="utf-8").split())
     for phrase in (
         "never suggests deleting",
         "Never write the names of private repos",
@@ -175,3 +182,29 @@ def test_setup_guide_names_prerequisites_and_installer():
     assert "twelve hooks" in readme
     assert "CLAUDE_KIT_VAULT" in readme
     assert "CLAUDE_KIT_WORKSPACE_RULES=0" in readme
+
+
+def test_agent_agnostic_adr_amends_0034_and_0035():
+    decisions = REPO / "knowledge" / "decisions"
+    adr = "0050-agent-agnostic-kit.md"
+    assert (decisions / adr).is_file()
+    index = (decisions / "README.md").read_text(encoding="utf-8")
+    assert f"]({adr})" in index
+    amended = ("0034-workspace-rules-inject.md", "0035-process-rules-in-claude-md.md")
+    for old in amended:
+        row = next(line for line in index.splitlines() if old in line)
+        assert "amended by 0050" in row, old
+        assert "amended by 0050" in (decisions / old).read_text("utf-8"), old
+
+
+def test_docs_cover_other_agents():
+    guide = (REPO / "docs" / "setup.md").read_text(encoding="utf-8")
+    section = guide.split("## Using the kit with Vibe, Codex or Cursor", 1)[1]
+    section = section.split("\n## ", 1)[0]
+    for needle in ("--agent vibe", "--agent codex", "--agent cursor", "/hooks"):
+        assert needle in section, needle
+    for needle in ("vendor-superpowers.py", "agent-skills.py", "/ship-many"):
+        assert needle in section, needle
+    readme = " ".join((REPO / "README.md").read_text(encoding="utf-8").split())
+    para = readme.split("Mistral Vibe", 1)[1][:400]
+    assert "Codex" in para and "Cursor" in para and "docs/setup.md" in para

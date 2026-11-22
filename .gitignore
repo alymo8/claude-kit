@@ -20,6 +20,7 @@
 !/knowledge/
 !/docs/
 !/tests/
+!/vendor/
 !/.github/
 
 # ...and never track secrets or local state, even inside the whitelisted dirs

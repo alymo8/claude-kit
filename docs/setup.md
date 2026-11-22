@@ -47,6 +47,58 @@ installer. If PowerShell refuses to run it (execution policy), use
 To update, `git pull` in the checkout. Skill and command edits are live;
 hook edits need a new session or `/reload-plugins`.
 
+## Using the kit with Vibe, Codex or Cursor
+
+The kit also runs in Mistral Vibe, Codex and Cursor (ADR 0050). From the
+checkout, run the installer once per agent:
+
+```
+python plugin/install.py --agent vibe
+python plugin/install.py --agent codex
+python plugin/install.py --agent cursor
+```
+
+On Windows, `plugin\install.ps1 -Agent vibe` (or `codex`, `cursor`) does the
+same. For that agent the installer:
+
+- links the kit skills, one wrapper skill per kit command and the bundled
+  superpowers skills (`vendor/superpowers/`) into `~/.agents/skills/`;
+- adds the kit's hook runner (`plugin/hooks/run.py`) to the agent's user hook
+  file (`~/.vibe/hooks.toml`, `~/.codex/hooks.json` or
+  `~/.cursor/hooks.json`), which injects the workspace rules, kit map,
+  handoff and vault pointer at session start;
+- for Vibe and Codex, adds a fallback line to `~/.vibe/AGENTS.md` or
+  `~/.codex/AGENTS.md` that tells the agent to run the runner itself when the
+  kit map is missing from its context.
+
+`--home` changes the base of every default path, and `--skills-dir` and
+`--python` work as for Claude Code. Rerunning is safe: it relinks moved
+skills and removes links to skills that no longer exist. The installer does
+not read `CODEX_HOME` or `VIBE_HOME`: if you moved an agent's home, link the
+skills and edit its hook file by hand, or point `--home` at the folder that
+holds `.codex` or `.vibe`. Links into a kit checkout you have since deleted
+are reported as `Skipped`; remove them by hand and rerun.
+
+Next steps:
+
+- Codex: run `/hooks` and trust the claude-kit hooks.
+- Vibe and Cursor: start a new session.
+- Cursor runs session-start hooks without waiting for them, so the kit map
+  may not reach the model. If it does not, paste the line the installer
+  prints into Cursor's user rules.
+
+Claude-only: `/ship-many`, the status line, `token-report.py`, `audit --user`,
+and the transcript, precompact and spec-edit hooks. In other agents `/ship`
+and `/ship-fast` run in one session and use subagents where the agent has
+them.
+
+For kit developers: after editing a command, run
+`python plugin/scripts/agent-skills.py` to regenerate its wrapper skill. To
+refresh the bundled superpowers, run
+`python plugin/scripts/vendor-superpowers.py --from <dir>`, where `<dir>` is a
+superpowers checkout or its Claude Code plugin cache folder, and commit the
+result.
+
 ## Where project repos live
 
 Either works:
@@ -61,6 +113,8 @@ Either works:
 ## Switches
 
 Set these under `env` in `~/.claude/settings.json`.
+`CLAUDE_KIT_AGENT` is not a switch to set by hand; `plugin/hooks/run.py` sets
+it to `vibe`, `codex` or `cursor` for the hooks it runs.
 
 | Variable | Default | Effect |
 |---|---|---|
