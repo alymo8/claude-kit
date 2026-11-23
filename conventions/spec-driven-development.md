@@ -158,7 +158,9 @@ harness or fixtures whose results decide "done". Once the spec or plan is
 approved, implementers never edit those files to make them pass. A frozen
 file that does not exist yet is created once, exactly as the plan gives it,
 and never changed after. A needed change goes back to the user as a spec
-decision.
+decision. A value starting with `none` (any case) freezes nothing, whatever
+follows it: ``- **Frozen:** none (`tests/x.py` is written by Task 1)`` freezes
+no file.
 
 `plugin/scripts/frozen-check.py` enforces this before each push in `/ship`
 and `/ship-fast`. Only the main session writes a
