@@ -5,7 +5,7 @@ import sys
 from pathlib import Path
 
 import pytest
-from helpers import PLUGIN, broken_links, load_module, run_script
+from helpers import PLUGIN, REPO, broken_links, load_module, run_script
 
 SCRIPT = PLUGIN / "scripts" / "scaffold.py"
 EXPECTED = [
@@ -118,9 +118,65 @@ def test_unknown_stack_is_a_usage_error(tmp_path):
     assert result.returncode == 2
 
 
-def test_default_parent_is_the_workspace_root():
+def test_default_parent_of_real_checkout():
     mod = load_module(SCRIPT, "scaffold_default_parent")
-    assert mod.build_parser().get_default("parent") == PLUGIN.parent
+    assert mod.build_parser().get_default("parent") is None
+    common = git("rev-parse", "--git-common-dir", cwd=REPO)
+    assert mod.default_parent(PLUGIN) == (REPO / common).resolve().parent
+
+
+def copy_plugin(tmp_path: Path) -> Path:
+    """Copy the plugin as Claude Code's cache would; return the copy's scaffold.py."""
+    dest = tmp_path / "cache" / "agent-kit" / "1.0.0"
+    shutil.copytree(PLUGIN, dest, ignore=shutil.ignore_patterns("__pycache__"))
+    return dest / "scripts" / "scaffold.py"
+
+
+def fake_kit(path: Path) -> Path:
+    """A committed git repo that passes for a kit checkout."""
+    (path / "plugin").mkdir(parents=True)
+    (path / "plugin" / "rules.md").write_text("# rules\n", encoding="utf-8")
+    (path / ".claude-plugin").mkdir()
+    (path / ".claude-plugin" / "marketplace.json").write_text(
+        '{"name": "agent-kit"}\n', encoding="utf-8"
+    )
+    git("init", "-q", "-b", "main", cwd=path)
+    git("add", "-A", cwd=path)
+    ident = ["-c", "user.name=t", "-c", "user.email=t@example.com"]
+    git(*ident, "commit", "-q", "-m", "init", cwd=path)
+    return path
+
+
+def test_default_parent_from_copy_outside_kit_is_cwd(tmp_path):
+    script = copy_plugin(tmp_path)
+    work = tmp_path / "work"
+    work.mkdir()
+    result = run_script(script, "--name", "demo", "--stack", "python", cwd=work)
+    assert result.returncode == 0, result.stderr
+    assert (work / "demo" / "CLAUDE.md").is_file()
+
+
+def test_default_parent_in_child_repo_is_kit_root(tmp_path):
+    script = copy_plugin(tmp_path)
+    kit = fake_kit(tmp_path / "kit")
+    child = kit / "child"
+    child.mkdir()
+    git("init", "-q", "-b", "main", cwd=child)
+    result = run_script(script, "--name", "demo", "--stack", "python", cwd=child)
+    assert result.returncode == 0, result.stderr
+    assert (kit / "demo").is_dir()
+    assert not (child / "demo").exists()
+
+
+def test_default_parent_in_kit_worktree_is_main_checkout(tmp_path):
+    script = copy_plugin(tmp_path)
+    kit = fake_kit(tmp_path / "kit")
+    wt = (kit / ".claude" / "worktrees" / "wt").resolve()
+    git("worktree", "add", "-q", str(wt), cwd=kit)
+    result = run_script(script, "--name", "demo", "--stack", "python", cwd=wt)
+    assert result.returncode == 0, result.stderr
+    assert (kit / "demo").is_dir()
+    assert not (wt / "demo").exists()
 
 
 def test_render_files_rejects_unresolved_placeholder(tmp_path, monkeypatch):

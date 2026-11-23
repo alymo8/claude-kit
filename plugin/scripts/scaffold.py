@@ -4,10 +4,11 @@
     scaffold.py --name NAME --stack {node,python} [--parent DIR]
     scaffold.py --adopt --stack {node,python} [--dest DIR] [--name NAME]
 
-New mode renders plugin/templates/ into PARENT/NAME (PARENT defaults to the
-workspace directory that contains the kit checkout's `plugin/` folder, i.e. the
-kit checkout's own root — new projects land beside the other repos there), then
-runs `git init -b main` and one commit.
+New mode renders plugin/templates/ into PARENT/NAME, then runs `git init -b main`
+and one commit. PARENT defaults to the kit's main checkout when the current
+folder is inside a kit checkout or one of its worktrees, else to the kit checkout
+the plugin runs from (a contributor link), else to the current folder; never the
+plugin cache or a worktree.
 It records `.githooks/pre-push` as executable and sets
 `core.hooksPath=.githooks`, which enables the pre-push lint hook.
 It refuses a non-empty destination. Adopt mode writes only the files that do not
@@ -24,6 +25,7 @@ from __future__ import annotations
 
 import argparse
 import datetime as dt
+import importlib.util
 import re
 import shutil
 import subprocess
@@ -33,6 +35,7 @@ from pathlib import Path
 PLUGIN_ROOT = Path(__file__).resolve().parent.parent
 TEMPLATES = PLUGIN_ROOT / "templates"
 INDEXER = PLUGIN_ROOT / "scripts" / "spec-index.py"
+KIT_HOOK = PLUGIN_ROOT / "hooks" / "workspace_rules_inject.py"
 STACKS = ("node", "python")
 PLACEHOLDER_RE = re.compile(r"\{\{[a-z_]+\}\}")
 CI_PATH = Path(".github/workflows/ci.yml")
@@ -48,6 +51,43 @@ NEXT_STEPS = {
         "next: `uv init` and `uv add --dev pytest ruff`, then commit pyproject.toml"
     ),
 }
+
+
+def load_kit_hook():
+    """The workspace-rules hook module: one definition of a kit checkout."""
+    spec = importlib.util.spec_from_file_location("workspace_rules_inject", KIT_HOOK)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def main_checkout(kit: Path) -> Path:
+    """The main checkout of the kit's repo (kit itself when not a worktree)."""
+    try:
+        result = subprocess.run(
+            ["git", "-C", str(kit), "rev-parse", "--git-common-dir"],
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+        )
+    except OSError:
+        return kit
+    out = result.stdout.strip()
+    if result.returncode != 0 or not out:
+        return kit
+    common = (kit / out).resolve()
+    return common.parent if common.name == ".git" else kit
+
+
+def default_parent(cwd: Path) -> Path:
+    """Where a new project goes when --parent is not given."""
+    hook = load_kit_hook()
+    kit = hook.find_kit(cwd)
+    if kit is not None:
+        return main_checkout(kit)
+    if hook.is_kit_checkout(PLUGIN_ROOT.parent):
+        return main_checkout(PLUGIN_ROOT.parent)
+    return cwd
 
 
 def render_files(name: str, stack: str, today: str) -> dict[Path, str]:
@@ -240,8 +280,11 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--parent",
         type=Path,
-        default=PLUGIN_ROOT.parent,
-        help="new mode: directory to create the project in",
+        default=None,
+        help=(
+            "new mode: directory to create the project in "
+            "(default: the kit's main checkout, else the current folder)"
+        ),
     )
     parser.add_argument(
         "--adopt",
@@ -266,7 +309,8 @@ def main(argv: list[str]) -> int:
         return 0
     if not args.name:
         parser.error("--name is required in new mode")
-    scaffold_new(args.name, args.stack, args.parent)
+    parent = args.parent or default_parent(Path.cwd().resolve())
+    scaffold_new(args.name, args.stack, parent)
     return 0
 
 
