@@ -206,10 +206,10 @@ def test_description_mentions_pr_review_respond():
     assert "pr-review-respond" in data["description"]
 
 
-def test_version_is_0_35_0():
+def test_version_is_0_36_0():
     plugin_json = PLUGIN / ".claude-plugin" / "plugin.json"
     data = json.loads(plugin_json.read_text(encoding="utf-8"))
-    assert data["version"] == "0.35.0"
+    assert data["version"] == "0.36.0"
 
 
 def test_description_mentions_review():
@@ -238,11 +238,12 @@ def test_description_mentions_docker_compact():
     assert "/docker-compact" in data["description"]
 
 
-def test_description_mentions_vault():
+def test_description_omits_vault():
     plugin_json = PLUGIN / ".claude-plugin" / "plugin.json"
     data = json.loads(plugin_json.read_text(encoding="utf-8"))
-    assert "a personal vault (/vault-init" in data["description"]
-    assert "CLAUDE_KIT_VAULT" in data["description"]
+    description = data["description"].lower()
+    for word in ("vault", "ingest", "task-prompt"):
+        assert word not in description, word
 
 
 def test_description_mentions_duplicate_intent():

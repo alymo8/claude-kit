@@ -179,8 +179,8 @@ def test_setup_guide_names_prerequisites_and_installer():
     assert "ExecutionPolicy" in guide
     readme = (REPO / "README.md").read_text(encoding="utf-8")
     assert "ExecutionPolicy" not in readme
-    assert "twelve hooks" in readme
-    assert "CLAUDE_KIT_VAULT" in readme
+    assert "eleven hooks" in readme
+    assert "CLAUDE_KIT_VAULT" not in readme
     assert "CLAUDE_KIT_WORKSPACE_RULES=0" in readme
 
 
@@ -195,6 +195,20 @@ def test_agent_agnostic_adr_amends_0034_and_0035():
         row = next(line for line in index.splitlines() if old in line)
         assert "amended by 0050" in row, old
         assert "amended by 0050" in (decisions / old).read_text("utf-8"), old
+
+
+def test_vault_adrs_moved_by_0051():
+    decisions = REPO / "knowledge" / "decisions"
+    adr = "0051-vault-tooling-split.md"
+    assert (decisions / adr).is_file()
+    index = (decisions / "README.md").read_text(encoding="utf-8")
+    assert f"]({adr})" in index
+    for old in ("0040-personal-vault.md", "0047-untrusted-vault-content.md"):
+        row = next(line for line in index.splitlines() if old in line)
+        assert "| moved |" in row, old
+        text = (decisions / old).read_text("utf-8")
+        assert "- **Status:** moved" in text, old
+        assert "ADR 0051" in text, old
 
 
 def test_docs_cover_other_agents():

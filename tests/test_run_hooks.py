@@ -218,7 +218,7 @@ def test_real_hooks_json_commands(tmp_path):
     mod = load_module(RUN, "kit_run_hooks")
     hooks = json.loads((PLUGIN / "hooks" / "hooks.json").read_text("utf-8"))
     session = mod.commands(hooks, "SessionStart", "startup", PLUGIN, tmp_path)
-    assert len(session) == 7
+    assert len(session) == 6
     for argv in session:
         assert argv[0] == sys.executable
         assert (PLUGIN / "hooks").as_posix() in argv[1]

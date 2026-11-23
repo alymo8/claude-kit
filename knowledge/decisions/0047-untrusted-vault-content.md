@@ -1,7 +1,10 @@
 # ADR 0047: Untrusted vault content
 
-- **Status:** accepted
-- **Date:** 2026-11-16
+- **Status:** moved
+- **Date:** 2026-11-16 (moved 2026-11-23)
+
+The tooling this ADR describes moved to the second-brain-kit plugin
+(ADR 0051). The record below is kept as history.
 
 ## Context
 Raw files in a personal vault (web pages, documents, call transcripts) can carry

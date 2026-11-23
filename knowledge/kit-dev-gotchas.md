@@ -163,6 +163,12 @@ The commands keep the rules and leave out the reasons; the reasons are here.
   are not derived from `plugin/hooks/hooks.json`, so a PR adding a hook can
   leave them stale (#52 did). Count the `python` commands in `hooks.json`
   and update both; do not trust the number in a spec or the README.
+  `test_real_hooks_json_commands` in `tests/test_run_hooks.py` also pins
+  the SessionStart command count; adding or removing a SessionStart hook
+  changes it too.
+- Removing (or renaming) a command also means deleting its generated
+  wrapper `plugin/agent-skills/<name>/`; `python plugin/scripts/agent-skills.py
+  --check` fails until the two match.
 
 ## Main checkout
 
@@ -193,6 +199,12 @@ The commands keep the rules and leave out the reasons; the reasons are here.
   pushing. Scope Out lines about personal memory or other projects are
   where names slip in. Rewording a spec afterwards changes its hash and
   forces a re-gate, and then a plan re-gate.
+- Start a hand-written spec or plan from the newest one's skeleton:
+  `spec-lint.py` wants a spec's `## Decisions` and `## Success criteria`
+  (each criterion naming its check), and a plan's `### Task N:` headings,
+  `- [ ] **Step N:**` bullets, a `**Files:**` line, a step with
+  ``Run `cmd` `` then `Expected:`, and a commit step in every task
+  (`**Files:** none` waives the commit).
 - Take a new ADR's number from `origin/main`
   (`git ls-tree --name-only origin/main knowledge/decisions/`), not local
   `main`. Renumbering after the spec gate changes the spec hash and forces
