@@ -82,7 +82,7 @@ def test_docs_and_manifest_wire_the_gate():
     def text(rel):
         return (REPO / rel).read_text(encoding="utf-8")
 
-    assert "## Plan gate" in text("conventions/spec-driven-development.md")
+    assert "## Plan gate" in text("plugin/conventions/spec-driven-development.md")
     adr = "0016-plan-gate-signs-off-on-new-decisions-only.md"
     assert (REPO / "knowledge" / "decisions" / adr).is_file()
     assert f"]({adr})" in text("knowledge/decisions/README.md")

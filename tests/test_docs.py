@@ -1,9 +1,9 @@
 import re
 import subprocess
 
-from helpers import REPO, broken_links
+from helpers import CONVENTIONS, PLUGIN, REPO, RULES, broken_links
 
-SCRIPT_REF_RE = re.compile(r"python \.\./(\S+\.py)")
+SCRIPT_REF_RE = re.compile(r"python <plugin root>/(\S+\.py)")
 # Plans embed snippets of other files; template links resolve only once rendered.
 # vendor/ is an unchanged upstream copy.
 SKIP_DIRS = ("docs/superpowers/plans/", "plugin/templates/", "vendor/")
@@ -29,10 +29,10 @@ def test_relative_markdown_links_resolve():
 
 
 def test_claude_md_script_paths_exist():
-    text = (REPO / "AGENTS.md").read_text(encoding="utf-8")
+    text = RULES.read_text(encoding="utf-8")
     refs = SCRIPT_REF_RE.findall(text)
-    assert refs, "CLAUDE.md should reference the renderer as python ../<path>.py"
-    missing = [r for r in refs if not (REPO / r).exists()]
+    assert refs, "rules.md should reference the renderer as python <plugin root>/"
+    missing = [r for r in refs if not (PLUGIN / r).exists()]
     assert not missing, missing
 
 
@@ -43,7 +43,7 @@ def test_claude_md_is_the_agents_stub():
 
 
 def _claude_md_section(title):
-    text = (REPO / "AGENTS.md").read_text(encoding="utf-8")
+    text = RULES.read_text(encoding="utf-8")
     body = text.split(f"\n## {title}\n", 1)[1]
     return body.split("\n## ", 1)[0]
 
@@ -62,12 +62,10 @@ def test_docs_wire_ship_fast():
     assert (REPO / "knowledge" / "decisions" / adr).is_file()
     index = (REPO / "knowledge" / "decisions" / "README.md").read_text(encoding="utf-8")
     assert f"]({adr})" in index
-    conv = (REPO / "conventions" / "spec-driven-development.md").read_text(
-        encoding="utf-8"
-    )
+    conv = (CONVENTIONS / "spec-driven-development.md").read_text(encoding="utf-8")
     assert "/ship-fast" in conv and adr in conv
-    for name in ("README.md", "AGENTS.md"):
-        assert "/ship-fast" in (REPO / name).read_text(encoding="utf-8"), name
+    for path in (REPO / "README.md", RULES):
+        assert "/ship-fast" in path.read_text(encoding="utf-8"), path
     skill = (REPO / "plugin" / "skills" / "parallel-tasks" / "SKILL.md").read_text(
         encoding="utf-8"
     )
@@ -91,34 +89,28 @@ def test_docs_wire_ship_fast_interview():
     assert "amended by 0022" in row_0021
     adr_0021 = (decisions / "0021-ship-fast-skips-gates.md").read_text("utf-8")
     assert "amended by 0022" in adr_0021 and adr in adr_0021
-    for name in ("README.md", "AGENTS.md", "conventions/spec-driven-development.md"):
-        text = (REPO / name).read_text(encoding="utf-8")
+    for path in (REPO / "README.md", RULES, CONVENTIONS / "spec-driven-development.md"):
+        text = path.read_text(encoding="utf-8")
         paragraphs = _paragraphs_with(text, "/ship-fast")
-        assert any("interview" in p for p in paragraphs), name
+        assert any("interview" in p for p in paragraphs), path
 
 
 def test_learnings_capture_is_part_of_finishing():
-    claude = (REPO / "AGENTS.md").read_text(encoding="utf-8")
+    claude = RULES.read_text(encoding="utf-8")
     para = claude.split(
         "**A feature is not finished until its workspace is gone.**", 1
     )[1]
     para = para.split("\n\n", 1)[0]
     assert "claude-kit:capture-learnings" in para
-    convention = (REPO / "conventions" / "project-memory.md").read_text(
-        encoding="utf-8"
-    )
+    convention = (CONVENTIONS / "project-memory.md").read_text(encoding="utf-8")
     assert "## Capturing learnings" in convention
     assert "capture-learnings" in convention.split("## Capturing learnings", 1)[1]
 
 
 def test_claude_md_has_rules_moved_from_memory():
+    rules = " ".join(RULES.read_text(encoding="utf-8").split())
+    assert "never suggests deleting" in rules
     text = " ".join((REPO / "AGENTS.md").read_text(encoding="utf-8").split())
-    for phrase in (
-        "never suggests deleting",
-        "Never write the names of private repos",
-        "fold it into an existing flow step",
-    ):
-        assert phrase in text, phrase
     kit_dev = text.split("## Developing the kit", 1)[1]
     assert "Never write the names of private repos" in kit_dev
     assert "fold it into an existing flow step" in kit_dev

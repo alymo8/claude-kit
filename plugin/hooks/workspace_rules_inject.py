@@ -1,16 +1,25 @@
 #!/usr/bin/env python3
-"""SessionStart hook: inject the workspace rules in repos outside the kit.
+"""SessionStart hook: inject the workspace rules where the agent lacks them.
 
-Claude Code loads the workspace CLAUDE.md only for repos inside the kit
-checkout. In any other repo this prints the rules, up to their
-"## Developing the kit" section, so they apply wherever a repo is cloned
-(ADR 0034). The rules come from the kit's AGENTS.md when present (CLAUDE.md is
-then an @AGENTS.md stub), else from CLAUDE.md. Silent inside the kit root and
-in git worktrees of the kit, which load a kit CLAUDE.md natively. With
-CLAUDE_KIT_AGENT set (by plugin/hooks/run.py, for a non-Claude agent), child
-repos inside the kit folder get the rules too, since that agent does not load
-the parent folder's file (ADR 0050). On by default;
-CLAUDE_KIT_WORKSPACE_RULES=0 turns it off. Always exits 0 (ADR 0007).
+The rules live in plugin/rules.md, next to this hook's folder, so they ship
+with the plugin wherever it is installed (a kit checkout, a skills-dir link or
+Claude Code's plugin cache). The kit's AGENTS.md imports them, so Claude Code
+loads them natively inside a kit checkout; other agents read AGENTS.md without
+expanding the import (ADR 0034, ADR 0050). Where the session runs decides:
+
+| Where the session runs                    | Claude Code | Vibe/Codex/Cursor |
+|-------------------------------------------|-------------|-------------------|
+| A kit checkout (its root or a child repo) | silent      | inject            |
+| A git worktree of the kit, anywhere       | silent      | inject            |
+| Any other repo                            | inject      | inject            |
+
+A kit checkout is a folder holding plugin/rules.md and a
+.claude-plugin/marketplace.json named agent-kit, found by walking up from the
+project. A git worktree of the kit (also one of a branch from before the move,
+without plugin/rules.md) is found by comparing git common dirs with the kit
+checkout the plugin runs from. CLAUDE_KIT_AGENT, set by plugin/hooks/run.py,
+names a non-Claude agent. On by default; CLAUDE_KIT_WORKSPACE_RULES=0 turns it
+off. Always exits 0 (ADR 0007).
 """
 
 from __future__ import annotations
@@ -21,17 +30,42 @@ import subprocess
 import sys
 from pathlib import Path
 
-KIT_DEV = "## Developing the kit"
+KIT_NAME = "agent-kit"
 
 
 def enabled() -> bool:
     return os.environ.get("CLAUDE_KIT_WORKSPACE_RULES") != "0"
 
 
-def kit_root() -> Path | None:
-    """The kit checkout: the parent of the real plugin/ folder, links followed."""
-    root = Path(__file__).resolve().parents[2]
-    return root if (root / "CLAUDE.md").is_file() else None
+def is_kit_checkout(folder: Path) -> bool:
+    """True when the folder holds plugin/rules.md and the agent-kit marketplace."""
+    try:
+        if not (folder / "plugin" / "rules.md").is_file():
+            return False
+        marketplace = folder / ".claude-plugin" / "marketplace.json"
+        data = json.loads(marketplace.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return False
+    return isinstance(data, dict) and data.get("name") == KIT_NAME
+
+
+def find_kit(project: Path) -> Path | None:
+    """The first of the project and its parents that is a kit checkout."""
+    for folder in (project, *project.parents):
+        if is_kit_checkout(folder):
+            return folder
+    return None
+
+
+def plugin_root() -> Path:
+    """The plugin folder holding this hook, links followed."""
+    return Path(__file__).resolve().parents[1]
+
+
+def plugin_kit() -> Path | None:
+    """The kit checkout the plugin runs from, or None for an installed copy."""
+    kit = plugin_root().parent
+    return kit if is_kit_checkout(kit) else None
 
 
 def project_dir(stdin_text: str) -> Path:
@@ -50,11 +84,7 @@ def same(a: Path, b: Path) -> bool:
     return os.path.normcase(str(a)) == os.path.normcase(str(b))
 
 
-def inside(path: Path, root: Path) -> bool:
-    return same(path, root) or any(same(parent, root) for parent in path.parents)
-
-
-def in_kit_worktree(project: Path, root: Path) -> bool:
+def in_kit_worktree(project: Path, kit: Path) -> bool:
     """True when the project is in a git worktree whose common dir is the kit's."""
     try:
         done = subprocess.run(
@@ -68,83 +98,50 @@ def in_kit_worktree(project: Path, root: Path) -> bool:
     common = done.stdout.strip()
     if done.returncode != 0 or not common:
         return False
-    return same((project / common).resolve(), (root / ".git").resolve())
+    return same((project / common).resolve(), (kit / ".git").resolve())
 
 
-def toplevel(project: Path) -> Path | None:
-    """The git top level of the project, or None outside a repo or on error."""
-    try:
-        done = subprocess.run(
-            ["git", "-C", str(project), "rev-parse", "--show-toplevel"],
-            capture_output=True,
-            text=True,
-            encoding="utf-8",
-            timeout=10,
-        )
-    except (OSError, subprocess.SubprocessError):
-        return None
-    top = done.stdout.strip()
-    if done.returncode != 0 or not top:
-        return None
-    return Path(top).resolve()
-
-
-def child_repo(project: Path, root: Path) -> bool:
-    """True when the project is in its own git repo nested inside the kit."""
-    top = toplevel(project)
-    if top is None or same(top, root) or not inside(top, root):
-        return False
-    return not in_kit_worktree(project, root)
-
-
-def rules_file(root: Path) -> Path:
-    agents = root / "AGENTS.md"
-    return agents if agents.is_file() else root / "CLAUDE.md"
-
-
-def rules(root: Path) -> str:
-    lines = rules_file(root).read_text(encoding="utf-8").splitlines()
-    for index, line in enumerate(lines):
-        if line.startswith(KIT_DEV):
-            lines = lines[:index]
-            break
-    return "\n".join(lines).strip()
-
-
-def build(root: Path, agent: str = "") -> str:
-    where = root.as_posix()
-    name = rules_file(root).name
+def should_inject(project: Path, agent: str) -> bool:
     if agent:
-        header = (
-            f"Workspace rules (claude-kit, from {where}/{name}). Your agent did "
-            "not load them for this repo; follow them as you would an AGENTS.md. "
-            f"Relative links resolve against {where}."
+        return True
+    if find_kit(project) is not None:
+        return False
+    kit = plugin_kit()
+    return not (kit is not None and in_kit_worktree(project, kit))
+
+
+def build(plugin: Path, agent: str = "") -> str:
+    where = plugin.as_posix()
+    if agent:
+        middle = (
+            "Your agent did not load them for this repo; follow them as you "
+            "would an AGENTS.md."
         )
     else:
-        header = (
-            f"Workspace rules (claude-kit, from {where}/{name}). This repo is "
-            "outside the kit folder, so Claude Code did not load them; follow them "
-            f"as you would a CLAUDE.md. Relative links resolve against {where}."
+        middle = (
+            "This repo is outside the kit folder, so Claude Code did not load "
+            "them; follow them as you would a CLAUDE.md."
         )
-    return f"{header}\n\n{rules(root)}"
+    header = (
+        f"Workspace rules (claude-kit, from {where}/rules.md). {middle} "
+        f"Relative links resolve against the plugin root, {where}."
+    )
+    rules = (plugin / "rules.md").read_text(encoding="utf-8").strip()
+    return f"{header}\n\n{rules}"
 
 
 def main() -> int:
     try:
         stdin_text = "" if sys.stdin is None or sys.stdin.isatty() else sys.stdin.read()
-        root = kit_root() if enabled() else None
-        if root is not None:
+        plugin = plugin_root()
+        if enabled() and (plugin / "rules.md").is_file():
             project = project_dir(stdin_text)
             agent = os.environ.get("CLAUDE_KIT_AGENT", "")
-            if inside(project, root):
-                inject = bool(agent) and child_repo(project, root)
-            else:
-                inject = not in_kit_worktree(project, root)
-            if inject:
+            if should_inject(project, agent):
                 output = {
                     "hookSpecificOutput": {
                         "hookEventName": "SessionStart",
-                        "additionalContext": build(root, agent),
+                        "additionalContext": build(plugin, agent),
                     }
                 }
                 print(json.dumps(output))

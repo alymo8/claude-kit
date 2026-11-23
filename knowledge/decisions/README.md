@@ -1,7 +1,7 @@
 # Decisions
 
 Architecture Decision Records for this repo (the kit itself), following
-[the decision-log convention](../../conventions/decision-log.md). New decisions take
+[the decision-log convention](../../plugin/conventions/decision-log.md). New decisions take
 the next number; superseded ones are never deleted.
 
 | # | Title | Status | Date |

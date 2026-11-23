@@ -3,9 +3,10 @@
 from __future__ import annotations
 
 import json
+import re
 import subprocess
 
-from helpers import PLUGIN, REPO
+from helpers import FENCE_RE, LINK_RE, PLUGIN, REPO, RULES
 
 MARKETPLACE = REPO / ".claude-plugin" / "marketplace.json"
 
@@ -42,3 +43,96 @@ def test_frontmatter_hints_are_quoted():
     assert 'argument-hint: "[base-ref] [spec.md] [plan.md]"' in review
     new = (PLUGIN / "commands" / "new-project.md").read_text("utf-8")
     assert 'argument-hint: "[name] [node|python]"' in new
+
+
+def tracked(*paths: str) -> list[str]:
+    out = subprocess.run(
+        ["git", "ls-files", *paths],
+        cwd=REPO,
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        check=True,
+    ).stdout
+    return [line for line in out.splitlines() if line]
+
+
+def test_plugin_links_stay_inside_plugin():
+    root = PLUGIN.resolve()
+    outside = []
+    for rel in tracked("plugin"):
+        if not rel.endswith(".md"):
+            continue
+        md = REPO / rel
+        prose = FENCE_RE.sub("", md.read_text(encoding="utf-8"))
+        for match in LINK_RE.finditer(prose):
+            href = match.group(1)
+            if "://" in href or href.startswith("mailto:"):
+                continue
+            path = href.split("#", 1)[0]
+            if not path:
+                continue
+            target = (md.parent / path).resolve()
+            try:
+                target.relative_to(root)
+            except ValueError:
+                outside.append(f"{rel} -> {href}")
+    assert not outside, outside
+
+
+OLD_ROOT_RE = re.compile(r"(?<![\w./-])conventions/")
+EXEMPT_PHRASES = {
+    "plugin/skills/review/SKILL.md": (
+        "the repo's `conventions/engineering-practices.md`"
+    ),
+    "plugin/skills/spec-gate/rubric.md": (
+        "`conventions/decision-log.md` in the repository"
+    ),
+}
+SKIP_PREFIXES = ("docs/superpowers/", "docs/audit/", "vendor/")
+SKIP_FILES = {"tests/test_publish.py", "plugin/rules.md"}
+
+
+def skipped(rel: str) -> bool:
+    if rel.startswith(SKIP_PREFIXES) or rel in SKIP_FILES:
+        return True
+    if re.fullmatch(r"knowledge/decisions/0[^/]*\.md", rel):
+        return True
+    return bool(re.fullmatch(r"plugin/conventions/[^/]*\.md", rel))
+
+
+def test_no_live_file_names_old_conventions_root():
+    hits = []
+    for rel in tracked():
+        if skipped(rel):
+            continue
+        try:
+            text = (REPO / rel).read_text(encoding="utf-8")
+        except (UnicodeDecodeError, OSError):
+            continue
+        phrase = EXEMPT_PHRASES.get(rel)
+        if phrase:
+            text = text.replace(phrase, "")
+        for number, line in enumerate(text.splitlines(), 1):
+            if OLD_ROOT_RE.search(line):
+                hits.append(f"{rel}:{number}")
+    assert not hits, "\n".join(hits)
+
+
+def test_gitignore_drops_root_conventions():
+    lines = (REPO / ".gitignore").read_text(encoding="utf-8").splitlines()
+    assert "!/conventions/" not in lines
+
+
+def test_agents_md_imports_rules():
+    agents = (REPO / "AGENTS.md").read_text(encoding="utf-8")
+    assert "@plugin/rules.md" in agents.splitlines()
+    assert "## Developing the kit" in agents
+    assert "## How we work" not in agents
+    rules = RULES.read_text(encoding="utf-8")
+    assert rules.startswith("# Workspace conventions\n")
+    assert "These rules apply to every repo that uses the kit." in rules
+    assert "This file plays two roles" not in rules
+    assert "python ../plugin" not in rules
+    assert "](docs/" not in rules
+    assert "https://github.com/alymo8/claude-kit/blob/main/docs/setup.md" in rules

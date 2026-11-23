@@ -1,4 +1,4 @@
-from helpers import PLUGIN, REPO
+from helpers import CONVENTIONS, PLUGIN, REPO
 
 REVIEW = PLUGIN / "skills" / "review"
 SMELLS = (
@@ -128,7 +128,7 @@ def collapsed(path):
 
 
 def test_engineering_practices_name_the_surgical_rules():
-    text = collapsed(REPO / "conventions" / "engineering-practices.md")
+    text = collapsed(CONVENTIONS / "engineering-practices.md")
     for phrase in (
         "### Surgical diffs and simplicity",
         *(f"**{name}.**" for name in SURGICAL_RULES),
@@ -141,7 +141,7 @@ def test_engineering_practices_name_the_surgical_rules():
 
 
 def test_knowledge_layer_names_the_reviewer_only_file():
-    text = collapsed(REPO / "conventions" / "knowledge-layer.md")
+    text = collapsed(CONVENTIONS / "knowledge-layer.md")
     assert "knowledge/review-standards.md" in text
     assert "never link it from `CLAUDE.md`" in text
 

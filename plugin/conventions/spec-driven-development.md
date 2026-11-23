@@ -73,7 +73,7 @@ A good spec answers, in roughly this order:
   2026-10-01 or later) — one `- **<Area>:**` bullet per area in
   `plugin/skills/grill/coverage.md`, saying where the spec addresses it or
   `N/A` with the reason. `spec-lint.py` rule `L9-coverage` checks it
-  ([ADR 0019](../knowledge/decisions/0019-spec-grill-opt-in.md)).
+  ([ADR 0019](https://github.com/alymo8/claude-kit/blob/main/knowledge/decisions/0019-spec-grill-opt-in.md)).
 - **Frozen** (optional) — see [Frozen files](#frozen-files).
 
 ## Spec gate
@@ -89,8 +89,8 @@ record for the plan to answer. When the last discovery round's blocking
 findings were fixed, up to two verification rounds check only those fixes
 and the diff they made. The user then confirms a short verdict and the key
 decisions rather than reading the whole spec
-([ADR 0015](../knowledge/decisions/0015-spec-gate-replaces-full-read.md),
-[ADR 0020](../knowledge/decisions/0020-gates-end-with-verification.md)).
+([ADR 0015](https://github.com/alymo8/claude-kit/blob/main/knowledge/decisions/0015-spec-gate-replaces-full-read.md),
+[ADR 0020](https://github.com/alymo8/claude-kit/blob/main/knowledge/decisions/0020-gates-end-with-verification.md)).
 
 The linter requires, outside code blocks:
 
@@ -118,10 +118,10 @@ rules apply to files in a `plans` folder), then runs up to three discovery
 rounds of a fresh-context reviewer that maps every spec item to a task, tries
 to execute each task cold, checks task order and code claims, and checks
 that the plan answers the spec gate record's Plan questions
-([ADR 0016](../knowledge/decisions/0016-plan-gate-signs-off-on-new-decisions-only.md)).
+([ADR 0016](https://github.com/alymo8/claude-kit/blob/main/knowledge/decisions/0016-plan-gate-signs-off-on-new-decisions-only.md)).
 When the last discovery round's blocking findings were fixed, up to two
 verification rounds check only those fixes
-([ADR 0020](../knowledge/decisions/0020-gates-end-with-verification.md)).
+([ADR 0020](https://github.com/alymo8/claude-kit/blob/main/knowledge/decisions/0020-gates-end-with-verification.md)).
 
 The linter requires, outside code blocks:
 
@@ -177,10 +177,10 @@ into waves: tasks in a wave share no file (from their Create, Modify and Test
 bullets) and depend on no task in the same wave. Under `/ship`, a wave with
 more than one task runs through `claude-kit:parallel-tasks`: one subagent and
 git worktree per task, merged back in task order
-([ADR 0017](../knowledge/decisions/0017-parallel-plan-tasks.md)); every
+([ADR 0017](https://github.com/alymo8/claude-kit/blob/main/knowledge/decisions/0017-parallel-plan-tasks.md)); every
 other task under `/ship` runs through
 `superpowers:subagent-driven-development`
-([ADR 0037](../knowledge/decisions/0037-lean-ship-orchestrator.md)). Under
+([ADR 0037](https://github.com/alymo8/claude-kit/blob/main/knowledge/decisions/0037-lean-ship-orchestrator.md)). Under
 `/ship`, a fresh subagent writes the plan and runs the plan gate on it, and
 `/ship` acts on the verdict. The plan gate checks the line with rule
 `P10-depends`.
@@ -191,12 +191,12 @@ other task under `/ship` runs through
 an hour: it skips the spec and plan gates, writes a short task list instead
 of a full plan, and ends at an open pull request with green CI for the user
 to review and merge
-([ADR 0021](../knowledge/decisions/0021-ship-fast-skips-gates.md)). Given an
+([ADR 0021](https://github.com/alymo8/claude-kit/blob/main/knowledge/decisions/0021-ship-fast-skips-gates.md)). Given an
 idea instead of a spec, `/ship-fast` first runs a short interview in which
 the user decides the product
-([ADR 0022](../knowledge/decisions/0022-ship-fast-user-driven-spec.md)); the
+([ADR 0022](https://github.com/alymo8/claude-kit/blob/main/knowledge/decisions/0022-ship-fast-user-driven-spec.md)); the
 user then reads the written spec and approves it, which is the spec's only
-review ([ADR 0024](../knowledge/decisions/0024-ship-fast-user-approves-spec.md)).
+review ([ADR 0024](https://github.com/alymo8/claude-kit/blob/main/knowledge/decisions/0024-ship-fast-user-approves-spec.md)).
 
 ## Self-contained plans
 

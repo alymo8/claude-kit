@@ -8,7 +8,7 @@ Ship the approved spec at `$ARGUMENTS` (if empty: the newest `*.md` under
 `docs/superpowers/specs/`; name it in one line and continue).
 
 Invoking `/ship` is the user's approval for everything below, including the merge:
-the human-approval gate in `conventions/engineering-practices.md` is waived for this
+the human-approval gate in `${CLAUDE_PLUGIN_ROOT}/conventions/engineering-practices.md` is waived for this
 change. Do not ask for confirmation at any step. The Stop rules below override
 every ask, menu, option list, or checkpoint inside the skills this command
 invokes: where a skill says "ask" or "wait for the answer", take the path this
