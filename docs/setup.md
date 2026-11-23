@@ -65,8 +65,8 @@ same. For that agent the installer:
   superpowers skills (`vendor/superpowers/`) into `~/.agents/skills/`;
 - adds the kit's hook runner (`plugin/hooks/run.py`) to the agent's user hook
   file (`~/.vibe/hooks.toml`, `~/.codex/hooks.json` or
-  `~/.cursor/hooks.json`), which injects the workspace rules, kit map,
-  handoff and vault pointer at session start;
+  `~/.cursor/hooks.json`), which injects the workspace rules, kit map
+  and handoff at session start;
 - for Vibe and Codex, adds a fallback line to `~/.vibe/AGENTS.md` or
   `~/.codex/AGENTS.md` that tells the agent to run the runner itself when the
   kit map is missing from its context.
@@ -123,7 +123,6 @@ it to `vibe`, `codex` or `cursor` for the hooks it runs.
 | `CLAUDE_KIT_KIT_MAP` | on | `0` stops injecting the kit map |
 | `CLAUDE_KIT_WORKSPACE_RULES` | on | `0` stops injecting the workspace rules in repos outside the kit folder |
 | `CLAUDE_KIT_GRILL` | off | `1` turns on the spec grill before a spec is written |
-| `CLAUDE_KIT_VAULT` | off (unset) | a vault path: inject a pointer to that vault at session start |
 | `CLAUDE_KIT_NUDGE_AT` | 300000 | context tokens at which the first `/handoff` nudge fires |
 | `CLAUDE_KIT_NUDGE_STEP` | 100000 | tokens between later nudges |
 
@@ -143,46 +142,8 @@ already built up: it asks first, stops Docker and needs one UAC prompt.
 
 ## Personal vault
 
-1. Run `/vault-init <path> [personal|work]` to scaffold a vault outside any
-   project repo.
-2. Set `CLAUDE_KIT_VAULT` to that path (see Switches) so each session gets a
-   pointer to it.
-3. Install Obsidian and open the folder as a vault.
-4. Install the Obsidian Web Clipper and set its save folder to `raw/web/`.
-5. Save call transcripts (`.vtt`, `.docx` or text) into `raw/transcripts/`.
-6. Run the `claude-kit:ingest` skill; it writes source, people, topic and task
-   pages and does not commit, so you review the diff.
-
-The work profile keeps `raw/` out of git. Check the employer's policy on
-sending call content to an LLM before ingesting work calls.
-
-The vault holds content only (pages, raw files, `vault.toml`, Obsidian
-settings). The code that scaffolds it, ingests into it and points sessions at
-it is the kit plugin, so a machine with the kit installed has all of it.
-
-### Bringing an existing vault to another machine
-
-`/vault-init` creates no remote, so a vault exists only where you made it.
-
-1. Install the kit on the new machine (see Install).
-2. Copy the vault folder over, or push it to a **private** remote and clone it.
-   Never push a work vault anywhere the employer's policy does not allow.
-3. Set `CLAUDE_KIT_VAULT` on the new machine to the vault's path there.
-4. Open the folder as a vault in Obsidian, and set up the Web Clipper again
-   if you use it.
-
-### Daily ingest (optional)
-
-The kit does not schedule ingests. To run one each day, create a scheduled
-task in the Claude desktop app (Schedule) whose prompt:
-
-1. runs `python ~/.claude/skills/claude-kit/scripts/vault-pending.py <vault> --json`
-   and stops if it prints an empty list;
-2. otherwise runs the `claude-kit:ingest` skill on the vault;
-3. does not commit, push or create a remote, so you review the diff first.
-
-Scheduled tasks live on one machine; recreate the task, with that machine's
-paths, on each machine that should run it.
+The personal-vault tooling moved out of the kit into the second-brain-kit
+plugin; install that plugin to use a vault (ADR 0051).
 
 ## How changes ship
 

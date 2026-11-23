@@ -68,7 +68,7 @@ well"), to every item. Add:
 - Plugins without a pinned commit. For a project-scope plugin (`scope`,
   `project_path`), say that its project's settings decide whether it is enabled
   and that they were not read.
-- Scheduled tasks that read untrusted content (web, inbox, vault ingest) with no
+- Scheduled tasks that read untrusted content (web, inbox, notes ingest) with no
   human in the loop.
 - Untrusted text paths into a tool-using model across the whole setup.
 
