@@ -234,6 +234,12 @@ def is_kit_plugin(folder: Path) -> bool:
 def remove_legacy_link(skills_dir: Path) -> bool:
     """Remove <skills-dir>/<LEGACY_LINK> when it is a link to a kit plugin."""
     link = skills_dir / LEGACY_LINK
+    if is_link(link) and not os.path.exists(link):
+        print(
+            f"NOTE: the old link {link} points nowhere; "
+            "left in place, remove it yourself."
+        )
+        return False
     if not is_link(link) or not is_kit_plugin(Path(os.path.realpath(link))):
         return False
     remove_link(link)
@@ -539,12 +545,24 @@ def main(argv: list[str] | None = None) -> int:
     skills_dir = Path(args.skills_dir or home / ".claude" / "skills")
     settings = Path(args.settings or home / ".claude" / "settings.json")
     config = config_dir(home)
+    copy = marketplace_copy(config)
+    new_link = skills_dir / LINK_NAME
+    if copy is None and os.path.lexists(new_link):
+        if not (is_link(new_link) and points_at_plugin(new_link)):
+            print(
+                f"ERROR: {new_link} already exists and is not a link to "
+                f"{PLUGIN}. Remove it first."
+            )
+            return 1
     try:
         removed = remove_legacy_link(skills_dir)
+        if copy is not None and is_link(new_link) and points_at_plugin(new_link):
+            remove_link(new_link)
+            print(f"Removed {new_link} (the marketplace copy loads instead)")
+            removed = True
     except OSError as exc:
         print(f"ERROR: could not remove the old link: {exc}")
         return 1
-    copy = marketplace_copy(config)
     install_statusline(settings, skills_dir, config if copy else None)
     if copy is not None:
         print(

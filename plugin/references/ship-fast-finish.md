@@ -14,7 +14,7 @@ Part of `commands/ship-fast.md`, which reads this file when it reaches it. That 
    written as `'\''`. Write the body by
    `${CLAUDE_PLUGIN_ROOT}/references/pr-body.md` (fallback if the variable
    is not expanded: `<plugin root>/references/pr-body.md`):
-   its shared parts and its `/ship-fast` list. `<plugin root>` is the plugin root stated in the kit map, else `~/.claude/skills/agent-kit`. Then
+   its shared parts and its `/ship-fast` list. Then
    compare `gh pr view --json title` with the title; on a mismatch run
    `gh pr edit --title '<title>'` once. Whether the repository has CI is
    decided only by whether `.github/workflows/*.yml` exists on the branch.
@@ -23,7 +23,7 @@ Part of `commands/ship-fast.md`, which reads this file when it reaches it. That 
    `gh pr checks --watch --fail-fast`. On red: `gh run view <id> --log-failed`,
    fix with `superpowers:systematic-debugging`, commit, run the frozen check,
    push, count one attempt. If there is no workflow file, skip the watch and
-   say so in the report.
+   say so in the report. `<plugin root>` is the plugin root stated in the kit map, else `~/.claude/skills/agent-kit`.
    **Frozen check:** before each push in this step, run
    `python "${CLAUDE_PLUGIN_ROOT}/scripts/frozen-check.py" <spec>` (fallback
    `<plugin root>/scripts/frozen-check.py`; the task list

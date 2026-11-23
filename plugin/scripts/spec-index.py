@@ -68,9 +68,8 @@ def write_index(docs_dir: Path) -> Path | None:
         current = out.read_text(encoding="utf-8")
         if current == text:
             return out
-        if (
-            MARKER not in current and LEGACY_MARKER not in current
-        ):  # hand-written: leave it alone
+        # hand-written: leave it alone
+        if MARKER not in current and LEGACY_MARKER not in current:
             return None
     out.write_text(text, encoding="utf-8", newline="\n")
     return out

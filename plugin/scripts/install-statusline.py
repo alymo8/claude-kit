@@ -65,6 +65,8 @@ def install(settings: Path, skills_dir: Path, stable: Path | None = None) -> str
         outcome = "added"
     elif isinstance(command, str) and is_legacy(command, skills_dir):
         outcome = "migrated"
+    elif stable is not None and command == link_command(skills_dir):
+        outcome = "migrated"
     elif stable is not None and command == target:
         outcome = "refreshed"
     else:

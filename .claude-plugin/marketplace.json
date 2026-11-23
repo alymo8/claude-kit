@@ -1,5 +1,6 @@
 {
   "name": "agent-kit",
+  "description": "Spec-driven workflow kit for Claude Code: gated specs and plans, /ship, conventions and session hooks.",
   "owner": {
     "name": "alymo8"
   },

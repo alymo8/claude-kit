@@ -15,11 +15,11 @@ Part of `commands/ship.md`, which reads this file when it reaches it. That comma
    renumbered to the next free one, with its file name and index row;
    other files as before), then `git rebase --continue`, re-run
    tests, run the frozen check, `git push --force-with-lease`, return to
-   step 8. `<plugin root>` is the plugin root stated in the kit map, else `~/.claude/skills/agent-kit`. Then
+   step 8. Then
    `gh pr merge --squash --delete-branch`. Run from a worktree this exits
    non-zero *after* merging, because it cannot check out `main` here; confirm
    with `gh pr view --json state,mergeCommit` — `MERGED` means continue, and
-   step 11 finishes the local cleanup. Anything else is a stop rule.
+   step 11 finishes the local cleanup. Anything else is a stop rule. `<plugin root>` is the plugin root stated in the kit map, else `~/.claude/skills/agent-kit`.
 10. **Verify main.** Never test in the main checkout (the first entry of
     `git worktree list`). `git fetch origin`, then
     `git worktree add --detach <tmp> <squash-commit>` with `<tmp>` a new

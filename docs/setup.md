@@ -94,6 +94,16 @@ installer. If PowerShell refuses to run it (execution policy), use
 To update a checkout, `git pull` in it. Skill and command edits are live;
 hook edits need a new session or `/reload-plugins`.
 
+### Upgrading from the old name
+
+The kit was renamed to `agent-kit`. After pulling, run
+`python plugin/install.py` once: it removes the old link from before the
+rename and migrates the status line and the agent-file blocks. Commands from
+before the rename now start with `/agent-kit:` instead. A contributor who also
+installs the plugin from the marketplace should rerun the installer
+afterwards: it then removes its own `agent-kit` link, so only one copy of the
+kit loads.
+
 ## Using the kit with Vibe, Codex or Cursor
 
 The kit also runs in Mistral Vibe, Codex and Cursor (ADR 0050). From the

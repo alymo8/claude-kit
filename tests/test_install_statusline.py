@@ -84,6 +84,18 @@ def test_stable_copy_leaves_unrelated_line(tmp_path: Path):
     assert not (cfg / "claude-kit" / "statusline.py").exists()
 
 
+def test_stable_copy_migrates_link_mode_line(tmp_path: Path):
+    mod = load_module(SCRIPT, "install_statusline")
+    skills = tmp_path / "skills"
+    settings = tmp_path / "settings.json"
+    line = {"type": "command", "command": mod.link_command(skills)}
+    settings.write_text(json.dumps({"statusLine": line}), encoding="utf-8")
+    cfg = tmp_path / "cfg"
+    assert mod.install(settings, skills, stable=cfg) == "migrated"
+    assert command_of(settings) == mod.stable_command(cfg)
+    assert (cfg / "claude-kit" / "statusline.py").is_file()
+
+
 def test_rerun_refreshes_stable_copy(tmp_path: Path):
     settings = tmp_path / "settings.json"
     cfg = tmp_path / "cfg"
@@ -113,7 +125,7 @@ def test_stable_line_survives_cache_version_change(tmp_path: Path):
     scripts.mkdir(parents=True)
     for name in ("install-statusline.py", "statusline.py"):
         shutil.copy2(PLUGIN / "scripts" / name, scripts / name)
-    cfg = tmp_path / "cfg"
+    cfg = tmp_path / "c f g"
     settings = cfg / "settings.json"
     result = run_script(
         scripts / "install-statusline.py",

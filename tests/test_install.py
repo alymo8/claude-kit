@@ -116,6 +116,20 @@ def test_conflicting_directory_fails(tmp_path):
     assert (folder / "keep.txt").read_text(encoding="utf-8") == "x"
 
 
+def test_blocked_new_link_changes_nothing(tmp_path):
+    skills, settings = old_link_and_statusline(tmp_path)
+    folder = skills / "agent-kit"
+    folder.mkdir()
+    (folder / "keep.txt").write_text("x", encoding="utf-8")
+    before = settings.read_bytes()
+    result = run_install(tmp_path)
+    assert result.returncode == 1
+    assert "already exists" in out(result)
+    assert settings.read_bytes() == before
+    assert is_link(skills / "claude-kit")
+    assert (folder / "keep.txt").read_text(encoding="utf-8") == "x"
+
+
 def test_dangling_link_fails_cleanly(tmp_path):
     skills = tmp_path / "skills"
     skills.mkdir()
@@ -266,6 +280,48 @@ def test_marketplace_copy_present_creates_no_link(tmp_path):
     stable = home / ".claude" / "claude-kit" / "statusline.py"
     assert statusline_command(settings) == f'python "{stable.as_posix()}"'
     assert stable.is_file()
+
+
+def test_marketplace_copy_removes_own_agent_kit_link(tmp_path):
+    fake_marketplace(tmp_path / "home")
+    skills = tmp_path / "skills"
+    skills.mkdir()
+    make_dir_link(skills / "agent-kit", PLUGIN)
+    result = run_install(tmp_path)
+    assert result.returncode == 0, out(result)
+    assert not os.path.lexists(skills / "agent-kit")
+    assert "Removed" in result.stdout
+    assert PLUGIN.is_dir()
+
+
+def test_marketplace_copy_keeps_foreign_agent_kit(tmp_path):
+    fake_marketplace(tmp_path / "home")
+    skills = tmp_path / "skills"
+    folder = skills / "agent-kit"
+    folder.mkdir(parents=True)
+    (folder / "keep.txt").write_text("x", encoding="utf-8")
+    other = tmp_path / "other"
+    other.mkdir()
+    make_dir_link(skills / "claude-kit", other)
+    result = run_install(tmp_path)
+    assert result.returncode == 0, out(result)
+    assert (folder / "keep.txt").is_file()
+    assert is_link(skills / "claude-kit")
+
+
+def test_dangling_old_link_is_left_with_a_note(tmp_path):
+    skills = tmp_path / "skills"
+    skills.mkdir()
+    victim = tmp_path / "victim"
+    victim.mkdir()
+    link = skills / "claude-kit"
+    make_dir_link(link, victim)
+    victim.rmdir()
+    result = run_install(tmp_path)
+    assert result.returncode == 0, out(result)
+    assert os.path.lexists(link)
+    assert "points nowhere" in result.stdout
+    assert str(link) in result.stdout
 
 
 def test_config_dir_env_is_honoured(tmp_path):

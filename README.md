@@ -113,7 +113,8 @@ is in [`plugin/`](plugin/).
   [setup guide](docs/setup.md)): it checks the prerequisites, links
   `~/.claude/skills/agent-kit` to this folder (a junction on Windows, a
   symlink elsewhere) so edits are live, and adds the kit's status line to
-  `~/.claude/settings.json` when none is configured. The kit also
+  `~/.claude/settings.json` when none is configured. Coming from the old
+  name? See [upgrading](docs/setup.md#upgrading-from-the-old-name). The kit also
   provides two commands: `/new-project <name> <node|python>` scaffolds a new
   repo with every convention in place, and `/adopt-conventions <node|python>`
   adds the missing pieces to an existing one. Scaffolded CI pins every
