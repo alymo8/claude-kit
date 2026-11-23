@@ -43,6 +43,7 @@ def test_commands_exist_with_frontmatter():
         "ship-fast": "scripts/scaffold.py",
         "spec-html": "scripts/open-spec.py",
         "docker-compact": "scripts/docker-disk.py",
+        "statusline": "scripts/install-statusline.py",
     }
     for name, script in expected.items():
         text = (PLUGIN / "commands" / f"{name}.md").read_text(encoding="utf-8")
@@ -131,6 +132,7 @@ def test_side_effecting_commands_are_user_only():
         "adopt-conventions",
         "spec-html",
         "docker-compact",
+        "statusline",
     }
     for name in user_only | {"handoff"}:
         text = (PLUGIN / "commands" / f"{name}.md").read_text(encoding="utf-8")
@@ -252,3 +254,10 @@ def test_description_mentions_duplicate_intent():
     data = json.loads(plugin_json.read_text(encoding="utf-8"))
     assert "duplicate-intent pass" in data["description"]
     assert "function-catalog.py" in data["description"]
+
+
+def test_statusline_command_has_no_wrapper():
+    assert not (PLUGIN / "agent-skills" / "statusline").exists()
+    plugin_json = PLUGIN / ".claude-plugin" / "plugin.json"
+    data = json.loads(plugin_json.read_text(encoding="utf-8"))
+    assert "/statusline" in data["description"]
