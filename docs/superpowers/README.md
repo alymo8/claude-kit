@@ -6,6 +6,7 @@
 
 | Date | Spec | Status |
 |---|---|---|
+| 2026-11-23 | [Remove the vault tooling that moved to second-brain-kit](specs/2026-11-23-remove-vault-tooling-design.md) | approved |
 | 2026-11-18 | [Agent-agnostic kit: run the kit in Mistral Vibe, Codex and Cursor](specs/2026-11-18-agent-agnostic-kit-design.md) | approved |
 | 2026-11-18 | [`/ship-many` hardening: time limit, one resume, keep-awake](specs/2026-11-18-ship-many-hardening-design.md) | approved |
 | 2026-11-15 | [Untrusted vault content: scan raw files and keep injected text out of the wiki](specs/2026-11-15-untrusted-vault-content-design.md) | approved |
@@ -41,6 +42,7 @@
 
 | Date | Plan | Status |
 |---|---|---|
+| 2026-11-23 | [Remove vault tooling Implementation Plan](plans/2026-11-23-remove-vault-tooling.md) | draft |
 | 2026-11-18 | [Agent-agnostic kit Implementation Plan](plans/2026-11-18-agent-agnostic-kit.md) | approved |
 | 2026-11-18 | [`/ship-many` hardening Implementation Plan](plans/2026-11-18-ship-many-hardening.md) | approved |
 | 2026-11-16 | [Untrusted vault content Implementation Plan](plans/2026-11-16-untrusted-vault-content.md) | approved |
