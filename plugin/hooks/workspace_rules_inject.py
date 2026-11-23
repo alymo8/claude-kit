@@ -123,7 +123,7 @@ def build(plugin: Path, agent: str = "") -> str:
             "them; follow them as you would a CLAUDE.md."
         )
     header = (
-        f"Workspace rules (claude-kit, from {where}/rules.md). {middle} "
+        f"Workspace rules (agent-kit, from {where}/rules.md). {middle} "
         f"Relative links resolve against the plugin root, {where}."
     )
     rules = (plugin / "rules.md").read_text(encoding="utf-8").strip()
@@ -146,7 +146,7 @@ def main() -> int:
                 }
                 print(json.dumps(output))
     except Exception as exc:  # a hook must never raise
-        print(f"[claude-kit] workspace-rules inject error: {exc}", file=sys.stderr)
+        print(f"[agent-kit] workspace-rules inject error: {exc}", file=sys.stderr)
     return 0
 
 

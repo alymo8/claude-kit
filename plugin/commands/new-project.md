@@ -4,7 +4,7 @@ argument-hint: "[name] [node|python]"
 disable-model-invocation: true
 ---
 
-Scaffold a new project from the claude-kit templates. Arguments: `$ARGUMENTS`
+Scaffold a new project from the agent-kit templates. Arguments: `$ARGUMENTS`
 (expected: `<name> <node|python>`).
 
 1. If the name or the stack is missing or the stack is not `node` or `python`,
@@ -14,7 +14,8 @@ Scaffold a new project from the claude-kit templates. Arguments: `$ARGUMENTS`
    python "${CLAUDE_PLUGIN_ROOT}/scripts/scaffold.py" --name <name> --stack <stack>
 
    If `${CLAUDE_PLUGIN_ROOT}` is not expanded in this context, the script lives at
-   `~/.claude/skills/claude-kit/scripts/scaffold.py`. The project is created
+   `<plugin root>/scripts/scaffold.py`.
+   `<plugin root>` is the plugin root stated in the kit map, else `~/.claude/skills/agent-kit`. The project is created
    inside the workspace directory (the kit checkout's root), beside the other
    project repos, on `main`, with one commit. Pass `--parent <dir>` only if the
    user asks for a different location.

@@ -9,7 +9,8 @@ one line naming the opened file:
     python "${CLAUDE_PLUGIN_ROOT}/scripts/open-spec.py" "$ARGUMENTS"
 
 (Fallback if the variable is not expanded:
-`~/.claude/skills/claude-kit/scripts/open-spec.py`.)
+`<plugin root>/scripts/open-spec.py`.)
+`<plugin root>` is the plugin root stated in the kit map, else `~/.claude/skills/agent-kit`.
 
 - With a path argument (`.md` or `.html`), that file is rendered and opened.
 - With no argument, the most recently modified file under

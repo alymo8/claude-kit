@@ -11,7 +11,7 @@ Usage::
    Windows, ``caffeinate -w`` on macOS, ``systemd-inhibit`` around
    ``tail --pid`` elsewhere when found (both end with the runner);
    when none applies, carry on and record ``"keep_awake": false``.
-2. Attempt: ``claude -p "/claude-kit:ship <rel>" --permission-mode auto
+2. Attempt: ``claude -p "/agent-kit:ship <rel>" --permission-mode auto
    --permission-prompts none --output-format json`` with
    ``CLAUDE_CODE_PRINT_BG_WAIT_CEILING_MS=0``, in its own process group,
    stdout to ``<log>/<name>.json`` and stderr to ``<log>/<name>.err``. After
@@ -238,7 +238,7 @@ def run_attempt(
     claude: str, rel: str, cwd: Path, out: Path, err: Path, timeout: float
 ) -> dict:
     """Run one child; return its status entry."""
-    cmd = [claude, "-p", f"/claude-kit:ship {rel}"]
+    cmd = [claude, "-p", f"/agent-kit:ship {rel}"]
     cmd += ["--permission-mode", "auto", "--permission-prompts", "none"]
     cmd += ["--output-format", "json"]
     env = {**os.environ, "CLAUDE_CODE_PRINT_BG_WAIT_CEILING_MS": "0"}

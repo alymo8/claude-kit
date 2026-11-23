@@ -11,7 +11,7 @@ is pushed or posted before the user approves the triage table in step 4.
 
 The script is `review-threads.py` in the plugin's scripts folder:
 `python "${CLAUDE_PLUGIN_ROOT}/scripts/review-threads.py" [PR]` (fallback
-`~/.claude/skills/claude-kit/scripts/review-threads.py`). It prints JSON:
+`<plugin root>/scripts/review-threads.py`). `<plugin root>` is the plugin root stated in the kit map, else `~/.claude/skills/agent-kit`. It prints JSON:
 `pr`, `url`, `state`, `head`, `author`, `viewer`, and `items` (each a
 `thread`, `review` or `comment`; a thread has `thread_id`, `reply_to`,
 `path`, `line`, `outdated` and its `comments`). Exit 1 means `gh` failed:

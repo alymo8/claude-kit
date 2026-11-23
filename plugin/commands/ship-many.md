@@ -11,8 +11,8 @@ the merges, as `/ship` is for one. Do not ask for confirmation at any step.
 `--max N` (default 3) limits concurrent specs only; each child `/ship` still
 runs up to 3 task subagents at a time. Scripts are run as
 `python "${CLAUDE_PLUGIN_ROOT}/scripts/<name>.py"`, with the fallback
-`~/.claude/skills/claude-kit/scripts/<name>.py` when the variable is not
-expanded. Report once, at the end.
+`<plugin root>/scripts/<name>.py` when the variable is not
+expanded. `<plugin root>` is the plugin root stated in the kit map, else `~/.claude/skills/agent-kit`. Report once, at the end.
 
 ## Stop rules
 
@@ -53,7 +53,7 @@ without launching any child.
      spec, or write a record. A dry run is read-only except for `git fetch`
      (step 1), which updates remote-tracking refs.
    - Otherwise, a spec that does not print `ok:` goes through the
-     `claude-kit:spec-gate` skill, steps 1–6, in this session. A spec that
+     `agent-kit:spec-gate` skill, steps 1–6, in this session. A spec that
      passes is set to `approved`. A spec that fails is excluded and reported
      with its record's Open items; the others continue.
    - Then record each remaining spec's **title**: the first line outside code

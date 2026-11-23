@@ -74,7 +74,7 @@ def test_skill_runs_frozen_check_before_dispatch():
     for phrase in (
         "frozen-check.py",
         "--base <base>",
-        "~/.claude/skills/claude-kit/scripts/frozen-check.py",
+        "<plugin root>/scripts/frozen-check.py",
         "Frozen: skipped (no spec or plan)",
     ):
         assert phrase in text, phrase

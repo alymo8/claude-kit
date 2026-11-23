@@ -41,7 +41,7 @@ evaluated in this order; the first match wins. Messages go to stdout.
 5. Otherwise: print `index stale: run spec-index.py` and exit 1.
 
 In `--check` mode an exception is not swallowed: it prints
-`[claude-kit] spec-index error: <exc>` to stderr and exits 2.
+`[agent-kit] spec-index error: <exc>` to stderr and exits 2.
 
 Arguments: `--check` may appear in any position, and the first other argument
 is `DOCS_DIR`. With `--check`, any other argument starting with `--`, or a

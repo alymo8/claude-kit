@@ -120,5 +120,5 @@ def test_script_exit_code_is_zero_everywhere(repo, tmp_path):
 def test_script_prints_report_to_stdout(repo):
     git("branch", "old", cwd=repo)
     result = run_script(HOOK, cwd=repo)
-    assert result.stdout.startswith("[claude-kit] Leftover")
+    assert result.stdout.startswith("[agent-kit] Leftover")
     assert "old (merged)" in result.stdout

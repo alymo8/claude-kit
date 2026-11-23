@@ -49,7 +49,7 @@ def _claude_md_section(title):
 
 
 def test_claude_md_gates_plans():
-    assert "claude-kit:plan-gate" in _claude_md_section("Specs and plans")
+    assert "agent-kit:plan-gate" in _claude_md_section("Specs and plans")
 
 
 def test_claude_md_has_no_per_section_design_approval():
@@ -101,7 +101,7 @@ def test_learnings_capture_is_part_of_finishing():
         "**A feature is not finished until its workspace is gone.**", 1
     )[1]
     para = para.split("\n\n", 1)[0]
-    assert "claude-kit:capture-learnings" in para
+    assert "agent-kit:capture-learnings" in para
     convention = (CONVENTIONS / "project-memory.md").read_text(encoding="utf-8")
     assert "## Capturing learnings" in convention
     assert "capture-learnings" in convention.split("## Capturing learnings", 1)[1]

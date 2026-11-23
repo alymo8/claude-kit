@@ -67,7 +67,7 @@ def test_ages_by_written_not_by_state_refresh(repo):
 def test_mentions_other_branch_handoffs_in_one_line(repo):
     write_handoff(repo, "feature_bar", NOW - timedelta(days=2))
     text = load_module(HOOK, "inject").render(repo, NOW)
-    assert text == "[claude-kit] Handoffs exist for other branches: feature_bar (2d)"
+    assert text == "[agent-kit] Handoffs exist for other branches: feature_bar (2d)"
 
 
 def test_other_branch_stale_handoff_is_not_mentioned(repo):

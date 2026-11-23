@@ -13,7 +13,7 @@ context is printed in the agent's JSON shape; nothing collected prints nothing.
 
 Spec: docs/superpowers/specs/2026-11-18-agent-agnostic-kit-design.md (ADR 0050).
 Claude never calls this file: it keeps its own hooks.json. Always exits 0 and
-prints errors to stderr prefixed [claude-kit] (ADR 0007).
+prints errors to stderr prefixed [agent-kit] (ADR 0007).
 """
 
 from __future__ import annotations
@@ -147,14 +147,14 @@ def run_one(
             timeout=timeout,
         )
     except subprocess.TimeoutExpired:
-        print(f"[claude-kit] run.py: {name} timed out", file=sys.stderr)
+        print(f"[agent-kit] run.py: {name} timed out", file=sys.stderr)
         return ""
     except OSError as exc:
-        print(f"[claude-kit] run.py: {name} {exc}", file=sys.stderr)
+        print(f"[agent-kit] run.py: {name} {exc}", file=sys.stderr)
         return ""
     if result.returncode != 0:
         reason = f"exited {result.returncode}"
-        print(f"[claude-kit] run.py: {name} {reason}", file=sys.stderr)
+        print(f"[agent-kit] run.py: {name} {reason}", file=sys.stderr)
         return ""
     return contribution(result.stdout)
 
@@ -192,7 +192,7 @@ def optional(piece, *args) -> str:
     try:
         return piece(*args)
     except (OSError, ValueError) as exc:
-        print(f"[claude-kit] run.py: {piece.__name__} skipped: {exc}", file=sys.stderr)
+        print(f"[agent-kit] run.py: {piece.__name__} skipped: {exc}", file=sys.stderr)
         return ""
 
 
@@ -235,7 +235,7 @@ def main(argv: list[str] | None = None) -> int:
         if text:
             print(render(args.agent, args.event, text))
     except (Exception, SystemExit) as exc:  # noqa: BLE001 - never fail the session
-        print(f"[claude-kit] run.py error: {exc}", file=sys.stderr)
+        print(f"[agent-kit] run.py error: {exc}", file=sys.stderr)
     return 0
 
 

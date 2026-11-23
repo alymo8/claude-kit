@@ -28,8 +28,8 @@ your view of the work.
    from the kit map). Only files that exist.
 4. **Frozen check.** Run
    `python <this skill's directory>/../../scripts/frozen-check.py <spec> [<plan>] --base <base>`
-   (fallback: `~/.claude/skills/claude-kit/scripts/frozen-check.py`) and keep
-   its whole output for the standards reviewer. With no spec and no plan, skip
+   (fallback: `<plugin root>/scripts/frozen-check.py`) and keep
+   its whole output for the standards reviewer. `<plugin root>` is the plugin root stated in the kit map, else `~/.claude/skills/agent-kit`. With no spec and no plan, skip
    it and use `Frozen: skipped (no spec or plan)`. On exit 2, put the stderr in
    the output line given to the reviewer; it is not a finding.
 5. **Dispatch both reviewers in one message**, as new general-purpose

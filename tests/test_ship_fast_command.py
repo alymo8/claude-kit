@@ -38,7 +38,7 @@ def test_user_approves_the_spec():
 def test_names_its_pieces():
     for needle in (
         "parallel-plan.py",
-        "claude-kit:parallel-tasks",
+        "agent-kit:parallel-tasks",
         "code-review",
         "low --fix",
         "origin/main",
@@ -97,7 +97,7 @@ PRODUCT_AREAS = (
 def test_spec_phase():
     for needle in (
         "superpowers:brainstorming",
-        "claude-kit:grill",
+        "agent-kit:grill",
         "at most 7",
         "Assumed (not asked)",
         "[spec.md | idea]",
@@ -180,15 +180,15 @@ def _step(n):
 
 def test_learnings_are_captured_before_the_push():
     step = _step(7)
-    assert "claude-kit:capture-learnings" in step
-    learn = step.index("claude-kit:capture-learnings")
+    assert "agent-kit:capture-learnings" in step
+    learn = step.index("agent-kit:capture-learnings")
     assert learn < step.index("git push -u origin poc/<slug>")
 
 
 def test_frozen_check_before_each_push():
     step = _step(7)
     assert 'frozen-check.py" <spec>' in step
-    assert "~/.claude/skills/claude-kit/scripts/frozen-check.py" in step
+    assert "<plugin root>/scripts/frozen-check.py" in step
     assert "superpowers:systematic-debugging" in step
     assert step.index("frozen check") < step.index("git push -u origin poc/<slug>")
 
@@ -219,7 +219,7 @@ def test_pr_body_follows_the_reference():
 
 def test_quick_review_is_still_code_review():
     assert "code-review" in _step(6)
-    assert "claude-kit:review" not in SHIP_FAST
+    assert "agent-kit:review" not in SHIP_FAST
 
 
 def test_report_lists_learnings():

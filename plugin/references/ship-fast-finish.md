@@ -2,7 +2,7 @@
 
 Part of `commands/ship-fast.md`, which reads this file when it reaches it. That command's Stop rules and Git lock retry apply here.
 
-7. **PR.** First run the `claude-kit:capture-learnings` skill with the
+7. **PR.** First run the `agent-kit:capture-learnings` skill with the
    argument `--auto`, then run the frozen check and
    `git push -u origin poc/<slug>` (it carries any learnings commit, which
    changes no app code and needs no restart). (Each CI fix commit restarts
@@ -13,8 +13,8 @@ Part of `commands/ship-fast.md`, which reads this file when it reaches it. That 
    the title written out literally inside single quotes and each `'` in it
    written as `'\''`. Write the body by
    `${CLAUDE_PLUGIN_ROOT}/references/pr-body.md` (fallback if the variable
-   is not expanded: `~/.claude/skills/claude-kit/references/pr-body.md`):
-   its shared parts and its `/ship-fast` list. Then
+   is not expanded: `<plugin root>/references/pr-body.md`):
+   its shared parts and its `/ship-fast` list. `<plugin root>` is the plugin root stated in the kit map, else `~/.claude/skills/agent-kit`. Then
    compare `gh pr view --json title` with the title; on a mismatch run
    `gh pr edit --title '<title>'` once. Whether the repository has CI is
    decided only by whether `.github/workflows/*.yml` exists on the branch.
@@ -26,7 +26,7 @@ Part of `commands/ship-fast.md`, which reads this file when it reaches it. That 
    say so in the report.
    **Frozen check:** before each push in this step, run
    `python "${CLAUDE_PLUGIN_ROOT}/scripts/frozen-check.py" <spec>` (fallback
-   `~/.claude/skills/claude-kit/scripts/frozen-check.py`; the task list
+   `<plugin root>/scripts/frozen-check.py`; the task list
    carries no Frozen bullet). Exit 0: push. Exit 1: a stop rule. Exit 2:
    debug it with `superpowers:systematic-debugging` and rerun before
    pushing.

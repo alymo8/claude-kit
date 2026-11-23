@@ -20,7 +20,8 @@ and leave out what it does not need.
    python "${CLAUDE_PLUGIN_ROOT}/scripts/handoff.py" state
 
    (Fallback if the variable is not expanded:
-   `~/.claude/skills/claude-kit/scripts/handoff.py`.)
+   `<plugin root>/scripts/handoff.py`.)
+   `<plugin root>` is the plugin root stated in the kit map, else `~/.claude/skills/agent-kit`.
 3. Write the file at that path with exactly these sections, in this order. If
    `.claude/handoffs/.gitignore` does not exist, create it containing a single `*`
    line so the folder stays untracked in repos that do not ignore it.

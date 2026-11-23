@@ -478,7 +478,7 @@ def test_child_command_env_and_logs(rig, tmp_path):
     calls = rig.calls
     assert calls[0]["argv"] == [
         "-p",
-        f"/claude-kit:ship {rig.rel}",
+        f"/agent-kit:ship {rig.rel}",
         "--permission-mode",
         "auto",
         "--permission-prompts",

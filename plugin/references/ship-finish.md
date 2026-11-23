@@ -8,14 +8,14 @@ Part of `commands/ship.md`, which reads this file when it reaches it. That comma
    `git fetch origin && git rebase origin/main`, resolve every conflict (a
    conflict in `docs/superpowers/README.md` is resolved by running
    `python "${CLAUDE_PLUGIN_ROOT}/scripts/spec-index.py" docs/superpowers`, with
-   the fallback `~/.claude/skills/claude-kit/scripts/spec-index.py`, then
+   the fallback `<plugin root>/scripts/spec-index.py`, then
    `git add docs/superpowers/README.md`, never by hand; a conflict in a
    file from the `Capture learnings` commit keeps one copy of each
    duplicate entry, and an ADR whose number `origin/main` already uses is
    renumbered to the next free one, with its file name and index row;
    other files as before), then `git rebase --continue`, re-run
    tests, run the frozen check, `git push --force-with-lease`, return to
-   step 8. Then
+   step 8. `<plugin root>` is the plugin root stated in the kit map, else `~/.claude/skills/agent-kit`. Then
    `gh pr merge --squash --delete-branch`. Run from a worktree this exits
    non-zero *after* merging, because it cannot check out `main` here; confirm
    with `gh pr view --json state,mergeCommit` — `MERGED` means continue, and
@@ -42,7 +42,7 @@ Part of `commands/ship.md`, which reads this file when it reaches it. That comma
     `label=claude-kit.task=<slug>` filter, and never remove anything in the
     baseline. If the task used Docker, then run
     `python "${CLAUDE_PLUGIN_ROOT}/scripts/docker-disk.py"` (fallback
-    `~/.claude/skills/claude-kit/scripts/docker-disk.py`) and keep its
+    `<plugin root>/scripts/docker-disk.py`) and keep its
     `docker disk:` line for the report; it changes nothing and never prompts,
     and its verdict is not a stop rule. Run every git command as
     `git -C <main-checkout> ...`; none of them changes that checkout's files or
@@ -65,7 +65,7 @@ Part of `commands/ship.md`, which reads this file when it reaches it. That comma
 12. **Report.** One message: the PR link, the squash commit on `main`, the
     verification output from step 10, whether local `main` was fast-forwarded
     (and why not, if not), the review findings you fixed (from the review
-    in step 4 or step 6) and, per `claude-kit:review` axis (Standards,
+    in step 4 or step 6) and, per `agent-kit:review` axis (Standards,
     Spec), the findings fixed and the `judgement` findings left, the
     `Plan decisions (auto-approved)` (or `Plan decisions`) list from step 7, if
     any, the Learnings summary from step 7, the `docker disk:` line from

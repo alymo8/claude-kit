@@ -16,7 +16,7 @@ def test_on_injects_the_rule(env):
     assert result.returncode == 0
     out = json.loads(result.stdout)["hookSpecificOutput"]
     assert out["hookEventName"] == "SessionStart"
-    assert "claude-kit:lean-context" in out["additionalContext"]
+    assert "agent-kit:lean-context" in out["additionalContext"]
 
 
 def test_zero_turns_it_off():
@@ -28,7 +28,7 @@ def test_zero_turns_it_off():
 @pytest.mark.parametrize("value", ["", "yes", "true", " 0x"])
 def test_other_values_count_as_on(value):
     result = run(CLAUDE_KIT_LEAN_CONTEXT=value)
-    assert "claude-kit:lean-context" in result.stdout
+    assert "agent-kit:lean-context" in result.stdout
 
 
 def test_registered_on_session_start():

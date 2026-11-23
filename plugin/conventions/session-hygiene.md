@@ -46,9 +46,9 @@ restart cap stays.
    lives only in the conversation.
 3. **Keep the main context for what the work needs.** Read in full the code you
    change, search instead of sweeping, send long output to disk first (the
-   `claude-kit:lean-context` skill). Understanding is not waste; the restart
+   `agent-kit:lean-context` skill). Understanding is not waste; the restart
    cap limits how long it is carried (ADR 0011). The rule is on by default;
-   `CLAUDE_KIT_LEAN_CONTEXT=0` plus a `Skill(claude-kit:lean-context)` deny
+   `CLAUDE_KIT_LEAN_CONTEXT=0` plus a `Skill(agent-kit:lean-context)` deny
    switches it off (ADR 0014). The kit map, injected at session start, gives the
    plugin root and the absolute paths of these playbooks from any repo;
    `CLAUDE_KIT_KIT_MAP=0` switches it off (ADR 0032).

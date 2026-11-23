@@ -38,7 +38,7 @@ I take part by answering them and giving instructions. The spec gate and the
 plan gate review the documents, and my sign-off is each gate's verdict and
 key decisions.
 
-With `CLAUDE_KIT_GRILL=1`, the `claude-kit:grill` skill runs between the
+With `CLAUDE_KIT_GRILL=1`, the `agent-kit:grill` skill runs between the
 design summary and the spec
 ([ADR 0019](https://github.com/alymo8/claude-kit/blob/main/knowledge/decisions/0019-spec-grill-opt-in.md)); its rounds and the
 shared-understanding confirmation are the only pause.
@@ -57,13 +57,13 @@ never copy the renderer into a repo. `<plugin root>` is the plugin root stated i
 the kit map, else `~/.claude/skills/agent-kit`.
 
 **Gate every spec.** After writing or revising a spec, run the
-`claude-kit:spec-gate` skill on it before asking me to review it. My review is
+`agent-kit:spec-gate` skill on it before asking me to review it. My review is
 the gate's verdict and key decisions, answered in one line; I do not read the
 spec in full ([ADR 0015](https://github.com/alymo8/claude-kit/blob/main/knowledge/decisions/0015-spec-gate-replaces-full-read.md)).
 `/ship` requires a passing gate record under `docs/superpowers/gates/`.
 
 **Gate every plan.** After writing or revising a plan, run the
-`claude-kit:plan-gate` skill on it before offering an execution choice. A
+`agent-kit:plan-gate` skill on it before offering an execution choice. A
 `pass` goes straight to the execution choice; `pass-with-decisions` needs my
 one-line OK on the decisions it lists first; I do not read the plan
 ([ADR 0016](https://github.com/alymo8/claude-kit/blob/main/knowledge/decisions/0016-plan-gate-signs-off-on-new-decisions-only.md)).
@@ -105,7 +105,7 @@ Then build in an isolated worktree using `superpowers:using-git-worktrees`, afte
 pulling the latest `main` so the worktree branches from up-to-date code.
 
 **A feature is not finished until its workspace is gone.** Before the branch merges,
-run the `claude-kit:capture-learnings` skill so the feature's learnings land in its
+run the `agent-kit:capture-learnings` skill so the feature's learnings land in its
 PR. When the work is merged (or I have explicitly abandoned it), use
 `superpowers:finishing-a-development-branch`
 to integrate and clean up: the worktree removed and pruned, the branch deleted

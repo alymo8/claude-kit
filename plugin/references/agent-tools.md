@@ -1,4 +1,4 @@
-# claude-kit agent tools
+# agent-kit agent tools
 
 The kit's commands, skills and references are written for Claude Code. In this
 agent, read their Claude wording as follows.
@@ -7,7 +7,7 @@ The kit's plugin folder is <plugin>.
 
 ## Skill names
 
-`superpowers:<name>` and `claude-kit:<name>` mean the skill `<name>`. Load it
+`superpowers:<name>` and `agent-kit:<name>` mean the skill `<name>`. Load it
 the way this agent loads any skill.
 
 ## Subagents
@@ -32,9 +32,9 @@ A slash command such as `/ship`: run the wrapper skill of the same name.
 
 ## Paths
 
-`${CLAUDE_PLUGIN_ROOT}` means <plugin>. Every `~/.claude/skills/claude-kit`
-path in any kit command, skill or reference (for example spec-gate's linter
-fallback) also means <plugin>.
+`${CLAUDE_PLUGIN_ROOT}` means <plugin>. So do `<plugin root>`, the plugin root
+stated in the kit map, and every `~/.claude/skills/agent-kit` path in any kit
+command, skill or reference (for example spec-gate's linter fallback).
 
 ## Claude Code built-in skills
 

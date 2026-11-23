@@ -14,7 +14,7 @@ keyboard. The [knowledge layer](knowledge-layer.md) feeds this flow, and the
    work.)
 
    With the kit's opt-in grill on (`CLAUDE_KIT_GRILL=1`), the
-   `claude-kit:grill` skill then interviews you on the agreed design and a
+   `agent-kit:grill` skill then interviews you on the agreed design and a
    coverage checklist (`plugin/skills/grill/coverage.md`) before the spec is
    written.
 2. **Spec.** Write a design document that captures *what* is being built and *why*:
@@ -78,7 +78,7 @@ A good spec answers, in roughly this order:
 
 ## Spec gate
 
-Every spec passes the kit's spec gate (`claude-kit:spec-gate`) before review.
+Every spec passes the kit's spec gate (`agent-kit:spec-gate`) before review.
 The gate lints the spec with `plugin/scripts/spec-lint.py`, then runs up to
 three discovery rounds of a fresh-context reviewer that tries to plan the
 work from the spec alone. A finding is `[blocking]` only in one of six
@@ -112,7 +112,7 @@ stale, `/ship` runs the gate itself, and stops if the gate fails.
 
 ## Plan gate
 
-Every plan passes the kit's plan gate (`claude-kit:plan-gate`) before it is
+Every plan passes the kit's plan gate (`agent-kit:plan-gate`) before it is
 executed. The gate lints the plan with `plugin/scripts/spec-lint.py` (plan
 rules apply to files in a `plans` folder), then runs up to three discovery
 rounds of a fresh-context reviewer that maps every spec item to a task, tries
@@ -175,7 +175,7 @@ without the line runs after every earlier task, so plans without these lines
 run exactly as before. `plugin/scripts/parallel-plan.py waves` groups tasks
 into waves: tasks in a wave share no file (from their Create, Modify and Test
 bullets) and depend on no task in the same wave. Under `/ship`, a wave with
-more than one task runs through `claude-kit:parallel-tasks`: one subagent and
+more than one task runs through `agent-kit:parallel-tasks`: one subagent and
 git worktree per task, merged back in task order
 ([ADR 0017](https://github.com/alymo8/claude-kit/blob/main/knowledge/decisions/0017-parallel-plan-tasks.md)); every
 other task under `/ship` runs through

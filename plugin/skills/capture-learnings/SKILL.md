@@ -86,7 +86,7 @@ build them only on a yes, as a separate commit with its tests.
      in the same `Capture learnings` commit. If the file is missing, create
      it with frontmatter `title: Review standards`, `status: stable`,
      `last_updated: <today>`, `sources: []`, then one line saying it is
-     read by the standards reviewer of `claude-kit:review` and not by
+     read by the standards reviewer of `agent-kit:review` and not by
      implementers, then `## Rules`; if `knowledge/README.md` exists, add a
      row for it in its map. Never link this file from `CLAUDE.md` or any
      file an implementer loads at session start.

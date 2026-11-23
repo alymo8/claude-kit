@@ -1,6 +1,6 @@
 # Setting up the kit
 
-How to install claude-kit on a new machine, on Windows, macOS or Linux, and
+How to install agent-kit on a new machine, on Windows, macOS or Linux, and
 work the same way as everyone else on the team.
 
 ## Prerequisites
@@ -26,7 +26,7 @@ work the same way as everyone else on the team.
 
 ```
 git clone https://github.com/alymo8/claude-kit.git
-cd claude-kit
+cd agent-kit
 python plugin/install.py
 ```
 
@@ -34,7 +34,7 @@ The installer detects the OS (Windows, macOS or Linux) and prints it; it
 never asks. It checks `python` first and stops with the fix for that OS if it
 is missing or older than 3.11, changing nothing. On macOS the fix names the
 exact Homebrew folder to add when one is installed. It then links
-`~/.claude/skills/claude-kit` to the checkout's `plugin/` folder (a junction
+`~/.claude/skills/agent-kit` to the checkout's `plugin/` folder (a junction
 on Windows, a symlink elsewhere), so the kit loads in place and edits are
 live. It adds the kit's status line to `~/.claude/settings.json` when none is
 set, and warns if `git`, `gh` or superpowers is missing. Running it again is
@@ -81,7 +81,7 @@ are reported as `Skipped`; remove them by hand and rerun.
 
 Next steps:
 
-- Codex: run `/hooks` and trust the claude-kit hooks.
+- Codex: run `/hooks` and trust the agent-kit hooks.
 - Vibe and Cursor: start a new session.
 - Cursor runs session-start hooks without waiting for them, so the kit map
   may not reach the model. If it does not, paste the line the installer
@@ -118,7 +118,7 @@ it to `vibe`, `codex` or `cursor` for the hooks it runs.
 
 | Variable | Default | Effect |
 |---|---|---|
-| `CLAUDE_KIT_LEAN_CONTEXT` | on | `0` stops injecting the lean-context rule (also deny `Skill(claude-kit:lean-context)`) |
+| `CLAUDE_KIT_LEAN_CONTEXT` | on | `0` stops injecting the lean-context rule (also deny `Skill(agent-kit:lean-context)`) |
 | `CLAUDE_KIT_PRECOMPACT` | on | `0` stops steering the compaction summary toward dead ends and open problems |
 | `CLAUDE_KIT_KIT_MAP` | on | `0` stops injecting the kit map |
 | `CLAUDE_KIT_WORKSPACE_RULES` | on | `0` stops injecting the workspace rules in repos outside the kit folder |

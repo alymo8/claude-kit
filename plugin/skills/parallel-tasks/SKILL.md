@@ -22,7 +22,7 @@ built at the same time.
   that fails with `Unable to create '...lock': File exists` or
   `cannot lock ref` is retried after 5 seconds, up to 5 times.
 - **Caller.** The caller is `/ship` when this session's run was started by
-  `/ship` or `/claude-kit:ship`; otherwise (`/ship-fast` or a manual run) it
+  `/ship` or `/agent-kit:ship`; otherwise (`/ship-fast` or a manual run) it
   is any other caller. SDD means `superpowers:subagent-driven-development`.
   SDD and `superpowers:executing-plans` share one ledger workspace, so the
   ledger step 1 sets up is the one SDD's task loop writes to.

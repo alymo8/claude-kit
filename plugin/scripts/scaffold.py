@@ -110,9 +110,9 @@ def commit_all(dest: Path, message: str) -> None:
     if not (name_set and email_set):
         identity = [
             "-c",
-            "user.name=claude-kit",
+            "user.name=agent-kit",
             "-c",
-            "user.email=claude-kit@localhost",
+            "user.email=agent-kit@localhost",
         ]
     make_executable(dest / HOOK_PATH)
     for args in (
@@ -138,7 +138,7 @@ def scaffold_new(name: str, stack: str, parent: Path) -> Path:
         raise SystemExit(f"error: {exc}") from exc
     write_files(dest, files)
     try:
-        commit_all(dest, "Scaffold project from claude-kit")
+        commit_all(dest, "Scaffold project from agent-kit")
     except (SystemExit, OSError) as exc:
         if created_dir:
             shutil.rmtree(dest, ignore_errors=True)

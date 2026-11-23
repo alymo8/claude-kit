@@ -36,7 +36,7 @@ def main() -> int:
             prompts = _transcript.recent_prompts(tail)
         handoff.snapshot(cwd, prompts)
     except Exception as exc:  # a hook must never raise
-        print(f"[claude-kit] handoff snapshot error: {exc}", file=sys.stderr)
+        print(f"[agent-kit] handoff snapshot error: {exc}", file=sys.stderr)
     return 0
 
 

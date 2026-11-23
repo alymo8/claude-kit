@@ -103,7 +103,7 @@ def test_docs_wire_the_gate():
     def text(rel):
         return (REPO / rel).read_text(encoding="utf-8")
 
-    assert "claude-kit:spec-gate" in text("plugin/rules.md")
+    assert "agent-kit:spec-gate" in text("plugin/rules.md")
     assert "## Spec gate" in text("plugin/conventions/spec-driven-development.md")
     adr = "0015-spec-gate-replaces-full-read.md"
     assert (REPO / "knowledge" / "decisions" / adr).is_file()
@@ -157,7 +157,7 @@ def test_pass_message_sends_the_user_to_a_fresh_ship_session():
     passed = step7.split("**pass:**", 1)[1].split("**fail:**", 1)[0]
     passed = " ".join(passed.split())
     assert "/clear" in passed
-    assert "/claude-kit:ship docs/superpowers/specs/" in passed
+    assert "/agent-kit:ship docs/superpowers/specs/" in passed
 
 
 def test_rubric_checks_frozen_bullet():

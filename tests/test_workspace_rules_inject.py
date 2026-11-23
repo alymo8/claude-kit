@@ -53,7 +53,7 @@ def test_outside_any_kit_injects_rules(tmp_path):
     result = run(CLAUDE_PROJECT_DIR=str(tmp_path))
     assert result.returncode == 0, result.stderr
     text = context(result)
-    assert text.startswith("Workspace rules (claude-kit, from ")
+    assert text.startswith("Workspace rules (agent-kit, from ")
     assert f"{PLUGIN.as_posix()}/rules.md" in text
     assert "## How we work" in text
     assert "## Developing the kit" not in text

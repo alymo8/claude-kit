@@ -54,7 +54,7 @@ def playbooks(root: Path) -> list[tuple[str, Path]]:
 
 def build_map(root: Path) -> str:
     lines = [
-        "Kit map (claude-kit). Relative links in the workspace rules and the "
+        "Kit map (agent-kit). Relative links in the workspace rules and the "
         "playbooks resolve against the plugin root, not the current repo.",
         f"Plugin root: {root.as_posix()}",
     ]
@@ -76,7 +76,7 @@ def main() -> int:
             }
             print(json.dumps(output))
     except Exception as exc:  # a hook must never raise
-        print(f"[claude-kit] kit-map inject error: {exc}", file=sys.stderr)
+        print(f"[agent-kit] kit-map inject error: {exc}", file=sys.stderr)
     return 0
 
 

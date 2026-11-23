@@ -29,7 +29,7 @@ def main() -> int:
         if enabled():
             print(INSTRUCTION)
     except Exception as exc:  # a hook must never raise
-        print(f"[claude-kit] precompact error: {exc}", file=sys.stderr)
+        print(f"[agent-kit] precompact error: {exc}", file=sys.stderr)
     return 0
 
 

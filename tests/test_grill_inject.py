@@ -15,7 +15,7 @@ def test_one_injects_the_rule():
     assert result.returncode == 0
     out = json.loads(result.stdout)["hookSpecificOutput"]
     assert out["hookEventName"] == "SessionStart"
-    assert "claude-kit:grill" in out["additionalContext"]
+    assert "agent-kit:grill" in out["additionalContext"]
     assert "## Coverage" in out["additionalContext"]
 
 

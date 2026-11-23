@@ -136,3 +136,70 @@ def test_agents_md_imports_rules():
     assert "python ../plugin" not in rules
     assert "](docs/" not in rules
     assert "https://github.com/alymo8/claude-kit/blob/main/docs/setup.md" in rules
+
+
+ALLOWED = (
+    "<config>/claude-kit/",
+    "alymo8/claude-kit",
+    "claude-kit.task",
+    ".claude/claude-kit/",
+    '"claude-kit" / "nudge-level"',
+    "/claude-kit/nudge-level",
+    "claude-kit-nudge-",
+    'STATE_FOLDER = "claude-kit"',
+)
+RENAME_SKIP_PREFIXES = ("docs/superpowers/", "docs/audit/", "knowledge/", "vendor/")
+RENAME_SKIP_FILES = {
+    "tests/test_publish.py",
+    "tests/test_install.py",
+    "tests/test_install_statusline.py",
+    "tests/test_spec_index.py",
+}
+LEGACY_FILES = {
+    "plugin/install.py",
+    "plugin/scripts/install-statusline.py",
+    "plugin/scripts/spec-index.py",
+}
+LEGACY_RE = re.compile(r"^\s*LEGACY_\w+ = ")
+
+
+def test_claude_kit_only_in_allowed_places():
+    hits = []
+    for rel in tracked():
+        if rel.startswith(RENAME_SKIP_PREFIXES) or rel in RENAME_SKIP_FILES:
+            continue
+        try:
+            text = (REPO / rel).read_text(encoding="utf-8")
+        except (UnicodeDecodeError, OSError):
+            continue
+        for number, line in enumerate(text.splitlines(), 1):
+            if rel in LEGACY_FILES and LEGACY_RE.match(line):
+                continue
+            for allowed in ALLOWED:
+                line = line.replace(allowed, "")
+            if "claude-kit" in line:
+                hits.append(f"{rel}:{number}")
+    assert not hits, "\n".join(hits)
+
+
+def test_no_plugin_file_names_old_skills_link():
+    hits = []
+    for rel in tracked("plugin"):
+        try:
+            text = (REPO / rel).read_text(encoding="utf-8")
+        except (UnicodeDecodeError, OSError):
+            continue
+        if "skills/claude-kit" in text:
+            hits.append(rel)
+    assert not hits, hits
+
+
+def test_fallbacks_name_the_kit_map_root():
+    bad = []
+    for sub in ("commands", "skills", "references"):
+        for md in sorted((PLUGIN / sub).rglob("*.md")):
+            text = " ".join(md.read_text(encoding="utf-8").split())
+            if "~/.claude/skills/agent-kit" in text or "<plugin root>/" in text:
+                if "the plugin root stated in the kit map" not in text:
+                    bad.append(md.relative_to(PLUGIN).as_posix())
+    assert not bad, bad

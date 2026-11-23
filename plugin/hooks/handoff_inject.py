@@ -66,7 +66,7 @@ def render(cwd: Path, now: datetime) -> str:
         if delta <= limit:
             others.append(f"{path.stem} ({age_text(delta)})")
     if others:
-        return "[claude-kit] Handoffs exist for other branches: " + ", ".join(others)
+        return "[agent-kit] Handoffs exist for other branches: " + ", ".join(others)
     return ""
 
 
@@ -81,7 +81,7 @@ def main() -> int:
         if text:
             print(text)
     except Exception as exc:  # a hook must never raise
-        print(f"[claude-kit] handoff inject error: {exc}", file=sys.stderr)
+        print(f"[agent-kit] handoff inject error: {exc}", file=sys.stderr)
     return 0
 
 

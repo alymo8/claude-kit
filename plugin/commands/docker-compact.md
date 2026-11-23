@@ -10,8 +10,9 @@ does not apply and stop. Run every command below in PowerShell.
 ## Steps
 
 1. Run `python "${CLAUDE_PLUGIN_ROOT}/scripts/docker-disk.py"` (fallback:
-   `python ~/.claude/skills/claude-kit/scripts/docker-disk.py`) and show the
+   `python <plugin root>/scripts/docker-disk.py`) and show the
    line it prints.
+   `<plugin root>` is the plugin root stated in the kit map, else `~/.claude/skills/agent-kit`.
    - If the line says `skipped`, report it and stop: there is nothing to
      compact.
    - If the verdict lacks `compact suggested`, say so (when it shows

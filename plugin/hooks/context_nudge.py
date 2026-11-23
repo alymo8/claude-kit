@@ -41,7 +41,7 @@ def message(tokens: int) -> str:
     return (
         f"Context is at {tokens // 1000}k tokens; every turn now re-sends all of "
         "it. At the next natural boundary, run /handoff and then /clear. "
-        "(claude-kit session hygiene)"
+        "(agent-kit session hygiene)"
     )
 
 
@@ -106,7 +106,7 @@ def main() -> int:
             )
         )
     except Exception as exc:  # a hook must never raise
-        print(f"[claude-kit] context nudge error: {exc}", file=sys.stderr)
+        print(f"[agent-kit] context nudge error: {exc}", file=sys.stderr)
     return 0
 
 

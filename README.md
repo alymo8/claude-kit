@@ -102,7 +102,7 @@ is in [`plugin/`](plugin/).
   and nudge past a context threshold at the right moments;
   snapshot git state at session end). Install once per machine, on any OS,
   with `python plugin/install.py` (see the [setup guide](docs/setup.md)) —
-  it checks the prerequisites, links `~/.claude/skills/claude-kit` to this
+  it checks the prerequisites, links `~/.claude/skills/agent-kit` to this
   folder (a junction on Windows, a symlink elsewhere) so edits are live, and
   adds the kit's status line to `~/.claude/settings.json` when none is
   configured. It also

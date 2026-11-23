@@ -17,7 +17,8 @@ can settle do not block: they are handed to the plan.
 - **Spec:** `$ARGUMENTS` if given, else the `*.md` under `docs/superpowers/specs/`
   whose file name sorts last (the newest date prefix). Name it in one line.
 - **Linter:** `python <this skill's directory>/../../scripts/spec-lint.py`
-  (fallback: `~/.claude/skills/claude-kit/scripts/spec-lint.py`).
+  (fallback: `<plugin root>/scripts/spec-lint.py`).
+  `<plugin root>` is the plugin root stated in the kit map, else `~/.claude/skills/agent-kit`.
 - **Rubric:** `rubric.md` in this skill's directory (discovery rounds).
 - **Verify rubric:** `verify.md` in this skill's directory (verification
   rounds).
@@ -135,7 +136,7 @@ can settle do not block: they are handed to the plan.
      approved?". On yes, set the spec's Status bullet to `approved` (the hash
      ignores that line, so the record stays valid). The reply confirming it
      ends with this line, the spec's repo-relative path filled in: "Next: run
-     `/clear`, then `/claude-kit:ship docs/superpowers/specs/<file>`."
+     `/clear`, then `/agent-kit:ship docs/superpowers/specs/<file>`."
    - **fail:** "Gate failed." Then each Open item as a direct question with
      the options and your recommendation. After the user answers, update the
      spec and run the gate again from step 1.
