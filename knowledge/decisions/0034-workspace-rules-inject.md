@@ -1,6 +1,6 @@
 # ADR 0034: Workspace rules injected outside the kit folder
 
-- **Status:** accepted; amended by 0050 ([ADR 0050](0050-agent-agnostic-kit.md): rules now live in AGENTS.md; non-Claude agents also get them in child repos inside the kit folder)
+- **Status:** accepted; amended by 0050 ([ADR 0050](0050-agent-agnostic-kit.md): rules now live in AGENTS.md; non-Claude agents also get them in child repos inside the kit folder); amended by 0052 ([ADR 0052](0052-published-plugin.md): the rules come from `plugin/rules.md`)
 - **Date:** 2026-10-13
 
 ## Context

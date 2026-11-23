@@ -24,8 +24,52 @@ work the same way as everyone else on the team.
 
 ## Install
 
+In Claude Code, run:
+
 ```
-git clone https://github.com/alymo8/claude-kit.git
+/plugin install superpowers@claude-plugins-official
+/plugin marketplace add alymo8/claude-kit
+/plugin install agent-kit@agent-kit
+```
+
+Optionally run `/agent-kit:statusline` to add the kit's status line.
+
+To update, marketplace users get a new version through `/plugin` when the
+version changes.
+
+### For your company admin
+
+Managed work laptops often allowlist the sources plugins may come from, so
+the marketplace commands above fail until an admin allows them. Add this to
+the managed settings to allow the kit and superpowers, and to install both
+for every user:
+
+```json
+{
+  "strictKnownMarketplaces": [
+    {"source": "github", "repo": "anthropics/claude-plugins-official"},
+    {"source": "github", "repo": "alymo8/claude-kit"},
+    {"source": "skills-dir"}
+  ],
+  "extraKnownMarketplaces": {
+    "agent-kit": {"source": {"source": "github", "repo": "alymo8/claude-kit"}}
+  },
+  "enabledPlugins": {
+    "agent-kit@agent-kit": true,
+    "superpowers@claude-plugins-official": true
+  }
+}
+```
+
+`{"source": "skills-dir"}` keeps the contributor install (a link under
+`~/.claude/skills/`) working. See
+<https://code.claude.com/docs/en/plugins/org.md> for where managed settings
+live and what each key does.
+
+### From a checkout (contributors)
+
+```
+git clone https://github.com/alymo8/claude-kit.git agent-kit
 cd agent-kit
 python plugin/install.py
 ```
@@ -39,12 +83,15 @@ on Windows, a symlink elsewhere), so the kit loads in place and edits are
 live. It adds the kit's status line to `~/.claude/settings.json` when none is
 set, and warns if `git`, `gh` or superpowers is missing. Running it again is
 safe. Start a new Claude Code session (or run `/reload-plugins`) afterwards.
+The installer removes the old link from before the rename to `agent-kit` and
+migrates its status line,
+and does not link when the marketplace copy of `agent-kit` is installed.
 
 On Windows you can also run `plugin\install.ps1`, which wraps the same
 installer. If PowerShell refuses to run it (execution policy), use
 `powershell -ExecutionPolicy Bypass -File plugin\install.ps1`.
 
-To update, `git pull` in the checkout. Skill and command edits are live;
+To update a checkout, `git pull` in it. Skill and command edits are live;
 hook edits need a new session or `/reload-plugins`.
 
 ## Using the kit with Vibe, Codex or Cursor
@@ -78,6 +125,9 @@ not read `CODEX_HOME` or `VIBE_HOME`: if you moved an agent's home, link the
 skills and edit its hook file by hand, or point `--home` at the folder that
 holds `.codex` or `.vibe`. Links into a kit checkout you have since deleted
 are reported as `Skipped`; remove them by hand and rerun.
+
+Vibe, Codex and Cursor users: rerun the installer after updating the
+checkout, once per agent, until a native Vibe plugin exists.
 
 Next steps:
 

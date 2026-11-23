@@ -100,12 +100,20 @@ is in [`plugin/`](plugin/).
   index after edits and at every stop; report leftover worktrees, inject the
   branch handoff, inject the lean-context rule unless `CLAUDE_KIT_LEAN_CONTEXT=0`, inject the kit map unless `CLAUDE_KIT_KIT_MAP=0`, inject the workspace rules in repos outside the kit folder unless `CLAUDE_KIT_WORKSPACE_RULES=0`, inject the grill rule when `CLAUDE_KIT_GRILL=1`,
   and nudge past a context threshold at the right moments;
-  snapshot git state at session end). Install once per machine, on any OS,
-  with `python plugin/install.py` (see the [setup guide](docs/setup.md)) —
-  it checks the prerequisites, links `~/.claude/skills/agent-kit` to this
-  folder (a junction on Windows, a symlink elsewhere) so edits are live, and
-  adds the kit's status line to `~/.claude/settings.json` when none is
-  configured. It also
+  snapshot git state at session end). Install once per machine from the
+  marketplace, in Claude Code:
+  `/plugin install superpowers@claude-plugins-official`,
+  `/plugin marketplace add alymo8/claude-kit`, then
+  `/plugin install agent-kit@agent-kit`; optionally run
+  `/agent-kit:statusline` to add the kit's status line. On a managed
+  laptop, see "For your company admin" in the
+  [setup guide](docs/setup.md#for-your-company-admin). Contributors, and
+  Vibe, Codex and Cursor users, install from a checkout with
+  `python plugin/install.py` instead (see the
+  [setup guide](docs/setup.md)): it checks the prerequisites, links
+  `~/.claude/skills/agent-kit` to this folder (a junction on Windows, a
+  symlink elsewhere) so edits are live, and adds the kit's status line to
+  `~/.claude/settings.json` when none is configured. The kit also
   provides two commands: `/new-project <name> <node|python>` scaffolds a new
   repo with every convention in place, and `/adopt-conventions <node|python>`
   adds the missing pieces to an existing one. Scaffolded CI pins every

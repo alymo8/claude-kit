@@ -1,6 +1,6 @@
 # ADR 0033: Cross-platform Python installer
 
-- **Status:** accepted
+- **Status:** accepted; amended by 0052 ([ADR 0052](0052-published-plugin.md): the installer migrates old `claude-kit` links, status lines and agent blocks)
 - **Date:** 2026-10-13
 
 ## Context
