@@ -1,7 +1,10 @@
 # ADR 0040: A personal vault scaffolded and served by the kit
 
-- **Status:** accepted
-- **Date:** 2026-11-10
+- **Status:** moved
+- **Date:** 2026-11-10 (moved 2026-11-23)
+
+The tooling this ADR describes moved to the second-brain-kit plugin
+(ADR 0051). The record below is kept as history.
 
 ## Context
 The user wants a personal knowledge base (people, topics, sources, tasks)

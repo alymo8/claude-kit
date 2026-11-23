@@ -45,14 +45,15 @@ the next number; superseded ones are never deleted.
 | [0037](0037-lean-ship-orchestrator.md) | `/ship`'s main session coordinates; subagents write the plan and the code | accepted | 2026-10-20 |
 | [0038](0038-docker-disk-upkeep-outside-cleanup.md) | Docker disk upkeep runs outside the per-feature clean-up | accepted | 2026-10-21 |
 | [0039](0039-handoff-ages-by-written.md) | A handoff ages by its Written date, not by the session-end refresh | accepted | 2026-10-30 |
-| [0040](0040-personal-vault.md) | A personal vault scaffolded and served by the kit | accepted | 2026-11-10 |
+| [0040](0040-personal-vault.md) | A personal vault scaffolded and served by the kit | moved | 2026-11-10 |
 | [0041](0041-two-axis-review-in-ship.md) | Two-axis review in `/ship` | accepted | 2026-11-10 |
 | [0042](0042-frozen-evaluator-diff-check.md) | Frozen evaluator as a diff check and a stop rule | accepted | 2026-11-10 |
 | [0043](0043-harden-in-capture-learnings.md) | Harden step in capture-learnings | accepted | 2026-11-10 |
 | [0044](0044-surgical-diffs-and-simplicity.md) | Surgical diffs and simplicity | accepted | 2026-11-10 |
 | [0045](0045-merge-danger-in-pr-bodies.md) | Merge Danger in PR bodies | accepted | 2026-11-10 |
 | [0046](0046-installer-detects-os.md) | The installer detects the OS and never asks | accepted | 2026-11-15 |
-| [0047](0047-untrusted-vault-content.md) | Untrusted vault content | accepted | 2026-11-16 |
+| [0047](0047-untrusted-vault-content.md) | Untrusted vault content | moved | 2026-11-16 |
 | [0048](0048-user-config-audit.md) | User-config audit is a mode of audit, reports outside repos, never reads secrets | accepted | 2026-11-16 |
 | [0049](0049-ship-many-child-runner.md) | `/ship-many` children run through a runner with a time limit, one resume and keep-awake | accepted | 2026-11-18 |
 | [0050](0050-agent-agnostic-kit.md) | The kit runs in Mistral Vibe, Codex and Cursor from one source | accepted | 2026-11-22 |
+| [0051](0051-vault-tooling-split.md) | The vault tooling lives in second-brain-kit | accepted | 2026-11-23 |
