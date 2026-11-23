@@ -6,7 +6,7 @@ import subprocess
 import sys
 
 import pytest
-from helpers import PLUGIN, REPO, clean_env, load_module, run_script
+from helpers import CONVENTIONS, PLUGIN, clean_env, load_module, run_script
 
 HOOK = PLUGIN / "hooks" / "kit_map_inject.py"
 ROW = re.compile(r"^\|\s*\[([^\]]+)\]\(([^)#\s]+\.md)\)\s*\|")
@@ -25,7 +25,7 @@ def context(result) -> str:
 def readme_playbooks() -> list[str]:
     """Parse the playbook table independently of the hook."""
     files, section = [], False
-    readme = REPO / "conventions" / "README.md"
+    readme = CONVENTIONS / "README.md"
     for line in readme.read_text(encoding="utf-8").splitlines():
         if line.startswith("## "):
             section = line.strip() == "## The playbooks"
@@ -41,15 +41,29 @@ def test_on_by_default_lists_root_and_every_playbook(env):
     result = run(**env)
     assert result.returncode == 0
     text = context(result)
-    assert f"Kit root: {REPO.as_posix()}." in text
+    assert f"Plugin root: {PLUGIN.as_posix()}" in text
     files = readme_playbooks()
     assert len(files) == 6
     for name in files:
-        path = REPO / "conventions" / name
+        path = CONVENTIONS / name
         assert path.is_file()
         assert path.as_posix() in text
-    assert f"Kit ADRs: {(REPO / 'knowledge' / 'decisions').as_posix()}/" in text
-    assert "resolve against the kit root" in text
+    assert "Kit ADRs" not in text
+    assert "resolve against the plugin root" in text
+
+
+def test_copy_outside_checkout_lists_root_and_playbooks_inside_it(tmp_path):
+    copy = tmp_path / "cache" / "agent-kit" / "1.0.0"
+    shutil.copytree(PLUGIN, copy, ignore=shutil.ignore_patterns("__pycache__"))
+    result = run(copy / "hooks" / HOOK.name)
+    assert result.returncode == 0, result.stderr
+    text = context(result)
+    root = copy.resolve().as_posix()
+    assert f"Plugin root: {root}" in text
+    rows = [line for line in text.splitlines() if line.startswith("- ")]
+    assert len(rows) == 6
+    for line in rows:
+        assert f"{root}/" in line
 
 
 def test_zero_turns_it_off():
@@ -69,16 +83,19 @@ def make_kit(tmp_path, readme: str):
     (kit / "plugin" / "hooks").mkdir(parents=True)
     shutil.copy(HOOK, kit / "plugin" / "hooks" / HOOK.name)
     if readme is not None:
-        (kit / "conventions").mkdir()
-        (kit / "conventions" / "README.md").write_text(readme, encoding="utf-8")
+        (kit / "plugin" / "conventions").mkdir()
+        readme_file = kit / "plugin" / "conventions" / "README.md"
+        readme_file.write_text(readme, encoding="utf-8")
     return kit
 
 
-def test_missing_conventions_prints_nothing(tmp_path):
+def test_missing_conventions_prints_root_only(tmp_path):
     kit = make_kit(tmp_path, None)
     result = run(kit / "plugin" / "hooks" / HOOK.name)
     assert result.returncode == 0
-    assert result.stdout == ""
+    text = context(result)
+    assert "Plugin root:" in text
+    assert "Playbooks" not in text
 
 
 def test_missing_playbook_file_is_skipped(tmp_path):
@@ -87,7 +104,7 @@ def test_missing_playbook_file_is_skipped(tmp_path):
         "| [Real](real.md) | x |\n| [Ghost](ghost.md) | y |\n"
     )
     kit = make_kit(tmp_path, readme)
-    (kit / "conventions" / "real.md").write_text("x", encoding="utf-8")
+    (kit / "plugin" / "conventions" / "real.md").write_text("x", encoding="utf-8")
     text = context(run(kit / "plugin" / "hooks" / HOOK.name))
     assert "- Real: " in text
     assert "Ghost" not in text
@@ -101,7 +118,7 @@ def test_only_playbooks_section_is_parsed(tmp_path):
     )
     kit = make_kit(tmp_path, readme)
     for name in ("real.md", "other.md"):
-        (kit / "conventions" / name).write_text("x", encoding="utf-8")
+        (kit / "plugin" / "conventions" / name).write_text("x", encoding="utf-8")
     text = context(run(kit / "plugin" / "hooks" / HOOK.name))
     assert "- Real: " in text
     assert "Other" not in text
@@ -110,7 +127,7 @@ def test_only_playbooks_section_is_parsed(tmp_path):
 def test_zero_rows_omits_playbook_list(tmp_path):
     kit = make_kit(tmp_path, "## The playbooks\n\nnothing\n")
     text = context(run(kit / "plugin" / "hooks" / HOOK.name))
-    assert "Kit root:" in text
+    assert "Plugin root:" in text
     assert "Playbooks" not in text
 
 
@@ -139,12 +156,12 @@ def plugin_link(tmp_path):
 
 def test_resolves_through_link(plugin_link):
     text = context(run(plugin_link / "hooks" / HOOK.name))
-    assert f"Kit root: {REPO.as_posix()}." in text
+    assert f"Plugin root: {PLUGIN.as_posix()}" in text
 
 
 def test_build_map_uses_link_text_verbatim():
     module = load_module(HOOK, "kit_map_inject")
-    assert "- Decision log (ADRs): " in module.build_map(REPO)
+    assert "- Decision log (ADRs): " in module.build_map(PLUGIN)
 
 
 def test_registered_on_session_start_without_matcher():
@@ -167,14 +184,13 @@ def test_lean_context_pointers_name_playbook_via_kit_map():
         encoding="utf-8"
     )
     assert POINTER in skill
-    assert "`conventions/session-hygiene.md` in the kit" not in skill
 
 
 def test_rows_outside_conventions_are_ignored(tmp_path):
     readme = "## The playbooks\n\n| [Up](../up.md) | x |\n| [Real](real.md) | y |\n"
     kit = make_kit(tmp_path, readme)
-    (kit / "up.md").write_text("x", encoding="utf-8")
-    (kit / "conventions" / "real.md").write_text("x", encoding="utf-8")
+    (kit / "plugin" / "up.md").write_text("x", encoding="utf-8")
+    (kit / "plugin" / "conventions" / "real.md").write_text("x", encoding="utf-8")
     text = context(run(kit / "plugin" / "hooks" / HOOK.name))
     assert "- Real: " in text
     assert "Up" not in text

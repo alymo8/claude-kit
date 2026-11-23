@@ -64,7 +64,7 @@ def test_kit_references_scan_set(tmp_path):
     write(tmp_path / "plugin" / "a" / "x.md", "superpowers:aaa")
     write(tmp_path / "docs" / "y.md", "superpowers:bbb")
     write(tmp_path / "AGENTS.md", "superpowers:ccc")
-    write(tmp_path / "conventions" / "z.md", "superpowers:ddd")
+    write(tmp_path / "plugin" / "conventions" / "z.md", "superpowers:ddd")
     assert mod.kit_references(tmp_path) == {"aaa", "ccc", "ddd"}
 
 

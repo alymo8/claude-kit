@@ -111,7 +111,7 @@ def test_kit_secret_scan_matches_template():
     assert KIT_SECRET_SCAN.read_bytes() == SECRET_SCAN.read_bytes()
 
 
-CONVENTION = PLUGIN.parent / "conventions" / "decision-log.md"
+CONVENTION = PLUGIN / "conventions" / "decision-log.md"
 DECISIONS_README = PROJECT / "knowledge" / "decisions" / "README.md"
 
 

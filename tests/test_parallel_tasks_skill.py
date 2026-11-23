@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from helpers import PLUGIN, REPO
+from helpers import CONVENTIONS, PLUGIN, REPO
 
 SKILL = PLUGIN / "skills" / "parallel-tasks" / "SKILL.md"
 SCRIPT_REL = "../../scripts/parallel-plan.py"
@@ -54,7 +54,7 @@ def test_resume_skips_complete_tasks():
 
 
 def test_docs_wire_parallel_tasks():
-    conventions = (REPO / "conventions" / "spec-driven-development.md").read_text(
+    conventions = (CONVENTIONS / "spec-driven-development.md").read_text(
         encoding="utf-8"
     )
     assert "**Depends on:**" in conventions

@@ -60,28 +60,29 @@ flowchart LR
 ```
 
 Amber: a human decision. Blue: an independent check. The playbooks behind
-each step are in [`conventions/`](conventions/); the tooling that automates them
+each step are in [`plugin/conventions/`](plugin/conventions/); the tooling that automates them
 is in [`plugin/`](plugin/).
 
 ## What's here
 
 - **[`AGENTS.md`](AGENTS.md)** — the workspace instructions every agent reads (Claude
-  Code through the [`CLAUDE.md`](CLAUDE.md) stub that imports it): how we work,
-  decision verification, on-demand spec HTML views, environment, and file-opening
-  conventions.
-- **[`conventions/`](conventions/)** — six self-contained playbooks that generalize
+  Code through the [`CLAUDE.md`](CLAUDE.md) stub that imports it). The workspace rules (how we
+  work, decision verification, on-demand spec HTML views, environment, and
+  file-opening conventions) live in [`plugin/rules.md`](plugin/rules.md), which
+  `AGENTS.md` imports, so they ship with the plugin.
+- **[`plugin/conventions/`](plugin/conventions/)** — six self-contained playbooks that generalize
   my way of working to any new project:
-  - [Knowledge layer](conventions/knowledge-layer.md) — a version-controlled,
+  - [Knowledge layer](plugin/conventions/knowledge-layer.md) — a version-controlled,
     domain-organized knowledge base as the foundation.
-  - [Decision log (ADRs)](conventions/decision-log.md) — locked-in decisions as
+  - [Decision log (ADRs)](plugin/conventions/decision-log.md) — locked-in decisions as
     numbered, durable records.
-  - [Spec-driven development](conventions/spec-driven-development.md) — brainstorm →
+  - [Spec-driven development](plugin/conventions/spec-driven-development.md) — brainstorm →
     spec → plan → build.
-  - [Engineering practices](conventions/engineering-practices.md) — test-first,
+  - [Engineering practices](plugin/conventions/engineering-practices.md) — test-first,
     coding standards, and a CI + AI + human review gate.
-  - [Project memory file](conventions/project-memory.md) — a checked-in `CLAUDE.md`
+  - [Project memory file](plugin/conventions/project-memory.md) — a checked-in `CLAUDE.md`
     per repo: build/test commands, architecture, conventions, gotchas.
-  - [Session hygiene](conventions/session-hygiene.md) — short sessions, a
+  - [Session hygiene](plugin/conventions/session-hygiene.md) — short sessions, a
     per-branch handoff file, a context meter, lean exploration.
 - **[`plugin/`](plugin/)** — a Claude Code plugin: the `supabase-cli`,
   `lean-context`, `grill` (opt-in, `CLAUDE_KIT_GRILL=1`), `audit`,

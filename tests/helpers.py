@@ -13,6 +13,8 @@ from types import ModuleType
 
 REPO = Path(__file__).resolve().parents[1]
 PLUGIN = REPO / "plugin"
+RULES = PLUGIN / "rules.md"
+CONVENTIONS = PLUGIN / "conventions"
 
 
 REFERENCE_RE = re.compile(r"\$\{CLAUDE_PLUGIN_ROOT\}/references/([\w.-]+\.md)")
