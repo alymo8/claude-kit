@@ -48,7 +48,7 @@ def test_frontmatter():
     assert front["description"].startswith("Use when")
     assert "/ship" in front["description"]
     assert len(front["description"]) <= 1024
-    assert front["argument-hint"] == "[base-ref] [spec.md] [plan.md]"
+    assert front["argument-hint"] == '"[base-ref] [spec.md] [plan.md]"'
     assert "disable-model-invocation" not in front
 
 

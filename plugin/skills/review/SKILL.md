@@ -1,7 +1,7 @@
 ---
 name: review
 description: Use when /ship reaches step 6, or when the user asks for a review of a branch or diff against its spec and the repo's rules. Runs a standards reviewer and a spec reviewer as two parallel fresh-context subagents and reports them side by side.
-argument-hint: [base-ref] [spec.md] [plan.md]
+argument-hint: "[base-ref] [spec.md] [plan.md]"
 ---
 
 # Review

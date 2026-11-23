@@ -17,6 +17,7 @@
 !/pyproject.toml
 !/conventions/
 !/plugin/
+!/.claude-plugin/
 !/knowledge/
 !/docs/
 !/tests/

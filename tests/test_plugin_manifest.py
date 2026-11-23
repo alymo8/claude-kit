@@ -8,7 +8,8 @@ def test_plugin_manifest_is_valid():
     data = json.loads(
         (PLUGIN / ".claude-plugin" / "plugin.json").read_text(encoding="utf-8")
     )
-    assert data["name"] == "claude-kit"
+    assert data["name"] == "agent-kit"
+    assert data["author"] == {"name": "alymo8"}
     assert data["version"]
 
 
@@ -206,10 +207,10 @@ def test_description_mentions_pr_review_respond():
     assert "pr-review-respond" in data["description"]
 
 
-def test_version_is_0_36_1():
+def test_version_is_1_0_0():
     plugin_json = PLUGIN / ".claude-plugin" / "plugin.json"
     data = json.loads(plugin_json.read_text(encoding="utf-8"))
-    assert data["version"] == "0.36.1"
+    assert data["version"] == "1.0.0"
 
 
 def test_description_mentions_review():

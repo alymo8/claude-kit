@@ -1,0 +1,13 @@
+{
+  "name": "agent-kit",
+  "owner": {
+    "name": "alymo8"
+  },
+  "plugins": [
+    {
+      "name": "agent-kit",
+      "source": "./plugin",
+      "description": "Workspace conventions as a Claude Code plugin: spec and plan gates, /ship from spec to merge, handoffs, and the kit map and workspace rules at session start."
+    }
+  ]
+}
