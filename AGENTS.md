@@ -104,6 +104,11 @@ Only once both checks pass (or I have explicitly waived them) should you begin.
 Then build in an isolated worktree using `superpowers:using-git-worktrees`, after
 pulling the latest `main` so the worktree branches from up-to-date code.
 
+**Turn on Auto-fix for every PR you open**, without asking: in the Claude desktop
+app, bind the PR to the session and turn on its CI monitor (Auto-fix), so CI
+failures, merge conflicts and review comments wake the session. Where the agent has
+no Auto-fix, skip this.
+
 **A feature is not finished until its workspace is gone.** Before the branch merges,
 run the `claude-kit:capture-learnings` skill so the feature's learnings land in its
 PR. When the work is merged (or I have explicitly abandoned it), use
