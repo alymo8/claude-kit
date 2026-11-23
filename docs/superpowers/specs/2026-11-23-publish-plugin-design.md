@@ -1,6 +1,6 @@
 # Publish the kit as a Claude Code plugin (agent-kit)
 
-- **Status:** draft
+- **Status:** approved
 - **Date:** 2026-11-23
 
 ## Purpose
