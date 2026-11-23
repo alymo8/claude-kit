@@ -1,6 +1,6 @@
 # ADR 0050: The kit runs in Mistral Vibe, Codex and Cursor from one source
 
-- **Status:** accepted
+- **Status:** accepted; amended by 0052 ([ADR 0052](0052-published-plugin.md): rules table changed for other agents; markers renamed `agent-kit`)
 - **Date:** 2026-11-22
 
 ## Context

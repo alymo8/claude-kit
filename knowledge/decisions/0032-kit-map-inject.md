@@ -1,6 +1,6 @@
 # ADR 0032: Kit map injected at session start
 
-- **Status:** accepted
+- **Status:** accepted; amended by 0052 ([ADR 0052](0052-published-plugin.md): the map states the plugin root, needs no checkout, no longer lists the ADR folder)
 - **Date:** 2026-10-13
 
 ## Context
