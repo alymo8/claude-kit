@@ -9,7 +9,9 @@ code fences; indented continuation lines count) and takes their backticked
 spans as path patterns: ``*`` and ``?`` stay inside one path segment, ``**/``
 matches zero or more directories, a trailing ``**`` matches anything. A
 pattern ending in ``/``, or one that matches no file but names a directory,
-freezes everything under it.
+freezes everything under it. A bullet whose value starts with the word
+``none`` (any case) declares nothing frozen, whatever follows it, so
+``- **Frozen:** none (`tests/x.py` is written by Task 1)`` freezes no file.
 
 The base is ``git merge-base REF HEAD`` (REF defaults to ``origin/main``) in
 the repository holding ``--root`` (default: the current directory). A frozen
@@ -40,6 +42,7 @@ import sys
 from pathlib import Path
 
 BULLET_RE = re.compile(r"^\s*(?:[-*] )?\*\*Frozen:\*\*")
+NONE_RE = re.compile(r"^\s*(?:[-*] )?\*\*Frozen:\*\*\s*none\b", re.I)
 SPAN_RE = re.compile(r"`([^`]+)`")
 TRAILER_RE = re.compile(r"^Frozen-change-approved:[ \t]*(\S+)[ \t]*$", re.M)
 
@@ -92,10 +95,18 @@ def parse_bullets(text: str) -> list[str]:
     return bullets
 
 
+def declares_none(bullet: str) -> bool:
+    """Whether a Frozen bullet's value starts with ``none`` (nothing frozen)."""
+    return NONE_RE.match(bullet) is not None
+
+
 def parse_patterns(text: str) -> list[str]:
-    """The backticked spans of every ``- **Frozen:**`` header bullet, in order."""
+    """The backticked spans of every ``- **Frozen:**`` header bullet, in order,
+    skipping bullets that declare ``none``."""
     patterns = []
     for bullet in parse_bullets(text):
+        if declares_none(bullet):
+            continue
         for span in SPAN_RE.findall(bullet):
             patterns.append(span[2:] if span.startswith("./") else span)
     return patterns
@@ -261,7 +272,7 @@ def main(argv: list[str] | None = None) -> int:
             print(f"frozen-check: cannot read {name}", file=sys.stderr)
             return 2
         for bullet in parse_bullets(text):
-            if not SPAN_RE.search(bullet):
+            if not declares_none(bullet) and not SPAN_RE.search(bullet):
                 print(f"frozen: warning: no backticked path in {name}: {bullet}")
         for line in late_bullets(text):
             print(

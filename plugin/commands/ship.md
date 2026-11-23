@@ -118,7 +118,9 @@ rule.
    > record in the task it affects (none if the section is missing). Copy the
    > spec's `- **Frozen:**` bullet (with the `- `) into the plan header,
    > adding any test or eval file whose full content the plan writes and
-   > that a success criterion depends on. Add a
+   > that a success criterion depends on. A value starting with `none`
+   > freezes nothing, even with backticked paths after it; to freeze files,
+   > replace `none` with the backticked list. Add a
    > `**Depends on:**` line under each task's `**Files:**` block: `none`, or
    > the earlier tasks whose results it uses (`Task 1, Task 3`); a task whose
    > only link to earlier tasks is shared files gets `none`. Do not write a

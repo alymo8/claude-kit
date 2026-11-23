@@ -309,6 +309,49 @@ def test_frozen_line_without_paths_warns(repo, tmp_path):
     assert "frozen: none declared" in r.stdout
 
 
+@pytest.mark.parametrize(
+    "value",
+    [
+        "none",
+        "None.",
+        "NONE",
+        "none (spec freezes nothing; `tests/a.py` is written by Task 1)",
+    ],
+)
+def test_none_declares_nothing_frozen(repo, tmp_path, value):
+    commit(repo, "edit", {"tests/a.py": "b\n"})
+    r = check(repo, spec(tmp_path, f"- **Frozen:** {value}"))
+    assert r.returncode == 0, r.stdout + r.stderr
+    assert r.stdout.strip() == "frozen: none declared"
+
+
+def test_none_with_wrapped_aside_declares_nothing(repo, tmp_path):
+    commit(repo, "edit", {"tests/a.py": "b\n"})
+    s = spec(tmp_path, "- **Frozen:** none (the plan writes\n  `tests/a.py` itself)")
+    r = check(repo, s)
+    assert r.returncode == 0, r.stdout + r.stderr
+    assert r.stdout.strip() == "frozen: none declared"
+
+
+def test_word_starting_with_none_is_not_none(repo, tmp_path):
+    commit(repo, "edit", {"tests/a.py": "b\n"})
+    r = check(repo, spec(tmp_path, "- **Frozen:** nonexistent? `tests/a.py`"))
+    assert r.returncode == 1, r.stdout + r.stderr
+
+
+def test_backticked_list_still_freezes(repo, tmp_path):
+    commit(repo, "edit", {"tests/a.py": "b\n"})
+    r = check(repo, spec(tmp_path, "- **Frozen:** `src/x.py`, `tests/a.py`"))
+    assert r.returncode == 1, r.stdout + r.stderr
+    assert "frozen: changed tests/a.py" in r.stdout
+    assert "frozen: changed src/x.py" not in r.stdout
+
+
+def test_parse_patterns_none_unit():
+    assert fc.parse_patterns("- **Frozen:** none (`a.py` is new)\n") == []
+    assert fc.parse_patterns("- **Frozen:** `a.py` (none of the rest)\n") == ["a.py"]
+
+
 def test_pattern_regex_unit():
     assert fc.pattern_regex("a/*.py").fullmatch("a/b/c.py") is None
     assert fc.pattern_regex("a/**/c.py").fullmatch("a/c.py")
