@@ -1,21 +1,32 @@
 #!/usr/bin/env python3
-"""Install claude-kit as a Claude Code skills-dir plugin, on any OS.
+"""Install agent-kit as a Claude Code skills-dir plugin, on any OS.
 
 Usage: install.py [--agent {claude,vibe,codex,cursor}] [--home DIR]
                   [--skills-dir DIR] [--settings FILE] [--python CMD]
 
-Links <skills-dir>/claude-kit to this plugin folder (a junction on Windows, a
-symlink elsewhere), so Claude Code loads the kit from the git checkout
-(ADR 0005, amended by ADR 0033). First checks that the command the hooks run
-(default "python") is Python 3.11+, and exits 1 with nothing changed if not.
-Warns when git, gh or the superpowers plugin is missing. Adds the kit's status
-line when none is configured. Idempotent; refuses to overwrite anything else
-at the link path.
+First checks that the command the hooks run (default "python") is Python
+3.11+, and exits 1 with nothing changed if not. Warns when git, gh or the
+superpowers plugin is missing. Then, for Claude Code, in three steps:
+
+1. Removes the old link (<skills-dir>/<LEGACY_LINK>) when it points at a kit
+   plugin folder; anything else at that path is left alone.
+2. Adds the kit's status line when none is configured, or moves one that
+   still runs through the old link. When the plugin is installed from the
+   marketplace (recorded in <config>/plugins/installed_plugins.json, <config>
+   being $CLAUDE_CONFIG_DIR or <home>/.claude), the line runs a stable copy
+   of the script kept in the kit's state folder under <config>.
+3. Links <skills-dir>/agent-kit to this plugin folder (a junction on Windows,
+   a symlink elsewhere), so Claude Code loads the kit from the git checkout
+   (ADR 0005, amended by ADR 0033), unless a marketplace copy is installed:
+   then it links nothing, so only one copy loads.
+
+Idempotent; refuses to overwrite anything else at the link path.
 
 With --agent vibe, codex or cursor it instead links every kit skill folder
 (plugin/skills, plugin/agent-skills, vendor/superpowers/skills) into
 <home>/.agents/skills and merges plugin/hooks/run.py into the agent's user
-hook file (for Vibe and Codex also a fallback line into its AGENTS.md).
+hook file (for Vibe and Codex also a fallback line into its AGENTS.md),
+replacing the blocks an older kit version wrote.
 
 Keep this file parseable by Python 3.8, so an old interpreter still reaches
 the version error.
@@ -35,13 +46,20 @@ PLUGIN = Path(__file__).resolve().parent
 KIT = PLUGIN.parent
 RUNNER = PLUGIN / "hooks" / "run.py"
 AGENTS = ("claude", "vibe", "codex", "cursor")
-TOML_BEGIN = "# >>> claude-kit hooks (managed by plugin/install.py) >>>"
-TOML_END = "# <<< claude-kit hooks <<<"
-MD_BEGIN = "<!-- claude-kit:begin (managed by plugin/install.py) -->"
-MD_END = "<!-- claude-kit:end -->"
+LINK_NAME = "agent-kit"
+LEGACY_LINK = "claude-kit"
+PLUGIN_ID = "agent-kit@agent-kit"
+TOML_BEGIN = "# >>> agent-kit hooks (managed by plugin/install.py) >>>"
+TOML_END = "# <<< agent-kit hooks <<<"
+MD_BEGIN = "<!-- agent-kit:begin (managed by plugin/install.py) -->"
+MD_END = "<!-- agent-kit:end -->"
+LEGACY_TOML_BEGIN = TOML_BEGIN.replace(LINK_NAME, LEGACY_LINK)
+LEGACY_TOML_END = TOML_END.replace(LINK_NAME, LEGACY_LINK)
+LEGACY_MD_BEGIN = MD_BEGIN.replace(LINK_NAME, LEGACY_LINK)
+LEGACY_MD_END = MD_END.replace(LINK_NAME, LEGACY_LINK)
 NEXT_STEP = {
     "vibe": "Next: start a new Vibe session.",
-    "codex": "Next: in Codex, run /hooks and trust the claude-kit hooks.",
+    "codex": "Next: in Codex, run /hooks and trust the agent-kit hooks.",
     "cursor": (
         "Next: start a new Cursor agent chat. If the kit map does not reach the "
         "model, paste this into Cursor's user rules:"
@@ -173,12 +191,62 @@ def remove_link(link: Path) -> None:
         os.unlink(link)
 
 
+def config_dir(home: Path) -> Path:
+    """$CLAUDE_CONFIG_DIR when set and non-empty, else <home>/.claude."""
+    value = os.environ.get("CLAUDE_CONFIG_DIR", "")
+    return Path(value) if value else home / ".claude"
+
+
+def marketplace_copy(config: Path) -> Path | None:
+    """The installed marketplace copy of the kit, or None.
+
+    Reads <config>/plugins/installed_plugins.json, prefers the user-scope
+    entry, and returns the first installPath that is an existing folder. Any
+    read, parse or shape problem gives None.
+    """
+    record = config / "plugins" / "installed_plugins.json"
+    try:
+        data = json.loads(record.read_text(encoding="utf-8"))
+        entries = data["plugins"][PLUGIN_ID]
+    except (OSError, ValueError, KeyError, TypeError, IndexError):
+        return None
+    if not isinstance(entries, list):
+        return None
+    entries = [e for e in entries if isinstance(e, dict)]
+    entries.sort(key=lambda e: e.get("scope") != "user")
+    for entry in entries:
+        path = entry.get("installPath")
+        if isinstance(path, str) and path and Path(path).is_dir():
+            return Path(path)
+    return None
+
+
+def is_kit_plugin(folder: Path) -> bool:
+    """True when folder holds this kit's plugin manifest (old or new name)."""
+    manifest = folder / ".claude-plugin" / "plugin.json"
+    try:
+        data = json.loads(manifest.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return False
+    return isinstance(data, dict) and data.get("name") in (LEGACY_LINK, LINK_NAME)
+
+
+def remove_legacy_link(skills_dir: Path) -> bool:
+    """Remove <skills-dir>/<LEGACY_LINK> when it is a link to a kit plugin."""
+    link = skills_dir / LEGACY_LINK
+    if not is_link(link) or not is_kit_plugin(Path(os.path.realpath(link))):
+        return False
+    remove_link(link)
+    print(f"Removed the old link {link}")
+    return True
+
+
 def install_link(skills_dir: Path) -> str | None:
     """'installed' or 'present'; None after printing an error."""
-    link = skills_dir / "claude-kit"
+    link = skills_dir / LINK_NAME
     if os.path.lexists(link):
         if is_link(link) and points_at_plugin(link):
-            print(f"claude-kit already installed: {link} -> {PLUGIN}")
+            print(f"{LINK_NAME} already installed: {link} -> {PLUGIN}")
             return "present"
         print(
             f"ERROR: {link} already exists and is not a link to {PLUGIN}. "
@@ -191,10 +259,14 @@ def install_link(skills_dir: Path) -> str | None:
     return "installed"
 
 
-def install_statusline(settings: Path, skills_dir: Path) -> None:
+def install_statusline(
+    settings: Path, skills_dir: Path, config: Path | None = None
+) -> None:
     script = PLUGIN / "scripts" / "install-statusline.py"
     command = [sys.executable, str(script), "--settings", str(settings)]
     command += ["--skills-dir", str(skills_dir)]
+    if config is not None:
+        command += ["--stable-copy", "--config-dir", str(config)]
     try:
         done = subprocess.run(command, capture_output=True, text=True, timeout=60)
     except (OSError, subprocess.SubprocessError) as exc:
@@ -243,7 +315,7 @@ def hook_command(python: str, agent: str, event: str) -> str:
 def fallback_line(python: str, agent: str) -> str:
     command = hook_command(python, agent, "SessionStart")
     return (
-        'If your context has no "Kit map (claude-kit)" text, run '
+        'If your context has no "Kit map (agent-kit)" text, run '
         f"`{command}` and follow what it prints."
     )
 
@@ -307,24 +379,29 @@ def link_skills(skills_dir: Path, sources: list[Path]) -> None:
         print(f"Removed {link.name} (dangling)")
 
 
-def replace_block(text: str, begin: str, end: str, lines: list[str]) -> str:
-    """text without its managed block, then a fresh block at the end.
+def strip_block(text: str, begin: str, end: str) -> str:
+    """text without its managed block between begin and end.
 
     Raises ValueError when the markers are damaged (a marker missing its pair,
     or more than one block): cutting there could delete the user's own text.
     """
     if text.count(begin) != text.count(end) or text.count(begin) > 1:
-        raise ValueError(f"the claude-kit block markers are damaged ({begin!r})")
+        raise ValueError(f"the block markers are damaged ({begin!r})")
     start = text.find(begin)
     stop = text.find(end, start) if start >= 0 else -1
     if start >= 0 and stop < 0:
-        raise ValueError(f"the claude-kit block markers are damaged ({begin!r})")
+        raise ValueError(f"the block markers are damaged ({begin!r})")
     if stop >= 0:
         stop += len(end)
         if text[stop : stop + 1] == "\n":
             stop += 1
         text = text[:start] + text[stop:]
-    rest = text.rstrip("\n")
+    return text
+
+
+def replace_block(text: str, begin: str, end: str, lines: list[str]) -> str:
+    """text without its managed block, then a fresh block at the end."""
+    rest = strip_block(text, begin, end).rstrip("\n")
     block = "\n".join([begin, *lines, end]) + "\n"
     return f"{rest}\n\n{block}" if rest else block
 
@@ -334,16 +411,17 @@ def vibe_hooks(text: str, python: str) -> str:
     stop = hook_command(python, "vibe", "Stop")
     lines = [
         "[[hooks]]",
-        'name = "claude-kit-session-start"',
+        'name = "agent-kit-session-start"',
         'type = "session_start"',
         f"command = {json.dumps(start)}",
         "",
         "[[hooks]]",
-        'name = "claude-kit-stop"',
+        'name = "agent-kit-stop"',
         'type = "post_agent"',
         'match = "main"',
         f"command = {json.dumps(stop)}",
     ]
+    text = strip_block(text, LEGACY_TOML_BEGIN, LEGACY_TOML_END)
     return replace_block(text, TOML_BEGIN, TOML_END, lines)
 
 
@@ -399,6 +477,7 @@ def json_hooks(text: str, agent: str, python: str) -> str:
 
 
 def agents_block(text: str, python: str, agent: str) -> str:
+    text = strip_block(text, LEGACY_MD_BEGIN, LEGACY_MD_END)
     return replace_block(text, MD_BEGIN, MD_END, [fallback_line(python, agent)])
 
 
@@ -459,20 +538,34 @@ def main(argv: list[str] | None = None) -> int:
         return install_agent(args.agent, home, skills_dir, args.python)
     skills_dir = Path(args.skills_dir or home / ".claude" / "skills")
     settings = Path(args.settings or home / ".claude" / "settings.json")
+    config = config_dir(home)
     try:
-        outcome = install_link(skills_dir)
+        removed = remove_legacy_link(skills_dir)
     except OSError as exc:
-        print(f"ERROR: could not create the link: {exc}")
+        print(f"ERROR: could not remove the old link: {exc}")
         return 1
-    if outcome is None:
-        return 1
-    install_statusline(settings, skills_dir)
+    copy = marketplace_copy(config)
+    install_statusline(settings, skills_dir, config if copy else None)
+    if copy is not None:
+        print(
+            f"{LINK_NAME} is installed from the marketplace ({copy}); "
+            "not linking, so only one copy loads."
+        )
+        outcome = "marketplace"
+    else:
+        try:
+            outcome = install_link(skills_dir)
+        except OSError as exc:
+            print(f"ERROR: could not create the link: {exc}")
+            return 1
+        if outcome is None:
+            return 1
     if not superpowers_enabled(settings):
         print(
             "WARNING: the superpowers plugin is not enabled. The kit's flow "
             f"uses its skills. In Claude Code run: /plugin install {SUPERPOWERS}"
         )
-    if outcome == "installed":
+    if outcome == "installed" or removed:
         print(
             "Start a new Claude Code session (or run /reload-plugins) to load the kit."
         )

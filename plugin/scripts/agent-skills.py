@@ -12,7 +12,7 @@ import shutil
 import sys
 from pathlib import Path
 
-SKIP = {"ship-many"}
+SKIP = {"ship-many", "statusline"}
 
 TEMPLATE = """---
 name: {name}
