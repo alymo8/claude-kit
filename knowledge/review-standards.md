@@ -1,7 +1,7 @@
 ---
 title: Review standards
 status: stable
-last_updated: 2026-11-23
+last_updated: 2026-11-24
 sources: []
 ---
 
@@ -40,3 +40,7 @@ Read by the standards reviewer of `claude-kit:review`, not by implementers.
 - A value written into a user's TOML file goes in as a basic string
   (`json.dumps(value)`), never a `'...'` literal: a path with `'` in it
   breaks the file.
+- An installer error path that adds "nothing changed" must be checked
+  against every step that ran before it (a restored backup, a written
+  file, a removed link); and a `finally` that deletes a staging or backup
+  folder must not run on an interrupt that left a plugin folder missing.

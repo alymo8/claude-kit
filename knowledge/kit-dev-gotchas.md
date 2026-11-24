@@ -10,7 +10,9 @@ Things that cost time in past runs and are not obvious from the code.
 - Test code written in a plan is copied verbatim into `tests/`, so it must
   fit ruff's 88-character line limit; a longer line fails
   `ruff format --check plugin tests`. `ruff format` never splits a long
-  string literal (E501 stays), so split it by hand in the plan.
+  string literal (E501 stays), so split it by hand in the plan, but it
+  joins a split string or wrapped signature back onto one line when that
+  fits in 88 characters, so split only what would not fit.
 - `test_relative_markdown_links_resolve` checks every tracked `.md`, specs
   included, and does not skip code spans: a link-shaped example such as a
   bracketed name followed by a parenthesised `file.md` fails it. Describe
@@ -96,9 +98,6 @@ Things that cost time in past runs and are not obvious from the code.
   `git worktree add <tmp>/claude-tasks/<branch-slug>/task-N
   -b feat/<slug>-task-N HEAD`, as `parallel-tasks` does, then
   `git merge --ff-only` it into the feature branch and remove it.
-- `tests/test_publish.py`'s guards read `git ls-files`, so they skip a new
-  file until it is committed: a task subagent's green suite before its
-  commit can turn red after the merge. Rerun the suite after each merge.
 - A frozen test that pins old behaviour blocks a review fix to that
   behaviour; check `**Frozen:**` tests before fixing, and report the fix as
   a follow-up if the spec keeps the old behaviour.

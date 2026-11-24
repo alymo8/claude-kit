@@ -42,6 +42,18 @@ class BuildError(Exception):
     pass
 
 
+class ChangedError(BuildError):
+    """The build failed after changing something; the message says what."""
+
+
+class RestoreError(ChangedError):
+    """A previous copy could not be put back; the staging folder keeps it."""
+
+    def __init__(self, message: str, staging: Path) -> None:
+        super().__init__(message)
+        self.staging = staging
+
+
 def read_version_file(path: Path) -> tuple[str, str]:
     try:
         text = Path(path).read_text(encoding="utf-8")
@@ -59,8 +71,30 @@ def read_version_file(path: Path) -> tuple[str, str]:
     return values["version"], values["source"]
 
 
+SAFE = "_./:\\-"
+REFUSED = ('"', "$", "`", "%")
+
+
+def quote_python(python: str) -> str:
+    """The python path, double-quoted unless every character is safe bare."""
+    if all(c.isalnum() or c in SAFE for c in python):
+        return python
+    return f'"{python}"'
+
+
+def unquotable(python: str) -> str | None:
+    """The first character of python that no hook quoting protects, or None."""
+    return next((c for c in python if c in REFUSED), None)
+
+
+def refusal(python: str, char: str) -> str:
+    return (
+        f"--python {python} contains {char}, which a hook command cannot quote safely"
+    )
+
+
 def runner_command(python: str, runner: Path, event: str) -> str:
-    exe = f'"{python}"' if " " in python else python
+    exe = quote_python(python)
     return f'{exe} "{Path(runner).as_posix()}" --agent vibe --event {event}'
 
 
@@ -160,8 +194,33 @@ def stage_superpowers(kit: Path, dest: Path, kit_version: str) -> None:
     write_text(dest / MARKER, kit_version + "\n")
 
 
+def restore_backups(out: Path, staging: Path) -> list[str]:
+    """Move each <name>.old in staging back to out when out/<name> is missing.
+
+    Returns the names of the plugins moved back.
+    """
+    out, staging = Path(out), Path(staging)
+    restored = []
+    for name in NAMES:
+        old = staging / f"{name}.old"
+        target = out / name
+        if not os.path.lexists(old) or os.path.lexists(target):
+            continue
+        try:
+            out.mkdir(parents=True, exist_ok=True)
+            os.rename(old, target)
+        except OSError as exc:
+            raise RestoreError(
+                f"could not move {old} back to {target}: {exc}; the previous copy "
+                f"is kept in {staging}",
+                staging,
+            ) from exc
+        restored.append(name)
+    return restored
+
+
 def swap(out: Path, staging: Path) -> None:
-    done = []  # (target, old or None) for plugins already swapped in
+    done = []  # (name, target, old or None) for plugins already swapped in
     for name in NAMES:
         target = out / name
         old = staging / f"{name}.old"
@@ -172,33 +231,61 @@ def swap(out: Path, staging: Path) -> None:
                 moved = old
             os.rename(staging / name, target)
         except OSError as exc:
+            lost = []  # (description, .old file name) of copies not restored
             if moved is not None:
                 try:
                     os.rename(moved, target)
                 except OSError:
-                    pass
-            for prev_target, prev_old in reversed(done):
+                    lost.append((name, moved.name))
+            for prev_name, prev_target, prev_old in reversed(done):
                 shutil.rmtree(prev_target, ignore_errors=True)
-                if prev_old is not None:
-                    try:
-                        os.rename(prev_old, prev_target)
-                    except OSError:
-                        pass
-            raise BuildError(f"could not swap in the new copy: {exc}") from exc
-        done.append((target, moved))
+                if prev_old is None:
+                    continue
+                if os.path.lexists(prev_target):
+                    lost.append(
+                        (
+                            f"{prev_name} (a partial new copy is left at "
+                            f"{prev_target}; delete it by hand before rerunning "
+                            f"to get the previous copy back from {prev_old})",
+                            prev_old.name,
+                        )
+                    )
+                    continue
+                try:
+                    os.rename(prev_old, prev_target)
+                except OSError:
+                    lost.append((prev_name, prev_old.name))
+            if not lost:
+                raise BuildError(f"could not swap in the new copy: {exc}") from exc
+            names = ", ".join(entry for entry, _ in lost)
+            olds = ", ".join(old_name for _, old_name in lost)
+            raise RestoreError(
+                f"could not swap in the new copy: {exc}; could not restore the "
+                f"previous copy of {names}; the staging folder {staging} keeps "
+                f"it as {olds}, and the next build moves a copy back when its "
+                "plugin folder is missing",
+                staging,
+            ) from exc
+        done.append((name, target, moved))
 
 
 def build(out: Path, python: str = "python", kit: Path = KIT) -> None:
     out = Path(out).resolve()
     kit = Path(kit)
+    char = unquotable(python)
+    if char:
+        raise BuildError(refusal(python, char))
     foreign = foreign_folders(out)
     if foreign:
         raise BuildError(
             f"{foreign[0]} exists and was not built by agent-kit; remove or rename it"
         )
     staging = out.parent / STAGING
+    keep = False
+    restored = []
     try:
         if os.path.lexists(staging):
+            restored = restore_backups(out, staging)
             shutil.rmtree(staging)
         manifest = kit / "plugin" / ".claude-plugin" / "plugin.json"
         claude = json.loads(manifest.read_text(encoding="utf-8"))
@@ -208,12 +295,29 @@ def build(out: Path, python: str = "python", kit: Path = KIT) -> None:
         stage_superpowers(kit, staging / "superpowers", claude["version"])
         out.mkdir(parents=True, exist_ok=True)
         swap(out, staging)
-    except BuildError:
+    except RestoreError:
+        keep = True
         raise
-    except (OSError, ValueError, KeyError) as exc:
+    except (BuildError, OSError, ValueError, KeyError) as exc:
+        if restored:
+            raise ChangedError(
+                f"{exc}; the previous copy of {', '.join(restored)} was moved back "
+                f"to {out} from {staging} first"
+            ) from exc
+        if isinstance(exc, BuildError):
+            raise
         raise BuildError(str(exc)) from exc
     finally:
-        shutil.rmtree(staging, ignore_errors=True)
+        if not keep and not stranded_backups(out, staging):
+            shutil.rmtree(staging, ignore_errors=True)
+
+
+def stranded_backups(out: Path, staging: Path) -> bool:
+    """True when staging holds a previous copy whose plugin folder is missing."""
+    return any(
+        os.path.lexists(staging / f"{name}.old") and not os.path.lexists(out / name)
+        for name in NAMES
+    )
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -226,6 +330,9 @@ def main(argv: list[str] | None = None) -> int:
     out = Path(args.out).resolve()
     try:
         build(out, args.python)
+    except ChangedError as exc:
+        print(f"ERROR: {exc}")
+        return 1
     except BuildError as exc:
         print(f"ERROR: {exc}; nothing changed.")
         return 1
