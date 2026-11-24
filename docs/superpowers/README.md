@@ -6,6 +6,7 @@
 
 | Date | Spec | Status |
 |---|---|---|
+| 2026-11-24 | [Directory-ready plugin, a sibling default for `/new-project`, and a `git mv` plan check](specs/2026-11-24-directory-ready-design.md) | approved |
 | 2026-11-23 | [Publish the kit as a Claude Code plugin (agent-kit)](specs/2026-11-23-publish-plugin-design.md) | approved |
 | 2026-11-23 | [Remove the vault tooling that moved to second-brain-kit](specs/2026-11-23-remove-vault-tooling-design.md) | approved |
 | 2026-11-23 | [Install the kit in Mistral Vibe as a native plugin](specs/2026-11-23-vibe-plugin-design.md) | approved |
