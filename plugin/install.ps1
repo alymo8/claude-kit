@@ -7,13 +7,16 @@
   same parameters. It junctions <SkillsDir>\agent-kit to this plugin folder,
   checks the prerequisites (python 3.11+, git, gh, the superpowers plugin) and
   adds the kit's status line when none is configured. Idempotent; refuses to
-  overwrite anything else at that path. With -Agent vibe, codex or cursor it
-  links the kit's skills into <Home>\.agents\skills and merges the kit's hook
-  runner into that agent's user hook file instead.
+  overwrite anything else at that path. With -Agent codex or cursor it links
+  the kit's skills into <Home>\.agents\skills and merges the kit's hook runner
+  into that agent's user hook file instead. With -Agent vibe it installs the
+  agent-kit and superpowers Vibe plugins under <Home>\.vibe\plugins and removes
+  the old Vibe install.
 
 .PARAMETER SkillsDir
   Where the agent looks for skills. Default: <Home>\.claude\skills for
-  claude, <Home>\.agents\skills for the other agents.
+  claude, <Home>\.agents\skills for the other agents. For vibe it only names
+  where old kit skill links are removed.
 
 .PARAMETER Settings
   Claude Code user settings file. Default: <Home>\.claude\settings.json

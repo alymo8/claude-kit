@@ -139,7 +139,8 @@ is in [`plugin/`](plugin/).
   [setup guide](docs/setup.md#for-your-company-admin). Contributors, and
   Vibe, Codex and Cursor users, install from a checkout with
   `python plugin/install.py` instead (see the
-  [setup guide](docs/setup.md)): it checks the prerequisites, links
+  [setup guide](docs/setup.md)); for Vibe, `--agent vibe` installs two
+  native plugins under `~/.vibe/plugins/` instead of skill links. It checks the prerequisites, links
   `~/.claude/skills/agent-kit` to this folder (a junction on Windows, a
   symlink elsewhere) so edits are live, and adds the kit's status line to
   `~/.claude/settings.json` when none is configured. Coming from the old
@@ -184,11 +185,13 @@ is in [`plugin/`](plugin/).
   for one approval, then fixes, pushes and replies in each thread, and
   never resolves one.
 
-  The kit also runs in Mistral Vibe, Codex and Cursor:
-  `python plugin/install.py --agent vibe` (or `codex`, `cursor`) links its
-  skills, a wrapper skill per command and a bundled superpowers copy into
-  `~/.agents/skills/` and adds its session-start hooks to the agent; see the
-  [setup guide](docs/setup.md#using-the-kit-with-vibe-codex-or-cursor).
+  The kit also runs in Mistral Vibe, Codex and Cursor (see the
+  [setup guide](docs/setup.md#using-the-kit-with-vibe-codex-or-cursor)):
+  `python plugin/install.py --agent vibe` builds the `agent-kit` and
+  `superpowers` plugins under `~/.vibe/plugins/`; `--agent codex` or
+  `--agent cursor` links its skills, a wrapper skill per command and a
+  bundled superpowers copy into `~/.agents/skills/` and adds its
+  session-start hooks to the agent.
   `/ship-many`, the status line and a few hooks stay Claude-only.
 - **[`knowledge/decisions/`](knowledge/decisions/)** — this repo's own ADRs.
 - **[`docs/superpowers/`](docs/superpowers/)** — specs and plans for changes to

@@ -8,6 +8,7 @@
 |---|---|---|
 | 2026-11-23 | [Publish the kit as a Claude Code plugin (agent-kit)](specs/2026-11-23-publish-plugin-design.md) | approved |
 | 2026-11-23 | [Remove the vault tooling that moved to second-brain-kit](specs/2026-11-23-remove-vault-tooling-design.md) | approved |
+| 2026-11-23 | [Install the kit in Mistral Vibe as a native plugin](specs/2026-11-23-vibe-plugin-design.md) | approved |
 | 2026-11-18 | [Agent-agnostic kit: run the kit in Mistral Vibe, Codex and Cursor](specs/2026-11-18-agent-agnostic-kit-design.md) | approved |
 | 2026-11-18 | [`/ship-many` hardening: time limit, one resume, keep-awake](specs/2026-11-18-ship-many-hardening-design.md) | approved |
 | 2026-11-15 | [Learning decay: prune stale learnings at ship](specs/2026-11-15-learning-decay-design.md) | approved |
@@ -46,6 +47,7 @@
 |---|---|---|
 | 2026-11-23 | [Publish the kit as a Claude Code plugin (agent-kit) Implementation Plan](plans/2026-11-23-publish-plugin.md) | approved |
 | 2026-11-23 | [Remove vault tooling Implementation Plan](plans/2026-11-23-remove-vault-tooling.md) | approved |
+| 2026-11-23 | [Vibe native plugin Implementation Plan](plans/2026-11-23-vibe-plugin.md) | approved |
 | 2026-11-18 | [Agent-agnostic kit Implementation Plan](plans/2026-11-18-agent-agnostic-kit.md) | approved |
 | 2026-11-18 | [`/ship-many` hardening Implementation Plan](plans/2026-11-18-ship-many-hardening.md) | approved |
 | 2026-11-16 | [Learning decay: prune stale learnings at ship Implementation Plan](plans/2026-11-16-learning-decay.md) | approved |

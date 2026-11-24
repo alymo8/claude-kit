@@ -22,11 +22,17 @@ superpowers plugin is missing. Then, for Claude Code, in three steps:
 
 Idempotent; refuses to overwrite anything else at the link path.
 
-With --agent vibe, codex or cursor it instead links every kit skill folder
+With --agent codex or cursor it instead links every kit skill folder
 (plugin/skills, plugin/agent-skills, vendor/superpowers/skills) into
 <home>/.agents/skills and merges plugin/hooks/run.py into the agent's user
-hook file (for Vibe and Codex also a fallback line into its AGENTS.md),
-replacing the blocks an older kit version wrote.
+hook file (for Codex also a fallback line into its AGENTS.md), replacing the
+blocks an older kit version wrote.
+
+With --agent vibe it builds the agent-kit and superpowers Vibe plugins into
+<home>/.vibe/plugins (plugin/vibe_plugin.py), removes the kit's old block from
+<home>/.vibe/hooks.toml and, when Codex and Cursor do not use them, the old
+kit skill links in <skills-dir>, and keeps the fallback line in
+<home>/.vibe/AGENTS.md pointing at the copy's hook runner.
 
 Keep this file parseable by Python 3.8, so an old interpreter still reaches
 the version error.
@@ -58,7 +64,7 @@ LEGACY_TOML_END = TOML_END.replace(LINK_NAME, LEGACY_LINK)
 LEGACY_MD_BEGIN = MD_BEGIN.replace(LINK_NAME, LEGACY_LINK)
 LEGACY_MD_END = MD_END.replace(LINK_NAME, LEGACY_LINK)
 NEXT_STEP = {
-    "vibe": "Next: start a new Vibe session.",
+    "vibe": "Next: start a new Vibe session (or run /reload-plugins).",
     "codex": "Next: in Codex, run /hooks and trust the agent-kit hooks.",
     "cursor": (
         "Next: start a new Cursor agent chat. If the kit map does not reach the "
@@ -313,13 +319,13 @@ def skill_sources(kit: Path = KIT) -> list[Path]:
     return found
 
 
-def hook_command(python: str, agent: str, event: str) -> str:
+def hook_command(python: str, agent: str, event: str, runner: Path = RUNNER) -> str:
     exe = f'"{python}"' if " " in python else python
-    return f'{exe} "{RUNNER.as_posix()}" --agent {agent} --event {event}'
+    return f'{exe} "{Path(runner).as_posix()}" --agent {agent} --event {event}'
 
 
-def fallback_line(python: str, agent: str) -> str:
-    command = hook_command(python, agent, "SessionStart")
+def fallback_line(python: str, agent: str, runner: Path = RUNNER) -> str:
+    command = hook_command(python, agent, "SessionStart", runner=runner)
     return (
         'If your context has no "Kit map (agent-kit)" text, run '
         f"`{command}` and follow what it prints."
@@ -412,25 +418,6 @@ def replace_block(text: str, begin: str, end: str, lines: list[str]) -> str:
     return f"{rest}\n\n{block}" if rest else block
 
 
-def vibe_hooks(text: str, python: str) -> str:
-    start = hook_command(python, "vibe", "SessionStart")
-    stop = hook_command(python, "vibe", "Stop")
-    lines = [
-        "[[hooks]]",
-        'name = "agent-kit-session-start"',
-        'type = "session_start"',
-        f"command = {json.dumps(start)}",
-        "",
-        "[[hooks]]",
-        'name = "agent-kit-stop"',
-        'type = "post_agent"',
-        'match = "main"',
-        f"command = {json.dumps(stop)}",
-    ]
-    text = strip_block(text, LEGACY_TOML_BEGIN, LEGACY_TOML_END)
-    return replace_block(text, TOML_BEGIN, TOML_END, lines)
-
-
 def is_kit_command(command: object) -> bool:
     return (
         isinstance(command, str)
@@ -482,27 +469,131 @@ def json_hooks(text: str, agent: str, python: str) -> str:
     return json.dumps(data, indent=2) + "\n"
 
 
-def agents_block(text: str, python: str, agent: str) -> str:
+def agents_block(text: str, python: str, agent: str, runner: Path = RUNNER) -> str:
     text = strip_block(text, LEGACY_MD_BEGIN, LEGACY_MD_END)
-    return replace_block(text, MD_BEGIN, MD_END, [fallback_line(python, agent)])
+    line = fallback_line(python, agent, runner=runner)
+    return replace_block(text, MD_BEGIN, MD_END, [line])
 
 
 def read_text(path: Path) -> str:
     return path.read_text(encoding="utf-8") if path.is_file() else ""
 
 
+def has_kit_command(data: object) -> bool:
+    """True when any string anywhere in the parsed JSON is a kit hook command."""
+    if isinstance(data, dict):
+        return any(has_kit_command(v) for v in data.values())
+    if isinstance(data, list):
+        return any(has_kit_command(v) for v in data)
+    return is_kit_command(data)
+
+
+def kit_hooks_in_use(home: Path) -> list[Path]:
+    """The Codex and Cursor hook files that still run the kit's hooks.
+
+    A missing file is not in use; one that cannot be read or parsed is.
+    """
+    found = []
+    for agent in ("codex", "cursor"):
+        path = home / f".{agent}" / "hooks.json"
+        if not path.exists():
+            continue
+        try:
+            data = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            found.append(path)
+            continue
+        if has_kit_command(data):
+            found.append(path)
+    return found
+
+
+def remove_kit_links(skills_dir: Path) -> None:
+    """Remove the links into this checkout's skill roots (dangling ones too)."""
+    if not skills_dir.is_dir():
+        return
+    names = {f.name for f in skill_sources()}
+    for entry in sorted(skills_dir.iterdir()):
+        target = link_target(entry)
+        if target is not None and under_kit_roots(target, entry):
+            remove_link(entry)
+            print(f"Removed old link {entry.name}")
+        elif target is not None and entry.name in names:
+            print(
+                f"Kept {entry.name}: it links outside this kit checkout (remove it"
+                " by hand if it points into an old checkout)"
+            )
+
+
+def install_vibe(home: Path, skills_dir: Path, python: str) -> int:
+    """Build the agent-kit and superpowers Vibe plugins, remove the old install."""
+    if str(PLUGIN) not in sys.path:
+        sys.path.insert(0, str(PLUGIN))
+    import vibe_plugin
+
+    plugins = (home / ".vibe" / "plugins").resolve()
+    foreign = vibe_plugin.foreign_folders(plugins)
+    if foreign:
+        print(
+            f"ERROR: {foreign[0]} exists and was not built by agent-kit; remove or "
+            "rename it, then rerun. Nothing changed."
+        )
+        return 1
+    hooks = home / ".vibe" / "hooks.toml"
+    rules = home / ".vibe" / "AGENTS.md"
+    runner = plugins / "agent-kit" / "hooks" / "run.py"
+    current = hooks
+    try:
+        old = read_text(hooks)
+        rest = strip_block(old, LEGACY_TOML_BEGIN, LEGACY_TOML_END)
+        rest = strip_block(rest, TOML_BEGIN, TOML_END)
+        current = rules
+        old_rules = read_text(rules)
+        new_rules = agents_block(old_rules, python, "vibe", runner=runner)
+    except ValueError as exc:
+        print(f"ERROR: {current} cannot be updated ({exc}); nothing changed.")
+        return 1
+    try:
+        vibe_plugin.build(plugins, python)
+    except vibe_plugin.BuildError as exc:
+        print(f"ERROR: {exc}; nothing changed.")
+        return 1
+    print(f"Installed the agent-kit and superpowers plugins in {plugins}")
+    if rest != old:
+        if rest.strip() == "":
+            hooks.unlink()
+            print(f"Removed {hooks} (only the kit's hooks were in it)")
+        else:
+            vibe_plugin.write_text(hooks, rest.rstrip("\n") + "\n")
+            print(f"Wrote {hooks}")
+    if new_rules == old_rules:
+        print(f"Unchanged {rules}")
+    else:
+        vibe_plugin.write_text(rules, new_rules)
+        print(f"Wrote {rules}")
+    in_use = kit_hooks_in_use(home)
+    if not in_use:
+        remove_kit_links(skills_dir)
+    else:
+        print(
+            f"WARNING: kept the kit's skill links in {skills_dir}: "
+            f"{', '.join(str(p) for p in in_use)} still run the kit's hooks, so "
+            "Vibe lists the kit's skills twice (bare and agent-kit:-prefixed) "
+            "until Codex and Cursor stop using them."
+        )
+    print(NEXT_STEP["vibe"])
+    return 0
+
+
 def install_agent(agent: str, home: Path, skills_dir: Path, python: str) -> int:
-    """Link the kit skills and merge its hooks for Vibe, Codex or Cursor."""
+    """Link the kit skills and merge its hooks for Codex or Cursor."""
     base = home / f".{agent}"
-    hooks = base / ("hooks.toml" if agent == "vibe" else "hooks.json")
+    hooks = base / "hooks.json"
     rules = base / "AGENTS.md"
     current = hooks
     try:
         old = read_text(hooks)
-        if agent == "vibe":
-            new = vibe_hooks(old, python)
-        else:
-            new = json_hooks(old, agent, python)
+        new = json_hooks(old, agent, python)
         files = [(hooks, old, new)]
         if agent != "cursor":
             current = rules
@@ -541,6 +632,8 @@ def main(argv: list[str] | None = None) -> int:
     warn_missing_tools()
     if args.agent != "claude":
         skills_dir = Path(args.skills_dir or home / ".agents" / "skills")
+        if args.agent == "vibe":
+            return install_vibe(home, skills_dir, args.python)
         return install_agent(args.agent, home, skills_dir, args.python)
     skills_dir = Path(args.skills_dir or home / ".claude" / "skills")
     settings = Path(args.settings or home / ".claude" / "settings.json")

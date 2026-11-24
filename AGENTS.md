@@ -21,6 +21,9 @@ symlink, ADR 0005). Never run `plugin/install.py` (or its wrapper
 `plugin/install.ps1`) from a test without a temporary `--skills-dir`
 (`-SkillsDir`).
 
+Vibe runs a copy of the plugin, so to try an edit in Vibe rerun
+`python plugin/install.py --agent vibe` (then /reload-plugins or a new session).
+
 - This repo is public. Never write the names of private repos or a machine's
   username into tracked files; refer to them generically ("a project repo") and
   use `%USERPROFILE%` or `<repo-root>` in paths. Grep the diff for them before

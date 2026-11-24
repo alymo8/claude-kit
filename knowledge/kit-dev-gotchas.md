@@ -96,6 +96,12 @@ Things that cost time in past runs and are not obvious from the code.
   `git worktree add <tmp>/claude-tasks/<branch-slug>/task-N
   -b feat/<slug>-task-N HEAD`, as `parallel-tasks` does, then
   `git merge --ff-only` it into the feature branch and remove it.
+- `tests/test_publish.py`'s guards read `git ls-files`, so they skip a new
+  file until it is committed: a task subagent's green suite before its
+  commit can turn red after the merge. Rerun the suite after each merge.
+- A frozen test that pins old behaviour blocks a review fix to that
+  behaviour; check `**Frozen:**` tests before fixing, and report the fix as
+  a follow-up if the spec keeps the old behaviour.
 - A feature worktree made with `git worktree add -b feat/<slug> <path>
   origin/main` tracks `origin/main`, so `handoff.py state` reports
   "upstream: origin/main". The first push must be
@@ -192,6 +198,14 @@ The commands keep the rules and leave out the reasons; the reasons are here.
 - Removing (or renaming) a command also means deleting its generated
   wrapper `plugin/agent-skills/<name>/`; `python plugin/scripts/agent-skills.py
   --check` fails until the two match.
+- Check the Vibe plugins headless from a child repo:
+  `vibe -p "<ask it to quote the Kit map and Plugin root lines>" --max-turns 2`.
+  Headless Vibe denies every tool call that needs approval ("a headless run
+  cannot give"), `--add-dir` included, so a kit command that reads
+  `<plugin>/commands/*.md` needs an interactive session to verify.
+- `python plugin/install.py --agent vibe` run from a worktree keeps the old
+  `~/.agents/skills/` links (they point into the main checkout); run it from
+  the main checkout to remove them.
 
 ## Main checkout
 
