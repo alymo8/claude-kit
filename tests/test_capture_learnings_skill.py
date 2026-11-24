@@ -215,6 +215,15 @@ def test_prune_spares_this_runs_learnings():
     assert "Never prune a learning routed in step 3 of this run" in flat()
 
 
+def test_prune_follows_agents_md_stub():
+    text = flat().split("4. **Prune.**", 1)[1].split("5. **Harden.**", 1)[0]
+    assert "only `@AGENTS.md`" in text
+
+
+def test_none_needs_no_repo_or_memory_prune():
+    assert "nothing was pruned in the repo or in memory" in flat()
+
+
 def test_prune_has_no_approval_pause():
     text = flat().split("4. **Prune.**", 1)[1].split("5. **Harden.**", 1)[0]
     assert "with and without `--auto`" in text

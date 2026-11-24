@@ -263,3 +263,4 @@ def test_rules_staleness_check():
     assert "inferred (from: git log)" in built_well
     assert "not `knowledge/decisions/`" in built_well
     assert "only a `knowledge/` folder" in section
+    assert "no `last_updated` is flagged only for its stale entries" in built_well

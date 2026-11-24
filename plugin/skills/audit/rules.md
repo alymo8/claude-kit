@@ -119,7 +119,8 @@ also applies to a repo that has only a `knowledge/` folder.
   cite the first stale entry (the `last_updated` line when the date is the
   only one), **Confidence** is `verified` only when every listed entry is,
   and **Impact** lists every stale entry with its line and its own
-  confidence.
+  confidence. A doc with no `last_updated` is flagged only for its stale
+  entries.
 - Duplication: the same instruction in several places, or one behaviour split
   across a hook, a command and an agent.
 - Wrong mechanism: a hook that should be a command, CLAUDE.md content that

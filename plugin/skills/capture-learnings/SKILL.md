@@ -78,7 +78,8 @@ build them only on a yes, as a separate commit with its tests.
    parallel run may have pruned it. Step 2's filter does not apply here.
    Never prune a learning routed in step 3 of this run.
    - **Repo files:** the root `CLAUDE.md`, every nested `CLAUDE.md` in a
-     directory the diff touched or an ancestor of one, and every
+     directory the diff touched or an ancestor of one (a `CLAUDE.md` that
+     is only `@AGENTS.md`: read and edit the `AGENTS.md` beside it), and every
      `knowledge/**/*.md` doc (`knowledge/decisions/` excluded) that names a
      changed, renamed or deleted path, or a command, script, flag or
      setting the diff changed. For each entry (a bullet, a table row or a
@@ -171,7 +172,8 @@ build them only on a yes, as a separate commit with its tests.
      `memory: <file>: <resolved | rewritten | deleted>: <why>`;
    - one line per decision or preference listed instead of written, and
      per step-4 ADR or memory conflict, starting `not written:`;
-   - when no learning was written and nothing was pruned: `none`, then
+   - when no learning was written and nothing was pruned in the repo or in
+     memory: `none`, then
      each dropped candidate with the step-2 rule that dropped it;
    - after the learnings lines, a `Hardening:` block with one line per
      `harden (...)` line from step 5, or `Hardening: none`.
