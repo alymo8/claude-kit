@@ -932,7 +932,7 @@ def test_refusal_text_matches_builder():
 def test_vibe_build_turns_stuck_staging_into_build_error(tmp_path, monkeypatch):
     vibe = load_module(PLUGIN / "vibe_plugin.py", "vibe_plugin")
     out = tmp_path / "plugins"
-    (tmp_path / ".agent-kit-staging" / "agent-kit.old").mkdir(parents=True)
+    (tmp_path / ".agent-kit-staging" / "agent-kit").mkdir(parents=True)
 
     def stuck(path, ignore_errors=False, **kwargs):
         if not ignore_errors:
@@ -942,3 +942,26 @@ def test_vibe_build_turns_stuck_staging_into_build_error(tmp_path, monkeypatch):
     with pytest.raises(vibe.BuildError):
         vibe.build(out, python="python")
     assert not out.exists()
+
+
+def test_vibe_restore_error_keeps_staging_message(tmp_path, monkeypatch, capsys):
+    vp = load_module(PLUGIN / "vibe_plugin.py", "vibe_plugin")
+    home = tmp_path / "home"
+    plugins = (home / ".vibe" / "plugins").resolve()
+    vp.build(plugins, sys.executable)
+    real = os.rename
+
+    def flaky(src, dst):
+        src, dst = Path(src), Path(dst)
+        if src.name == "superpowers" and src.parent.name == ".agent-kit-staging":
+            raise OSError("locked")
+        if src.name == "agent-kit.old" and dst.parent == plugins:
+            raise OSError("restore blocked")
+        return real(src, dst)
+
+    monkeypatch.setattr(vp.os, "rename", flaky)
+    code = installer().install_vibe(home, skills(tmp_path), sys.executable)
+    printed = capsys.readouterr().out
+    assert code == 1
+    assert str(plugins.parent / ".agent-kit-staging") in printed
+    assert "nothing changed" not in printed
