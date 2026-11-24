@@ -30,10 +30,11 @@ Things that cost time in past runs and are not obvious from the code.
   (Claude Code cuts it there after a compaction). Move late sections to
   `plugin/references/`, never into `commands/` (every `.md` there becomes a
   slash command), and point to them as
-  `${CLAUDE_PLUGIN_ROOT}/references/<file>.md`. The same file must give the
-  `~/.claude/skills/claude-kit/references/<file>.md` fallback, or state it
-  once with the `FALLBACK_RULE` line from `tests/test_skill_size.py`, or the
-  pointer test fails.
+  `${CLAUDE_PLUGIN_ROOT}/references/<file>.md`. The same file must state
+  the fallback once with the `FALLBACK_RULE` line from
+  `tests/test_skill_size.py`, or give the per-pointer
+  `<plugin root>/references/<file>.md` fallback together with the exact
+  `ROOT_NOTE` sentence from that test, or the pointer test fails.
 - Writing test code through a bash heredoc into a Python script turns
   `\n` escapes inside string literals into real line breaks, so the
   test file no longer parses. Edit test files with the Edit tool. The
@@ -115,9 +116,11 @@ The commands keep the rules and leave out the reasons; the reasons are here.
   empty suite. `uv init --no-workspace` stops a parent `pyproject.toml`
   from adopting the new project.
 - **Plugin path fallback:** `${CLAUDE_PLUGIN_ROOT}` is not always expanded in
-  command text, so each long command states once that
-  `~/.claude/skills/claude-kit` stands in for it (`tests/test_skill_size.py`
-  accepts that line or a per-pointer fallback).
+  command text, so each long command states once that the plugin root from
+  the kit map (else `~/.claude/skills/agent-kit`) stands in for it
+  (`tests/test_skill_size.py` accepts that line or a per-pointer fallback).
+  A marketplace install has no skills-dir link, so the kit map's
+  `Plugin root:` line is the only path that always works.
 - **Print-mode wait ceiling:** `claude -p` ends a `run_in_background`
   command after 10 minutes (`CLAUDE_CODE_PRINT_BG_WAIT_CEILING_MS`), so
   `ship-child.py` sets it to `0` for `/ship-many` children.
@@ -166,6 +169,18 @@ The commands keep the rules and leave out the reasons; the reasons are here.
   `test_real_hooks_json_commands` in `tests/test_run_hooks.py` also pins
   the SessionStart command count; adding or removing a SessionStart hook
   changes it too.
+- To run a hook by hand on Windows, pipe its stdin from Bash
+  (`echo '{}' | python plugin/hooks/<hook>.py`). PowerShell 5.1's
+  `'{}' | python ...` sends a UTF-8 BOM, and hooks that parse stdin as JSON
+  (`handoff_inject.py`) print `Unexpected UTF-8 BOM`; Claude Code itself
+  sends none.
+- Check a marketplace install without touching your own config: set
+  `CLAUDE_CONFIG_DIR` to a scratch folder, then
+  `claude plugin marketplace add <worktree>` and
+  `claude plugin install agent-kit@agent-kit`. The install path is under
+  `agent-kit@agent-kit` in `<config>/plugins/installed_plugins.json`; run
+  the SessionStart commands from `<installPath>/hooks/hooks.json` with
+  `CLAUDE_PLUGIN_ROOT=<installPath>`. Delete the folder afterwards.
 - Removing (or renaming) a command also means deleting its generated
   wrapper `plugin/agent-skills/<name>/`; `python plugin/scripts/agent-skills.py
   --check` fails until the two match.
@@ -205,6 +220,9 @@ The commands keep the rules and leave out the reasons; the reasons are here.
   `- [ ] **Step N:**` bullets, a `**Files:**` line, a step with
   ``Run `cmd` `` then `Expected:`, and a commit step in every task
   (`**Files:** none` waives the commit).
+- A plan task that runs `git mv <dir> <new>` must not list `<dir>` in its
+  `git add` step: git stops on the missing pathspec and adds nothing more,
+  so the commit holds only the renames. Use `git add -A <new> <other files>`.
 - Take a new ADR's number from `origin/main`
   (`git ls-tree --name-only origin/main knowledge/decisions/`), not local
   `main`. Renumbering after the spec gate changes the spec hash and forces
