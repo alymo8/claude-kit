@@ -119,9 +119,10 @@ def test_harden_step_sits_between_route_and_commit():
     text = flat()
     assert (
         text.index("3. **Route**")
-        < text.index("4. **Harden.**")
-        < text.index("5. **Write and commit.**")
-        < text.index("6. **Return**")
+        < text.index("4. **Prune.**")
+        < text.index("5. **Harden.**")
+        < text.index("6. **Write and commit.**")
+        < text.index("7. **Return**")
     )
 
 
@@ -168,3 +169,59 @@ def test_stub_claude_md_routes_to_agents_md():
     text = flat()
     assert "is only `@AGENTS.md`" in text
     assert "write to the root `AGENTS.md` instead" in text
+
+
+def test_description_mentions_pruning():
+    description = frontmatter(body())["description"]
+    assert "prunes entries the feature made stale" in description
+
+
+def test_prune_reads_the_feature_diff():
+    assert "`git diff --name-status origin/main...HEAD`" in flat()
+
+
+def test_prune_reads_origin_main():
+    text = flat().split("4. **Prune.**", 1)[1].split("5. **Harden.**", 1)[0]
+    assert "git show origin/main:<path>" in text
+    assert "already fixed there" in text
+
+
+def test_prune_skips_adrs():
+    text = flat()
+    assert "`knowledge/decisions/` excluded" in text
+    assert "ADRs are never edited" in text
+    assert "not written: ADR <NNNN> may be superseded: <why>" in text
+
+
+def test_prune_never_edits_feedback_or_user_memory():
+    text = flat()
+    assert "`type: feedback` and `type: user`: never edit or delete" in text
+    assert "not written: memory <file> may conflict: <why>" in text
+    assert "only when nothing in it stays true" in text
+
+
+def test_prune_memory_edits_are_exact_replacements():
+    text = flat()
+    assert "exact replacement" in text
+    assert "re-reading the file right before each edit" in text
+
+
+def test_prune_stays_within_the_diff():
+    text = flat()
+    assert "leave it alone, even if it looks stale for another reason" in text
+
+
+def test_prune_spares_this_runs_learnings():
+    assert "Never prune a learning routed in step 3 of this run" in flat()
+
+
+def test_prune_has_no_approval_pause():
+    text = flat().split("4. **Prune.**", 1)[1].split("5. **Harden.**", 1)[0]
+    assert "with and without `--auto`" in text
+
+
+def test_summary_reports_prune_edits():
+    text = flat()
+    assert "`pruned: <file>: <old entry, shortened> → <new entry | removed>`" in text
+    assert "`memory: <file>: <resolved | rewritten | deleted>: <why>`" in text
+    assert "no learning was written and nothing was pruned" in text
