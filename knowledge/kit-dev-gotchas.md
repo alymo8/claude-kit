@@ -51,6 +51,12 @@ Things that cost time in past runs and are not obvious from the code.
   about 60 exact phrases, and one pins a line break
   (`"one\n   copy, the only one the run starts"` in step 5 of
   `ship-fast.md`), so rewrapping that sentence fails the test.
+- A Claude Code session (and so the shell that runs `pytest` in it) sets
+  `CLAUDE_PROJECT_DIR`, and `clean_env()` keeps it: a test of a script's
+  current-folder default must drop it (`env.pop("CLAUDE_PROJECT_DIR", None)`).
+- `tests/test_publish.py::test_claude_kit_only_in_allowed_places` rejects the
+  bare string `claude-kit` in any tracked file, test fixtures included; pick
+  another name for a fixture (say `claude-tools`).
 - The kit version lives in `plugin/.claude-plugin/plugin.json` and is
   pinned in `tests/test_plugin_manifest.py`; bump both in the same commit,
   and rename the test (`test_version_is_0_32_0`) to the new version.
