@@ -245,6 +245,7 @@ The commands keep the rules and leave out the reasons; the reasons are here.
 - A plan task that runs `git mv <dir> <new>` must not list `<dir>` in its
   `git add` step: git stops on the missing pathspec and adds nothing more,
   so the commit holds only the renames. Use `git add -A <new> <other files>`.
+  spec-lint P11 flags this.
 - Take a new ADR's number from `origin/main`
   (`git ls-tree --name-only origin/main knowledge/decisions/`), not local
   `main`. Renumbering after the spec gate changes the spec hash and forces
