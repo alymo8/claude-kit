@@ -47,6 +47,7 @@
 |---|---|---|
 | 2026-11-23 | [Publish the kit as a Claude Code plugin (agent-kit) Implementation Plan](plans/2026-11-23-publish-plugin.md) | approved |
 | 2026-11-23 | [Remove vault tooling Implementation Plan](plans/2026-11-23-remove-vault-tooling.md) | approved |
+| 2026-11-23 | [Vibe native plugin Implementation Plan](plans/2026-11-23-vibe-plugin.md) | approved |
 | 2026-11-18 | [Agent-agnostic kit Implementation Plan](plans/2026-11-18-agent-agnostic-kit.md) | approved |
 | 2026-11-18 | [`/ship-many` hardening Implementation Plan](plans/2026-11-18-ship-many-hardening.md) | approved |
 | 2026-11-16 | [Learning decay: prune stale learnings at ship Implementation Plan](plans/2026-11-16-learning-decay.md) | approved |
