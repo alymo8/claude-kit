@@ -6,6 +6,7 @@
 
 | Date | Spec | Status |
 |---|---|---|
+| 2026-11-24 | [Quote hook commands safely and harden the Vibe installer](specs/2026-11-24-hook-quoting-design.md) | approved |
 | 2026-11-23 | [Publish the kit as a Claude Code plugin (agent-kit)](specs/2026-11-23-publish-plugin-design.md) | approved |
 | 2026-11-23 | [Remove the vault tooling that moved to second-brain-kit](specs/2026-11-23-remove-vault-tooling-design.md) | approved |
 | 2026-11-23 | [Install the kit in Mistral Vibe as a native plugin](specs/2026-11-23-vibe-plugin-design.md) | approved |
