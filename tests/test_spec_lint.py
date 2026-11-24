@@ -843,8 +843,19 @@ def p11(text, root):
         (["git add a", "git mv a b"], []),  # add before mv: not checked
         (["git mv a b", 'git add "a'], []),  # shlex cannot split: skipped
         (['run("git mv a b")', "git add a"], []),  # quoted: no command
+        (["git mv a b", "git mv b a", "git add a"], []),  # moved back
     ],
-    ids=["flag", "new", "slash", "force", "and", "before", "unsplit", "quoted"],
+    ids=[
+        "flag",
+        "new",
+        "slash",
+        "force",
+        "and",
+        "before",
+        "unsplit",
+        "quoted",
+        "back",
+    ],
 )
 def test_p11_cases(root, commands, lines):
     plan_root(root)

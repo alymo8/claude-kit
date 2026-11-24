@@ -33,13 +33,13 @@ COMMAND_RE = re.compile(
 def tracked(root: Path) -> list[tuple[str, str]]:
     """(mode, path) of each tracked entry under plugin/ that exists on disk."""
     out = subprocess.run(
-        ["git", "-C", str(root), "ls-files", "-s", "plugin"],
+        ["git", "-C", str(root), "ls-files", "-s", "-z", "plugin"],
         capture_output=True,
         text=True,
         check=True,
     ).stdout
     entries = []
-    for line in out.splitlines():
+    for line in filter(None, out.split("\0")):
         meta, _, path = line.partition("\t")
         mode = meta.split()[0]
         if (root / path).exists() or (root / path).is_symlink():

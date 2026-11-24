@@ -14,9 +14,9 @@ Things that cost time in past runs and are not obvious from the code.
   joins a split string or wrapped signature back onto one line when that
   fits in 88 characters, so split only what would not fit.
 - `test_relative_markdown_links_resolve` checks every tracked `.md`, specs
-  included, and does not skip code spans: a link-shaped example such as a
-  bracketed name followed by a parenthesised `file.md` fails it. Describe
-  the shape in prose instead.
+  included. It skips fences and inline code spans (a span may wrap lines but
+  not cross a blank line), so a link-shaped example in prose outside code
+  still fails it: put it in backticks or describe the shape.
 - In `tests/test_ship_command.py`, `_step(n)` collapses whitespace but
   `_stops()` returns the raw section, so a phrase that wraps across lines
   in `ship.md` fails an `in _stops()` assertion. Normalise first:

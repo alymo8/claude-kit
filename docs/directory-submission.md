@@ -71,6 +71,9 @@ before you submit, in case it has changed.
   threads (`scripts/review-threads.py`, one `gh api graphql` query) and posts
   replies; `audit-deep` runs `gh run list`; `present` runs `gh pr view`.
   `/ship-many` starts headless `claude -p` sessions (`scripts/ship-child.py`).
+  The `supabase-cli` skill guides `supabase` CLI commands that reach the
+  user's Supabase project, and projects scaffolded by `/new-project` carry CI
+  workflows that download gitleaks and install packages in the user's own CI.
 - **What does it store locally?** Handoff files under `.claude/handoffs/` in
   the user's repo (git state and the last few prompts of the session), the
   spec index `docs/superpowers/README.md`, and a small context-nudge marker

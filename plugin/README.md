@@ -36,12 +36,12 @@ blocks your work. The `CLAUDE_KIT_*` switches named below turn a hook off or on.
 | PostToolUse (Write, Edit) | `hooks/on_spec_edit.py` | the edited file's path from the hook event | when the file is a spec or plan under `docs/superpowers/specs/` or `plans/`, regenerates `docs/superpowers/README.md` through `spec-index.py` | nothing, except errors |
 | SessionStart | `hooks/worktree_audit.py` | `git worktree list` and the local branches of the current repo | nothing (never deletes or prunes) | a short list of leftover worktrees and merged, upstream-gone or upstream-less branches, or nothing |
 | SessionStart | `hooks/lean_context_inject.py` | `CLAUDE_KIT_LEAN_CONTEXT` | nothing | a one-paragraph token-discipline rule as session context (off with `CLAUDE_KIT_LEAN_CONTEXT=0`) |
-| SessionStart | `hooks/kit_map_inject.py` | the playbook table in `./conventions/README.md` | nothing | the plugin root and the absolute path of each playbook (off with `CLAUDE_KIT_KIT_MAP=0`) |
+| SessionStart | `hooks/kit_map_inject.py` | the playbook table in this plugin's `./conventions/README.md` | nothing | the plugin root and the absolute path of each playbook (off with `CLAUDE_KIT_KIT_MAP=0`) |
 | SessionStart | `hooks/workspace_rules_inject.py` | `rules.md` in this plugin, `CLAUDE_PROJECT_DIR` or the event's `cwd`, and `git rev-parse --git-common-dir` | nothing | the workspace rules as session context when the project is outside a kit checkout (off with `CLAUDE_KIT_WORKSPACE_RULES=0`) |
 | SessionStart | `hooks/grill_inject.py` | `CLAUDE_KIT_GRILL` | nothing | the spec-grill rule, only when `CLAUDE_KIT_GRILL=1` |
 | SessionStart (startup, clear) | `hooks/handoff_inject.py` | `.claude/handoffs/<branch>.md` in the current repo and `git` branch state | nothing | the current branch's handoff when it is under seven days old, else one line naming fresh handoffs for other branches, or nothing |
 | PreCompact | `hooks/precompact_keep.py` | `CLAUDE_KIT_PRECOMPACT` | nothing | one instruction for the compaction summary (off with `CLAUDE_KIT_PRECOMPACT=0`) |
-| SessionEnd | `hooks/handoff_snapshot.py` | the tail of the session transcript (your last few prompts), `git` status, log and upstream, and the open PR's URL through `gh pr view` | creates `.claude/handoffs/<branch>.md`, or replaces only its State section | nothing, except errors |
+| SessionEnd | `hooks/handoff_snapshot.py` | the tail of the session transcript (your last few prompts), `git` status, log and upstream, and the open PR's URL through `gh pr view` | creates `.claude/handoffs/<branch>.md` (with your last few prompts), or replaces only its State section; writes a `.gitignore` of `*` in `.claude/handoffs/` so handoffs stay out of git | nothing, except errors |
 | Stop | `scripts/spec-index.py` | the specs and plans under `$CLAUDE_PROJECT_DIR/docs/superpowers/` (else the current folder's) | `docs/superpowers/README.md`, only when its content changed and it carries the generated marker | nothing, except errors |
 | UserPromptSubmit | `hooks/context_nudge.py` | the tail of the session transcript (token usage of the last API call) and `CLAUDE_KIT_NUDGE_AT`, `CLAUDE_KIT_NUDGE_STEP` | a small marker file, `<scratchpad>/claude-kit/nudge-level` in the session's scratchpad folder (else a `claude-kit-nudge-<session>` file in the system temp folder), holding the last threshold crossed | a one-sentence nudge to run `/handoff` and `/clear` when the context passes 300k tokens, then every further 100k |
 
@@ -52,8 +52,8 @@ have no `hooks.json` of their own; it skips the Claude-only ones
 
 ## Commands and scripts
 
-Commands and skills run only when you invoke them (the side-effecting commands
-cannot be invoked by the model on its own). `/ship`, `/ship-many`, `/ship-fast`
+Commands run only when you invoke them; skills run when you or Claude invoke
+them (the side-effecting commands cannot be invoked by the model on its own). `/ship`, `/ship-many`, `/ship-fast`
 and the spec and plan gates run `git`, `gh`, `python` (the scripts in
 `scripts/`) and subagents. `/ship`, `/ship-many` and `/ship-fast` create
 branches and worktrees, commit, push branches to your `origin` remote and open
@@ -61,8 +61,10 @@ pull requests; `/ship` and `/ship-many` also merge them (squash-merge on
 `main`). `/ship-many` starts one headless `claude -p` session per spec
 (`scripts/ship-child.py`). `/new-project` and `/adopt-conventions` write files
 into the folder you choose, and `install.py` (run by hand from a checkout)
-creates a link in your skills folder and edits your settings file for the
-status line.
+creates a link in your skills folder (none when the plugin came from the
+marketplace) and edits your settings file for the status line; with
+`--agent vibe`, `codex` or `cursor` it also writes that agent's plugin folder,
+hooks file and `AGENTS.md` line.
 
 ## Network
 
@@ -89,8 +91,14 @@ fixes), the `audit-deep` skill (`gh run list`, when `gh` is signed in) and the
 `present` skill (`gh pr view` for pull-request sources). `/new-project` leaves
 creating a remote (`gh repo create`) to you.
 
-There is no telemetry. Nothing is sent anywhere else: GitHub calls go through
-your own `gh` and `git`, to your own repositories.
+Two more reach other services, only on your say-so: the `supabase-cli` skill
+guides Claude through `supabase` CLI commands (`login`, `link`, `db push`,
+`functions deploy`) that talk to your Supabase project, and the projects
+`/new-project` scaffolds carry CI workflows that, in your own CI, download
+gitleaks from GitHub and install the project's packages.
+
+There is no telemetry. Nothing is sent to the plugin's authors or any third
+party: GitHub calls go through your own `gh` and `git`.
 
 ## Licence
 

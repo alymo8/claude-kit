@@ -739,6 +739,8 @@ def git_mv_add_problems(
                     paths = [a for a in args if not a.startswith("-")]
                     if sub == "mv":
                         if len(paths) >= 2:
+                            # A path moved back is no longer missing.
+                            moved.pop(paths[-1].rstrip("/"), None)
                             for source in paths[:-1]:
                                 moved[source.rstrip("/")] = paths[-1]
                         continue
