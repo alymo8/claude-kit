@@ -1,7 +1,10 @@
 #!/usr/bin/env python3
 """Regenerate docs/superpowers/README.md: an index of a repo's specs and plans.
 
-    python spec-index.py [DOCS_DIR]      # DOCS_DIR defaults to ./docs/superpowers
+    python spec-index.py [DOCS_DIR]
+
+DOCS_DIR defaults to $CLAUDE_PROJECT_DIR/docs/superpowers when that variable is
+set, else ./docs/superpowers.
 
 Each spec/plan row shows its date, title (linked) and Status. Title is the first
 ``# `` heading (fallback: file stem); Status comes from a ``**Status:**`` line
@@ -13,6 +16,7 @@ generated marker (a hand-written file is left alone). Always exits 0.
 
 from __future__ import annotations
 
+import os
 import re
 import sys
 from pathlib import Path
@@ -75,8 +79,14 @@ def write_index(docs_dir: Path) -> Path | None:
     return out
 
 
+def default_docs_dir() -> Path:
+    """$CLAUDE_PROJECT_DIR/docs/superpowers when set and not empty, else the cwd's."""
+    project = os.environ.get("CLAUDE_PROJECT_DIR")
+    return (Path(project) if project else Path.cwd()) / "docs" / "superpowers"
+
+
 def main(argv: list[str]) -> int:
-    docs_dir = Path(argv[0]) if argv else Path.cwd() / "docs" / "superpowers"
+    docs_dir = Path(argv[0]) if argv else default_docs_dir()
     try:
         write_index(docs_dir)
     except Exception as exc:  # never block a hook
