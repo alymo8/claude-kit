@@ -448,7 +448,7 @@ def snapshot(root):
     return found
 
 
-@pytest.mark.parametrize("agent", AGENTS)
+@pytest.mark.parametrize("agent", ("codex", "cursor"))
 def test_agent_links_every_skill(tmp_path, agent):
     result = run_agent(tmp_path, agent)
     assert result.returncode == 0, out(result)
@@ -465,7 +465,7 @@ def test_agent_links_every_skill(tmp_path, agent):
 
 def test_agent_skills_dir_override(tmp_path):
     other = tmp_path / "home" / "other-skills"
-    result = run_agent(tmp_path, "vibe", "--skills-dir", str(other))
+    result = run_agent(tmp_path, "codex", "--skills-dir", str(other))
     assert result.returncode == 0, out(result)
     assert os.path.samefile(other / "spec-gate", PLUGIN / "skills" / "spec-gate")
     assert not skills(tmp_path).exists()
@@ -475,7 +475,7 @@ def test_foreign_entry_left_alone(tmp_path):
     foreign = skills(tmp_path) / "spec-gate"
     foreign.mkdir(parents=True)
     (foreign / "keep.txt").write_text("mine", encoding="utf-8")
-    result = run_agent(tmp_path, "vibe")
+    result = run_agent(tmp_path, "codex")
     assert result.returncode == 0, out(result)
     assert not is_link(foreign) and (foreign / "keep.txt").is_file()
     assert "Skipped" in result.stdout and "spec-gate" in result.stdout
@@ -491,26 +491,6 @@ def test_dangling_kit_link_removed(tmp_path):
     result = run_agent(tmp_path, "codex")
     assert result.returncode == 0, out(result)
     assert not os.path.lexists(old)
-
-
-def test_vibe_hooks_toml_keeps_other_entries(tmp_path):
-    path = tmp_path / "home" / ".vibe" / "hooks.toml"
-    path.parent.mkdir(parents=True)
-    path.write_text(
-        '[[hooks]]\nname = "mine"\ntype = "session_start"\ncommand = "echo hi"\n',
-        encoding="utf-8",
-    )
-    assert run_agent(tmp_path, "vibe").returncode == 0
-    hooks = tomllib.loads(path.read_text(encoding="utf-8"))["hooks"]
-    assert [h["name"] for h in hooks] == [
-        "mine",
-        "agent-kit-session-start",
-        "agent-kit-stop",
-    ]
-    assert hooks[1]["type"] == "session_start"
-    assert hooks[1]["command"].endswith('run.py" --agent vibe --event SessionStart')
-    assert hooks[2]["type"] == "post_agent" and hooks[2]["match"] == "main"
-    assert hooks[2]["command"].endswith('run.py" --agent vibe --event Stop')
 
 
 def test_codex_hooks_json(tmp_path):
@@ -604,19 +584,14 @@ def test_damaged_block_markers_change_nothing(tmp_path, name, text, legacy):
     assert result.returncode == 1 and "markers are damaged" in result.stdout
     assert path.read_text(encoding="utf-8") == text
     assert not skills(tmp_path).exists()
-
-
-def test_vibe_toml_survives_quote_in_path():
-    text = installer().vibe_hooks("", "C:/Users/O'Neil/python.exe")
-    hooks = tomllib.loads(text)["hooks"]
-    assert hooks[0]["command"].startswith("C:/Users/O'Neil/python.exe ")
+    assert not (tmp_path / "home" / ".vibe" / "plugins").exists()
 
 
 def test_kit_link_to_moved_skill_relinked(tmp_path):
     skills(tmp_path).mkdir(parents=True)
     link = skills(tmp_path) / "ship"
     make_dir_link(link, PLUGIN / "skills" / "spec-gate")
-    result = run_agent(tmp_path, "vibe")
+    result = run_agent(tmp_path, "codex")
     assert result.returncode == 0, out(result)
     assert "Relinked ship" in result.stdout
     assert os.path.samefile(link, PLUGIN / "agent-skills" / "ship")
@@ -659,31 +634,24 @@ def test_powershell_wrapper_agent_vibe(tmp_path):
         command, capture_output=True, text=True, timeout=120, env=env
     )
     assert result.returncode == 0, out(result)
-    assert os.path.samefile(
-        tmp_path / ".agents" / "skills" / "spec-gate", PLUGIN / "skills" / "spec-gate"
-    )
-    assert (tmp_path / ".vibe" / "hooks.toml").is_file()
+    plugins = tmp_path / ".vibe" / "plugins"
+    for name in ("agent-kit", "superpowers"):
+        assert (plugins / name / "plugin.json").is_file(), name
+    assert not (tmp_path / ".agents").exists()
     assert not (tmp_path / ".claude" / "skills").exists()
-    lines = result.stdout.splitlines()
     written = {
         Path(line.split(" ", 1)[1]).resolve()
-        for line in lines
+        for line in result.stdout.splitlines()
         if line.startswith(("Wrote ", "Unchanged "))
     }
-    vibe = (tmp_path / ".vibe").resolve()
-    assert {vibe / "hooks.toml", vibe / "AGENTS.md"} <= written
+    assert (tmp_path / ".vibe").resolve() / "AGENTS.md" in written
     for path in written:
         assert path.is_relative_to(tmp_path.resolve()), path
-    linked = sum(1 for line in lines if line.startswith("Linked "))
-    assert linked == len(os.listdir(tmp_path / ".agents" / "skills"))
 
 
 def legacy_files(agent):
     mod = installer()
     md = ("AGENTS.md", mod.LEGACY_MD_BEGIN, mod.LEGACY_MD_END, mod.MD_BEGIN)
-    if agent == "vibe":
-        toml = ("hooks.toml", mod.LEGACY_TOML_BEGIN, mod.LEGACY_TOML_END)
-        return [(*toml, mod.TOML_BEGIN), md]
     return [md]
 
 
@@ -732,3 +700,143 @@ def test_cursor_old_entry_replaced(tmp_path):
     start = json.loads(path.read_text(encoding="utf-8"))["hooks"]["sessionStart"]
     expected = installer().hook_command(sys.executable, "cursor", "SessionStart")
     assert start == [{"command": expected}]
+
+
+def vibe(tmp_path):
+    return tmp_path / "home" / ".vibe"
+
+
+def kit_link(tmp_path, name, target):
+    skills(tmp_path).mkdir(parents=True, exist_ok=True)
+    make_dir_link(skills(tmp_path) / name, target)
+
+
+def test_vibe_installs_two_plugins(tmp_path):
+    result = run_agent(tmp_path, "vibe")
+    assert result.returncode == 0, out(result)
+    for name in ("agent-kit", "superpowers"):
+        folder = vibe(tmp_path) / "plugins" / name
+        assert (folder / "plugin.json").is_file(), name
+        assert (folder / ".agent-kit-build").is_file(), name
+    assert not skills(tmp_path).exists()
+    assert not (vibe(tmp_path) / "hooks.toml").exists()
+    assert not (vibe(tmp_path) / ".agent-kit-staging").exists()
+    step = "Next: start a new Vibe session (or run /reload-plugins)."
+    assert step in result.stdout
+
+
+def test_vibe_removes_kit_block_keeps_user_hook(tmp_path):
+    mod = installer()
+    path = vibe(tmp_path) / "hooks.toml"
+    path.parent.mkdir(parents=True)
+    mine = '[[hooks]]\nname = "mine"\ntype = "session_start"\ncommand = "echo"\n'
+    block = f"{mod.TOML_BEGIN}\nold = 1\n{mod.TOML_END}\n"
+    path.write_text(f"{mine}\n{block}", encoding="utf-8")
+    result = run_agent(tmp_path, "vibe")
+    assert result.returncode == 0, out(result)
+    text = path.read_text(encoding="utf-8")
+    assert mod.TOML_BEGIN not in text and "old = 1" not in text
+    assert [h["name"] for h in tomllib.loads(text)["hooks"]] == ["mine"]
+
+
+def test_vibe_removes_legacy_block_keeps_user_text(tmp_path):
+    mod = installer()
+    path = vibe(tmp_path) / "hooks.toml"
+    path.parent.mkdir(parents=True)
+    old = f"{mod.LEGACY_TOML_BEGIN}\nold = 1\n{mod.LEGACY_TOML_END}\n"
+    path.write_text(f"mine = 1\n\n{old}", encoding="utf-8")
+    assert run_agent(tmp_path, "vibe").returncode == 0
+    assert path.read_text(encoding="utf-8") == "mine = 1\n"
+
+
+def test_vibe_removes_legacy_block_and_deletes_empty_file(tmp_path):
+    mod = installer()
+    path = vibe(tmp_path) / "hooks.toml"
+    path.parent.mkdir(parents=True)
+    old = f"{mod.LEGACY_TOML_BEGIN}\nold = 1\n{mod.LEGACY_TOML_END}\n"
+    new = f"{mod.TOML_BEGIN}\nnew = 1\n{mod.TOML_END}\n"
+    path.write_text(f"\n{old}\n{new}", encoding="utf-8")
+    result = run_agent(tmp_path, "vibe")
+    assert result.returncode == 0, out(result)
+    assert not path.exists()
+
+
+def test_vibe_agents_md_names_the_copy(tmp_path):
+    result = run_agent(tmp_path, "vibe")
+    assert result.returncode == 0, out(result)
+    text = (vibe(tmp_path) / "AGENTS.md").read_text(encoding="utf-8")
+    runner = vibe(tmp_path) / "plugins" / "agent-kit" / "hooks" / "run.py"
+    expected = f'"{runner.resolve().as_posix()}" --agent vibe --event SessionStart'
+    assert expected in text
+
+
+def test_vibe_removes_old_kit_links_keeps_foreign(tmp_path):
+    kit_link(tmp_path, "spec-gate", PLUGIN / "skills" / "spec-gate")
+    kit_link(tmp_path, "ship", PLUGIN / "agent-skills" / "ship")
+    kit_link(tmp_path, "brainstorming", VENDOR / "brainstorming")
+    mine = tmp_path / "mine"
+    mine.mkdir()
+    kit_link(tmp_path, "mine", mine)
+    result = run_agent(tmp_path, "vibe")
+    assert result.returncode == 0, out(result)
+    assert sorted(os.listdir(skills(tmp_path))) == ["mine"]
+    assert is_link(skills(tmp_path) / "mine")
+
+
+def test_vibe_removes_dangling_kit_link(tmp_path):
+    skills(tmp_path).mkdir(parents=True)
+    gone = skills(tmp_path) / "gone"
+    try:
+        make_dir_link(gone, PLUGIN / "skills" / "no-such-skill")
+    except (OSError, subprocess.CalledProcessError):
+        pytest.skip("cannot create a dangling link here")
+    assert run_agent(tmp_path, "vibe").returncode == 0
+    assert not os.path.lexists(gone)
+
+
+@pytest.mark.parametrize("agent", ["codex", "cursor"])
+def test_vibe_keeps_links_while_other_agent_uses_them(tmp_path, agent):
+    path = tmp_path / "home" / f".{agent}" / "hooks.json"
+    path.parent.mkdir(parents=True)
+    text = installer().json_hooks("", agent, sys.executable)
+    path.write_text(text, encoding="utf-8")
+    kit_link(tmp_path, "spec-gate", PLUGIN / "skills" / "spec-gate")
+    result = run_agent(tmp_path, "vibe")
+    assert result.returncode == 0, out(result)
+    assert is_link(skills(tmp_path) / "spec-gate")
+    assert "WARNING" in result.stdout and "twice" in result.stdout
+
+
+def test_vibe_unreadable_other_hook_file_counts_as_in_use(tmp_path):
+    path = tmp_path / "home" / ".codex" / "hooks.json"
+    path.parent.mkdir(parents=True)
+    path.write_text("{oops", encoding="utf-8")
+    kit_link(tmp_path, "spec-gate", PLUGIN / "skills" / "spec-gate")
+    result = run_agent(tmp_path, "vibe")
+    assert result.returncode == 0, out(result)
+    assert is_link(skills(tmp_path) / "spec-gate")
+    assert "WARNING" in result.stdout and "twice" in result.stdout
+
+
+@pytest.mark.parametrize("name", ["agent-kit", "superpowers"])
+def test_vibe_foreign_plugin_folder_changes_nothing(tmp_path, name):
+    mod = installer()
+    base = vibe(tmp_path)
+    (base / "plugins" / name).mkdir(parents=True)
+    (base / "plugins" / name / "plugin.json").write_text("{}", encoding="utf-8")
+    block = f"{mod.TOML_BEGIN}\nold = 1\n{mod.TOML_END}\n"
+    (base / "hooks.toml").write_text(block, encoding="utf-8")
+    kit_link(tmp_path, "spec-gate", PLUGIN / "skills" / "spec-gate")
+    before = snapshot(tmp_path / "home")
+    result = run_agent(tmp_path, "vibe")
+    assert result.returncode == 1 and "ERROR" in result.stdout
+    assert f"plugins{os.sep}{name}" in result.stdout
+    assert snapshot(tmp_path / "home") == before
+
+
+def test_vibe_runner_command_matches_hook_command(tmp_path):
+    builder = load_module(PLUGIN / "vibe_plugin.py", "vibe_plugin")
+    runner = tmp_path / "run.py"
+    for python in ("python", "C:/Program Files/python.exe"):
+        expected = installer().hook_command(python, "vibe", "Stop", runner=runner)
+        assert builder.runner_command(python, runner, "Stop") == expected
