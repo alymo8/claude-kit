@@ -116,18 +116,18 @@ def test_conflicting_directory_fails(tmp_path):
     assert (folder / "keep.txt").read_text(encoding="utf-8") == "x"
 
 
-def test_blocked_new_link_changes_nothing(tmp_path):
+def test_blocked_new_link_still_migrates(tmp_path):
     skills, settings = old_link_and_statusline(tmp_path)
     folder = skills / "agent-kit"
     folder.mkdir()
     (folder / "keep.txt").write_text("x", encoding="utf-8")
-    before = settings.read_bytes()
     result = run_install(tmp_path)
     assert result.returncode == 1
     assert "already exists" in out(result)
-    assert settings.read_bytes() == before
-    assert is_link(skills / "claude-kit")
     assert (folder / "keep.txt").read_text(encoding="utf-8") == "x"
+    assert not os.path.lexists(skills / "claude-kit")
+    new = (skills / "agent-kit" / "scripts" / "statusline.py").as_posix()
+    assert statusline_command(settings) == f'python "{new}"'
 
 
 def test_dangling_link_fails_cleanly(tmp_path):

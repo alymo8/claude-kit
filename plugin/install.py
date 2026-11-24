@@ -547,13 +547,6 @@ def main(argv: list[str] | None = None) -> int:
     config = config_dir(home)
     copy = marketplace_copy(config)
     new_link = skills_dir / LINK_NAME
-    if copy is None and os.path.lexists(new_link):
-        if not (is_link(new_link) and points_at_plugin(new_link)):
-            print(
-                f"ERROR: {new_link} already exists and is not a link to "
-                f"{PLUGIN}. Remove it first."
-            )
-            return 1
     try:
         removed = remove_legacy_link(skills_dir)
         if copy is not None and is_link(new_link) and points_at_plugin(new_link):
