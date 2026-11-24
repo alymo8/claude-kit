@@ -59,8 +59,30 @@ def read_version_file(path: Path) -> tuple[str, str]:
     return values["version"], values["source"]
 
 
+SAFE = "_./:\\-"
+REFUSED = ('"', "$", "`", "%")
+
+
+def quote_python(python: str) -> str:
+    """The python path, double-quoted unless every character is safe bare."""
+    if all(c.isalnum() or c in SAFE for c in python):
+        return python
+    return f'"{python}"'
+
+
+def unquotable(python: str) -> str | None:
+    """The first character of python that no hook quoting protects, or None."""
+    return next((c for c in python if c in REFUSED), None)
+
+
+def refusal(python: str, char: str) -> str:
+    return (
+        f"--python {python} contains {char}, which a hook command cannot quote safely"
+    )
+
+
 def runner_command(python: str, runner: Path, event: str) -> str:
-    exe = f'"{python}"' if " " in python else python
+    exe = quote_python(python)
     return f'{exe} "{Path(runner).as_posix()}" --agent vibe --event {event}'
 
 
@@ -191,6 +213,9 @@ def swap(out: Path, staging: Path) -> None:
 def build(out: Path, python: str = "python", kit: Path = KIT) -> None:
     out = Path(out).resolve()
     kit = Path(kit)
+    char = unquotable(python)
+    if char:
+        raise BuildError(refusal(python, char))
     foreign = foreign_folders(out)
     if foreign:
         raise BuildError(

@@ -277,6 +277,48 @@ def test_hooks_toml_quotes_spaces(tmp_path):
 
 def test_hooks_toml_survives_quote_in_python_path(tmp_path):
     python = "C:/Users/O'Neil/python.exe"
-    text = builder().hooks_toml(python, tmp_path / "run.py")
-    hooks = tomllib.loads(text)["hooks"]
-    assert hooks[0]["command"].startswith(python + " ")
+    runner = tmp_path / "run.py"
+    hooks = tomllib.loads(builder().hooks_toml(python, runner))["hooks"]
+    for hook in hooks:
+        assert shlex.split(hook["command"])[:2] == [python, runner.as_posix()]
+
+
+PATHS = [
+    "python",
+    "C:/Python311/python.exe",
+    "C:/Program Files/python.exe",
+    "C:/Users/O'Neil/python.exe",
+    "C:/a&b/python.exe",
+    "C:/py(3)/python.exe",
+    "C:/Users/José/python.exe",
+]
+BAD = [
+    'C:/a"b/python.exe',
+    "C:/a$b/python.exe",
+    "C:/a`b/python.exe",
+    "C:/a%b/python.exe",
+]
+
+
+@pytest.mark.parametrize("python", PATHS)
+def test_runner_command_splits_back_to_python(tmp_path, python):
+    runner = tmp_path / "run.py"
+    command = builder().runner_command(python, runner, "Stop")
+    assert shlex.split(command)[:2] == [python, runner.as_posix()]
+
+
+@pytest.mark.parametrize("python", BAD)
+def test_builder_refuses_unquotable_python(tmp_path, python):
+    out = tmp_path / "plugins"
+    char = next(c for c in python if c in '"$`%')
+    result = run_builder(out, "--python", python)
+    assert result.returncode == 1
+    expected = (
+        f"ERROR: --python {python} contains {char}, which a hook command "
+        "cannot quote safely; nothing changed."
+    )
+    assert expected in result.stdout
+    assert not out.exists() and not (tmp_path / STAGING).exists()
+    mod = builder()
+    with pytest.raises(mod.BuildError, match="cannot quote safely"):
+        mod.build(out, python)
