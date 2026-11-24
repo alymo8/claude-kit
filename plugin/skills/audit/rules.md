@@ -73,7 +73,8 @@ Apply when the repo has any of: a CLAUDE.md or CLAUDE.local.md, `.claude/`,
 `.mcp.json`, hooks, skills, commands, subagents, output styles, or a plugin or
 marketplace manifest. Claude Code config fails silently, so verify each item
 rather than assume it works. What you cannot verify without running it is
-`inferred`, and says so.
+`inferred`, and says so. The Stale learnings bullet under "Is it built well"
+also applies to a repo that has only a `knowledge/` folder.
 
 ### Does it work
 
@@ -108,6 +109,18 @@ rather than assume it works. What you cannot verify without running it is
   git history, vague directives that cannot be followed, negative-only rules
   with no positive alternative, and restated default behaviour. Give its rough
   token cost (characters / 4), since it loads into every session.
+- Stale learnings: in every `knowledge/**/*.md` doc (not
+  `knowledge/decisions/`; `CLAUDE.md` files stay with the CLAUDE.md bullet
+  above), flag paths, commands, scripts, flags and settings that do not exist
+  in the tree or that the code contradicts, and a doc whose `last_updated` is
+  older than the last commit to a file it describes (the repo paths it names
+  and those in its `sources:`; `git log -1 --format=%cs -- <path>`), marked
+  `inferred (from: git log)`. One finding per doc: **Where** and **Evidence**
+  cite the first stale entry (the `last_updated` line when the date is the
+  only one), **Confidence** is `verified` only when every listed entry is,
+  and **Impact** lists every stale entry with its line and its own
+  confidence. A doc with no `last_updated` is flagged only for its stale
+  entries.
 - Duplication: the same instruction in several places, or one behaviour split
   across a hook, a command and an agent.
 - Wrong mechanism: a hook that should be a command, CLAUDE.md content that

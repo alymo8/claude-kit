@@ -58,3 +58,4 @@ the next number; superseded ones are never deleted.
 | [0050](0050-agent-agnostic-kit.md) | The kit runs in Mistral Vibe, Codex and Cursor from one source | accepted; amended by 0052 | 2026-11-22 |
 | [0051](0051-vault-tooling-split.md) | The vault tooling lives in second-brain-kit | accepted | 2026-11-23 |
 | [0052](0052-published-plugin.md) | The kit is a published Claude Code plugin (agent-kit) | accepted | 2026-11-23 |
+| [0053](0053-prune-learnings-at-ship.md) | Prune learnings at ship | accepted | 2026-11-23 |
