@@ -806,6 +806,7 @@ def test_vibe_keeps_links_while_other_agent_uses_them(tmp_path, agent):
     assert result.returncode == 0, out(result)
     assert is_link(skills(tmp_path) / "spec-gate")
     assert "WARNING" in result.stdout and "twice" in result.stdout
+    assert str(path) in result.stdout
 
 
 def test_vibe_unreadable_other_hook_file_counts_as_in_use(tmp_path):
@@ -816,7 +817,106 @@ def test_vibe_unreadable_other_hook_file_counts_as_in_use(tmp_path):
     result = run_agent(tmp_path, "vibe")
     assert result.returncode == 0, out(result)
     assert is_link(skills(tmp_path) / "spec-gate")
-    assert "WARNING" in result.stdout and "twice" in result.stdout
+    line = (
+        f"Kept the kit's skill links: {path} cannot be read, so it may still use them."
+    )
+    assert line in result.stdout
+    assert "twice" not in result.stdout
+
+
+def test_vibe_warning_names_only_readable_kit_hook_file(tmp_path):
+    codex = tmp_path / "home" / ".codex" / "hooks.json"
+    cursor = tmp_path / "home" / ".cursor" / "hooks.json"
+    for path in (codex, cursor):
+        path.parent.mkdir(parents=True)
+    codex.write_text(installer().json_hooks("", "codex", sys.executable))
+    cursor.write_text("{oops", encoding="utf-8")
+    kit_link(tmp_path, "spec-gate", PLUGIN / "skills" / "spec-gate")
+    result = run_agent(tmp_path, "vibe")
+    assert result.returncode == 0, out(result)
+    warning = next(x for x in result.stdout.splitlines() if "twice" in x)
+    assert str(codex) in warning and str(cursor) not in warning
+    assert f"Kept the kit's skill links: {cursor} cannot be read" in result.stdout
+
+
+def test_vibe_no_kit_links_prints_no_kept_lines(tmp_path):
+    codex = tmp_path / "home" / ".codex" / "hooks.json"
+    cursor = tmp_path / "home" / ".cursor" / "hooks.json"
+    for path in (codex, cursor):
+        path.parent.mkdir(parents=True)
+    codex.write_text(installer().json_hooks("", "codex", sys.executable))
+    cursor.write_text("{oops", encoding="utf-8")
+    elsewhere = tmp_path / "old-checkout" / "spec-gate"
+    elsewhere.mkdir(parents=True)
+    kit_link(tmp_path, "spec-gate", elsewhere)
+    result = run_agent(tmp_path, "vibe")
+    assert result.returncode == 0, out(result)
+    assert "twice" not in result.stdout
+    assert "cannot be read" not in result.stdout
+
+
+@pytest.mark.parametrize("user_text", [False, True])
+def test_vibe_hooks_toml_write_error_exits_1(tmp_path, monkeypatch, capsys, user_text):
+    mod = installer()
+    vp = load_module(PLUGIN / "vibe_plugin.py", "vibe_plugin")
+    home = tmp_path / "home"
+    hooks = home / ".vibe" / "hooks.toml"
+    hooks.parent.mkdir(parents=True)
+    mine = "mine = 1\n\n" if user_text else ""
+    block = f"{mod.TOML_BEGIN}\nold = 1\n{mod.TOML_END}\n"
+    hooks.write_text(mine + block, encoding="utf-8")
+    real_write, real_unlink = vp.write_text, Path.unlink
+
+    def write(path, text):
+        if Path(path) == hooks:
+            raise OSError("read-only")
+        return real_write(path, text)
+
+    def unlink(self, *args, **kwargs):
+        if self == hooks:
+            raise OSError("read-only")
+        return real_unlink(self, *args, **kwargs)
+
+    monkeypatch.setattr(vp, "write_text", write)
+    monkeypatch.setattr(Path, "unlink", unlink)
+    code = mod.install_vibe(home, skills(tmp_path), sys.executable)
+    printed = capsys.readouterr().out
+    assert code == 1
+    assert "Installed the agent-kit and superpowers plugins" in printed
+    assert f"remove the kit block from {hooks} by hand or rerun" in printed
+    assert (home / ".vibe" / "AGENTS.md").is_file()
+    assert "Next: start a new Vibe session" in printed
+
+
+def test_vibe_agents_md_write_error_exits_1(tmp_path):
+    (vibe(tmp_path) / "AGENTS.md").mkdir(parents=True)
+    result = run_agent(tmp_path, "vibe")
+    assert result.returncode == 1
+    assert "Traceback" not in out(result)
+    assert "Installed the agent-kit and superpowers plugins" in result.stdout
+    rules = vibe(tmp_path) / "AGENTS.md"
+    assert f"update the kit block in {rules} by hand or rerun" in result.stdout
+    assert "Next: start a new Vibe session" in result.stdout
+
+
+def test_vibe_link_removal_error_continues_and_exits_1(tmp_path, monkeypatch, capsys):
+    mod = installer()
+    kit_link(tmp_path, "spec-gate", PLUGIN / "skills" / "spec-gate")
+    kit_link(tmp_path, "ship", PLUGIN / "agent-skills" / "ship")
+    real = mod.remove_link
+
+    def flaky(link):
+        if Path(link).name == "spec-gate":
+            raise OSError("in use")
+        return real(link)
+
+    monkeypatch.setattr(mod, "remove_link", flaky)
+    code = mod.install_vibe(tmp_path / "home", skills(tmp_path), sys.executable)
+    printed = capsys.readouterr().out
+    assert code == 1
+    assert "Could not remove spec-gate: in use" in printed
+    assert not os.path.lexists(skills(tmp_path) / "ship")
+    assert is_link(skills(tmp_path) / "spec-gate")
 
 
 @pytest.mark.parametrize("name", ["agent-kit", "superpowers"])
