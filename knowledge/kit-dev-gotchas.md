@@ -100,6 +100,14 @@ Things that cost time in past runs and are not obvious from the code.
   origin/main` tracks `origin/main`, so `handoff.py state` reports
   "upstream: origin/main". The first push must be
   `git push -u origin feat/<slug>`.
+- Resuming `/ship` on a feature branch that `main` has moved past: rebase
+  it onto `origin/main` first. The gate records still verify (they hash
+  only the spec and plan), so settle the plan's stale values (version, ADR
+  number, moved paths) with `Ruling:` lines in the SDD ledger, and point
+  each task subagent's prompt at those lines.
+- A plan task that changes no repo file but dispatches its own subagent
+  or writes auto-memory (a scenario check) runs in the main session, not
+  as a `parallel-tasks` task subagent.
 
 ## Why `/ship` and `/ship-fast` say what they say
 

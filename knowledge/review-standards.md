@@ -1,7 +1,7 @@
 ---
 title: Review standards
 status: stable
-last_updated: 2026-11-22
+last_updated: 2026-11-23
 sources: []
 ---
 
@@ -34,6 +34,9 @@ Read by the standards reviewer of `claude-kit:review`, not by implementers.
 - An early-exit check (an error path that returns before later steps) must
   not come before a step the spec says runs "in every case"; move the
   check after that step or into the step that needs it.
+- A new skill step that reads or edits the root `CLAUDE.md` also handles a
+  `CLAUDE.md` that is only `@AGENTS.md` (read and edit the `AGENTS.md`
+  beside it); a fallback listed under another step does not cover it.
 - A value written into a user's TOML file goes in as a basic string
   (`json.dumps(value)`), never a `'...'` literal: a path with `'` in it
   breaks the file.
