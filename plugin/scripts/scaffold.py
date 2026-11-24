@@ -7,8 +7,9 @@
 New mode renders plugin/templates/ into PARENT/NAME, then runs `git init -b main`
 and one commit. PARENT defaults to the kit's main checkout when the current
 folder is inside a kit checkout or one of its worktrees, else to the kit checkout
-the plugin runs from (a contributor link), else to the current folder; never the
-plugin cache or a worktree.
+the plugin runs from (a contributor link), else, inside another git repo, to the
+folder that holds that repo's main checkout (never inside it), else to the
+current folder; never the plugin cache or a worktree.
 It records `.githooks/pre-push` as executable and sets
 `core.hooksPath=.githooks`, which enables the pre-push lint hook.
 It refuses a non-empty destination. Adopt mode writes only the files that do not
@@ -79,6 +80,23 @@ def main_checkout(kit: Path) -> Path:
     return common.parent if common.name == ".git" else kit
 
 
+def enclosing_repo(cwd: Path) -> Path | None:
+    """The top level of the git work tree holding cwd, or None outside one."""
+    try:
+        result = subprocess.run(
+            ["git", "-C", str(cwd), "rev-parse", "--show-toplevel"],
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+        )
+    except OSError:
+        return None
+    out = result.stdout.strip()
+    if result.returncode != 0 or not out:
+        return None
+    return Path(out).resolve()
+
+
 def default_parent(cwd: Path) -> Path:
     """Where a new project goes when --parent is not given."""
     hook = load_kit_hook()
@@ -87,6 +105,16 @@ def default_parent(cwd: Path) -> Path:
         return main_checkout(kit)
     if hook.is_kit_checkout(PLUGIN_ROOT.parent):
         return main_checkout(PLUGIN_ROOT.parent)
+    top = enclosing_repo(cwd)
+    if top is not None:
+        main = main_checkout(top)
+        if main.parent == main:
+            print(
+                f"error: cannot pick a folder next to {main}; pass --parent <dir>",
+                file=sys.stderr,
+            )
+            raise SystemExit(2)
+        return main.parent
     return cwd
 
 
@@ -283,7 +311,9 @@ def build_parser() -> argparse.ArgumentParser:
         default=None,
         help=(
             "new mode: directory to create the project in "
-            "(default: the kit's main checkout, else the current folder)"
+            "(default: the kit's main checkout, else, inside another git repo, "
+            "the folder that holds that repo's main checkout, "
+            "else the current folder)"
         ),
     )
     parser.add_argument(
