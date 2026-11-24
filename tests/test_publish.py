@@ -88,6 +88,8 @@ EXEMPT_PHRASES = {
     "plugin/skills/spec-gate/rubric.md": (
         "`conventions/decision-log.md` in the repository"
     ),
+    # A path inside the built Vibe plugin copy, not the old repo-root folder.
+    "tests/test_vibe_plugin.py": '"conventions/README.md"',
 }
 SKIP_PREFIXES = ("docs/superpowers/", "docs/audit/", "vendor/")
 SKIP_FILES = {"tests/test_publish.py", "plugin/rules.md"}
