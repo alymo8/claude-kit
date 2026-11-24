@@ -8,7 +8,7 @@ marker; a folder without the marker is never replaced.
 
 Usage: python plugin/vibe_plugin.py --out DIR [--python CMD]
 
-Spec: docs/superpowers/specs/2026-11-23-vibe-plugin-design.md (ADR 0053).
+Spec: docs/superpowers/specs/2026-11-23-vibe-plugin-design.md (ADR 0054).
 Keep this file parseable by Python 3.8 (install.py imports it).
 """
 
