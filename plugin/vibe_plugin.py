@@ -197,9 +197,9 @@ def build(out: Path, python: str = "python", kit: Path = KIT) -> None:
             f"{foreign[0]} exists and was not built by agent-kit; remove or rename it"
         )
     staging = out.parent / STAGING
-    if os.path.lexists(staging):
-        shutil.rmtree(staging)
     try:
+        if os.path.lexists(staging):
+            shutil.rmtree(staging)
         manifest = kit / "plugin" / ".claude-plugin" / "plugin.json"
         claude = json.loads(manifest.read_text(encoding="utf-8"))
         read_version_file(kit / "vendor" / "superpowers" / "VERSION")

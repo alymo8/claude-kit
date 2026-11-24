@@ -840,3 +840,18 @@ def test_vibe_runner_command_matches_hook_command(tmp_path):
     for python in ("python", "C:/Program Files/python.exe"):
         expected = installer().hook_command(python, "vibe", "Stop", runner=runner)
         assert builder.runner_command(python, runner, "Stop") == expected
+
+
+def test_vibe_build_turns_stuck_staging_into_build_error(tmp_path, monkeypatch):
+    vibe = load_module(PLUGIN / "vibe_plugin.py", "vibe_plugin")
+    out = tmp_path / "plugins"
+    (tmp_path / ".agent-kit-staging" / "agent-kit.old").mkdir(parents=True)
+
+    def stuck(path, ignore_errors=False, **kwargs):
+        if not ignore_errors:
+            raise PermissionError(f"in use: {path}")
+
+    monkeypatch.setattr(vibe.shutil, "rmtree", stuck)
+    with pytest.raises(vibe.BuildError):
+        vibe.build(out, python="python")
+    assert not out.exists()
