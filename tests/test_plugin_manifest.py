@@ -117,10 +117,8 @@ def test_stop_hook_regenerates_spec_index():
     # Edits made through Bash never reach the PostToolUse Write|Edit matcher.
     hooks = json.loads((PLUGIN / "hooks" / "hooks.json").read_text(encoding="utf-8"))
     commands = [h["command"] for g in hooks["hooks"]["Stop"] for h in g["hooks"]]
-    assert any(
-        "scripts/spec-index.py" in c and "${CLAUDE_PROJECT_DIR}/docs/superpowers" in c
-        for c in commands
-    )
+    assert commands == ['python "${CLAUDE_PLUGIN_ROOT}/scripts/spec-index.py"']
+    assert not any("CLAUDE_PROJECT_DIR" in c for c in commands)
 
 
 def test_side_effecting_commands_are_user_only():
