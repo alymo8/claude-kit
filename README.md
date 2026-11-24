@@ -93,7 +93,8 @@ is in [`plugin/`](plugin/).
   `audit --user` audits the user-scope setup outside any repo (settings, MCP
   servers, plugins and their hooks, skills, scheduled tasks) from
   `user-config-inventory.py` and writes its report to
-  `~/.claude/claude-kit/audit/`),
+  `~/.claude/claude-kit/audit/`; `capture-learnings` also prunes the
+  `CLAUDE.md`, `knowledge/` and project-memory entries a feature made stale),
   the `teach` skill (copied as is from
   [mattpocock/skills](https://github.com/mattpocock/skills), MIT), the on-demand spec → HTML renderer, the `token-report.py`
   measurement script, a status line, and eleven hooks (regenerate the spec/plan

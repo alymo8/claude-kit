@@ -72,7 +72,10 @@ writes each to its home: repo commands, gotchas and conventions to this file
 (or to `knowledge/` once this file would pass 100 lines); durable findings to
 the [knowledge layer](knowledge-layer.md); decisions to an ADR in the
 [decision log](decision-log.md); the user's preferences about how Claude
-works to auto-memory, never a tracked file. The learnings land in the
+works to auto-memory, never a tracked file. The same run prunes what the
+feature made stale: entries in this file, in `knowledge/` and in project
+memories that name a path it moved or deleted, or a command, setting or
+behaviour it changed. ADRs are never edited. The learnings land in the
 feature's PR. `/ship` and `/ship-fast` run the skill at their PR step; for a
 manual finish, run it yourself. The skill holds the full routing rules.
 
