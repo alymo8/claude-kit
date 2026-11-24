@@ -46,6 +46,7 @@
 
 | Date | Plan | Status |
 |---|---|---|
+| 2026-11-24 | [Directory-ready plugin Implementation Plan](plans/2026-11-24-directory-ready.md) | approved |
 | 2026-11-23 | [Publish the kit as a Claude Code plugin (agent-kit) Implementation Plan](plans/2026-11-23-publish-plugin.md) | approved |
 | 2026-11-23 | [Remove vault tooling Implementation Plan](plans/2026-11-23-remove-vault-tooling.md) | approved |
 | 2026-11-23 | [Vibe native plugin Implementation Plan](plans/2026-11-23-vibe-plugin.md) | approved |
