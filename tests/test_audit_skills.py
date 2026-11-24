@@ -251,3 +251,15 @@ def test_user_mode_self_check_searches_report_for_env_values():
     self_check = read(AUDIT / "user-mode.md").split("## Self-check", 1)[1]
     assert "prints only counts and key names, never a value" in self_check
     assert "<redacted: KEY>" in self_check
+
+
+def test_rules_staleness_check():
+    rules = " ".join(read(AUDIT / "rules.md").split())
+    section = rules.split("## 4.", 1)[1].split("## 5.", 1)[0]
+    built_well = section.split("### Is it built well", 1)[1]
+    assert "Stale learnings" in built_well
+    assert "`last_updated`" in built_well
+    assert "git log -1 --format=%cs -- <path>" in built_well
+    assert "inferred (from: git log)" in built_well
+    assert "not `knowledge/decisions/`" in built_well
+    assert "only a `knowledge/` folder" in section
