@@ -71,13 +71,16 @@ def run_script(
 
 LINK_RE = re.compile(r"\]\(([^)\s]+)\)")
 FENCE_RE = re.compile(r"^```.*?^```[ \t]*$", re.M | re.S)
+# An inline code span may wrap lines but never crosses a blank line.
+CODE_SPAN_RE = re.compile(r"(`+)(?:(?!\n[ \t]*\n).)+?(?<!`)\1(?!`)", re.S)
 
 
 def broken_links(md_files: Iterable[Path]) -> list[str]:
-    """Relative markdown links (outside code fences) that do not resolve."""
+    """Relative markdown links (outside code) that do not resolve."""
     broken = []
     for md in md_files:
         prose = FENCE_RE.sub("", md.read_text(encoding="utf-8"))
+        prose = CODE_SPAN_RE.sub("", prose)
         for match in LINK_RE.finditer(prose):
             href = match.group(1).split("#", 1)[0]
             if not href or "://" in href or href.startswith("mailto:"):

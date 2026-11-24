@@ -14,9 +14,9 @@ Things that cost time in past runs and are not obvious from the code.
   joins a split string or wrapped signature back onto one line when that
   fits in 88 characters, so split only what would not fit.
 - `test_relative_markdown_links_resolve` checks every tracked `.md`, specs
-  included, and does not skip code spans: a link-shaped example such as a
-  bracketed name followed by a parenthesised `file.md` fails it. Describe
-  the shape in prose instead.
+  included. It skips fences and inline code spans (a span may wrap lines but
+  not cross a blank line), so a link-shaped example in prose outside code
+  still fails it: put it in backticks or describe the shape.
 - In `tests/test_ship_command.py`, `_step(n)` collapses whitespace but
   `_stops()` returns the raw section, so a phrase that wraps across lines
   in `ship.md` fails an `in _stops()` assertion. Normalise first:
@@ -51,6 +51,12 @@ Things that cost time in past runs and are not obvious from the code.
   about 60 exact phrases, and one pins a line break
   (`"one\n   copy, the only one the run starts"` in step 5 of
   `ship-fast.md`), so rewrapping that sentence fails the test.
+- A Claude Code session (and so the shell that runs `pytest` in it) sets
+  `CLAUDE_PROJECT_DIR`, and `clean_env()` keeps it: a test of a script's
+  current-folder default must drop it (`env.pop("CLAUDE_PROJECT_DIR", None)`).
+- `tests/test_publish.py::test_claude_kit_only_in_allowed_places` rejects the
+  bare string `claude-kit` in any tracked file, test fixtures included; pick
+  another name for a fixture (say `claude-tools`).
 - The kit version lives in `plugin/.claude-plugin/plugin.json` and is
   pinned in `tests/test_plugin_manifest.py`; bump both in the same commit,
   and rename the test (`test_version_is_0_32_0`) to the new version.
@@ -244,6 +250,7 @@ The commands keep the rules and leave out the reasons; the reasons are here.
 - A plan task that runs `git mv <dir> <new>` must not list `<dir>` in its
   `git add` step: git stops on the missing pathspec and adds nothing more,
   so the commit holds only the renames. Use `git add -A <new> <other files>`.
+  spec-lint P11 flags this.
 - Take a new ADR's number from `origin/main`
   (`git ls-tree --name-only origin/main knowledge/decisions/`), not local
   `main`. Renumbering after the spec gate changes the spec hash and forces

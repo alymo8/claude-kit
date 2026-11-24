@@ -117,10 +117,8 @@ def test_stop_hook_regenerates_spec_index():
     # Edits made through Bash never reach the PostToolUse Write|Edit matcher.
     hooks = json.loads((PLUGIN / "hooks" / "hooks.json").read_text(encoding="utf-8"))
     commands = [h["command"] for g in hooks["hooks"]["Stop"] for h in g["hooks"]]
-    assert any(
-        "scripts/spec-index.py" in c and "${CLAUDE_PROJECT_DIR}/docs/superpowers" in c
-        for c in commands
-    )
+    assert commands == ['python "${CLAUDE_PLUGIN_ROOT}/scripts/spec-index.py"']
+    assert not any("CLAUDE_PROJECT_DIR" in c for c in commands)
 
 
 def test_side_effecting_commands_are_user_only():
@@ -209,10 +207,25 @@ def test_description_mentions_pr_review_respond():
     assert "pr-review-respond" in data["description"]
 
 
-def test_version_is_1_1_1():
+def test_version_is_1_2_0():
     plugin_json = PLUGIN / ".claude-plugin" / "plugin.json"
     data = json.loads(plugin_json.read_text(encoding="utf-8"))
-    assert data["version"] == "1.1.1"
+    assert data["version"] == "1.2.0"
+
+
+def test_homepage_repository_and_keywords():
+    plugin_json = PLUGIN / ".claude-plugin" / "plugin.json"
+    data = json.loads(plugin_json.read_text(encoding="utf-8"))
+    assert data["homepage"] == "https://github.com/alymo8/claude-kit"
+    assert data["repository"] == "https://github.com/alymo8/claude-kit"
+    assert data["keywords"] == [
+        "spec-driven",
+        "workflow",
+        "specs",
+        "code-review",
+        "git-worktrees",
+        "conventions",
+    ]
 
 
 def test_description_mentions_review():

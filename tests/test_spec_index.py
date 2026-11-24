@@ -1,9 +1,16 @@
 import os
 import time
 
-from helpers import PLUGIN, load_module, run_script
+from helpers import PLUGIN, clean_env, load_module, run_script
 
 SCRIPT = PLUGIN / "scripts" / "spec-index.py"
+
+
+def env_without_project(**extra):
+    env = clean_env(**extra)
+    if "CLAUDE_PROJECT_DIR" not in extra:
+        env.pop("CLAUDE_PROJECT_DIR", None)
+    return env
 
 
 def mod():
@@ -81,10 +88,38 @@ def test_second_run_does_not_rewrite(tmp_path):
 def test_cli_defaults_to_cwd_docs_superpowers_and_exits_zero(tmp_path):
     docs = tmp_path / "docs" / "superpowers"
     make(docs, "specs", "2026-01-01-a.md", "# A\n")
-    result = run_script(SCRIPT, cwd=tmp_path)
+    result = run_script(SCRIPT, cwd=tmp_path, env=env_without_project())
     assert result.returncode == 0, result.stderr
     assert (docs / "README.md").exists()
     assert run_script(SCRIPT, str(tmp_path / "nowhere")).returncode == 0
+
+
+def test_cli_uses_claude_project_dir_when_set(tmp_path):
+    project, other = tmp_path / "proj", tmp_path / "other"
+    make(project / "docs" / "superpowers", "specs", "2026-01-01-a.md", "# A\n")
+    other.mkdir()
+    env = env_without_project(CLAUDE_PROJECT_DIR=str(project))
+    assert run_script(SCRIPT, cwd=other, env=env).returncode == 0
+    assert (project / "docs" / "superpowers" / "README.md").exists()
+    assert not (other / "docs").exists()
+
+
+def test_cli_empty_claude_project_dir_falls_back_to_cwd(tmp_path):
+    make(tmp_path / "docs" / "superpowers", "specs", "2026-01-01-a.md", "# A\n")
+    env = env_without_project(CLAUDE_PROJECT_DIR="")
+    assert run_script(SCRIPT, cwd=tmp_path, env=env).returncode == 0
+    assert (tmp_path / "docs" / "superpowers" / "README.md").exists()
+
+
+def test_cli_argument_wins_over_claude_project_dir(tmp_path):
+    arg_docs = tmp_path / "arg" / "docs" / "superpowers"
+    make(arg_docs, "specs", "2026-01-01-a.md", "# A\n")
+    project = tmp_path / "proj"
+    make(project / "docs" / "superpowers", "specs", "2026-01-01-b.md", "# B\n")
+    env = env_without_project(CLAUDE_PROJECT_DIR=str(project))
+    assert run_script(SCRIPT, str(arg_docs), cwd=tmp_path, env=env).returncode == 0
+    assert (arg_docs / "README.md").exists()
+    assert not (project / "docs" / "superpowers" / "README.md").exists()
 
 
 def test_title_survives_utf8_bom(tmp_path):

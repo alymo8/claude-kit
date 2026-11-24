@@ -179,6 +179,46 @@ def test_default_parent_in_kit_worktree_is_main_checkout(tmp_path):
     assert not (wt / "demo").exists()
 
 
+def test_default_parent_in_foreign_repo_subfolder_is_sibling(tmp_path):
+    script = copy_plugin(tmp_path)
+    repo = tmp_path / "a" / "repo"
+    (repo / "sub").mkdir(parents=True)
+    git("init", "-q", "-b", "main", cwd=repo)  # no commit on purpose
+    result = run_script(script, "--name", "demo", "--stack", "python", cwd=repo / "sub")
+    assert result.returncode == 0, result.stderr
+    assert (tmp_path / "a" / "demo" / "CLAUDE.md").is_file()
+    assert not (repo / "demo").exists() and not (repo / "sub" / "demo").exists()
+
+
+def test_default_parent_in_foreign_worktree_is_main_checkouts_parent(tmp_path):
+    script = copy_plugin(tmp_path)
+    repo = tmp_path / "a" / "repo"
+    repo.mkdir(parents=True)
+    git("init", "-q", "-b", "main", cwd=repo)
+    ident = ["-c", "user.name=t", "-c", "user.email=t@example.com"]
+    git(*ident, "commit", "-q", "--allow-empty", "-m", "init", cwd=repo)
+    wt = (repo / ".worktrees" / "w").resolve()
+    git("worktree", "add", "-q", str(wt), cwd=repo)
+    result = run_script(script, "--name", "demo", "--stack", "python", cwd=wt)
+    assert result.returncode == 0, result.stderr
+    assert (tmp_path / "a" / "demo").is_dir()
+    assert not (wt / "demo").exists()
+
+
+def test_default_parent_repo_at_root_exits_2(tmp_path, monkeypatch, capsys):
+    mod = load_module(SCRIPT, "scaffold_root_repo")
+    monkeypatch.setattr(mod, "PLUGIN_ROOT", tmp_path / "cache" / "plugin")
+    monkeypatch.setattr(mod, "main_checkout", lambda path: Path(path.anchor))
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    git("init", "-q", "-b", "main", cwd=repo)
+    with pytest.raises(SystemExit) as exc:
+        mod.default_parent(repo)
+    assert exc.value.code == 2
+    err = capsys.readouterr().err
+    assert "cannot pick a folder next to" in err and "pass --parent <dir>" in err
+
+
 def test_render_files_rejects_unresolved_placeholder(tmp_path, monkeypatch):
     mod = load_module(SCRIPT, "scaffold_bad")
     bad_root = tmp_path / "templates"

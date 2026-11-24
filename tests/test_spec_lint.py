@@ -407,6 +407,7 @@ def test_valid_plan_is_clean(root):
         ("Expected: PASS", "It passes.", True, 35, "P6-task-parts"),
         ("", "", False, 8, "P4-spec-gated"),
         ("- Modify: `src/new.py`", "- Modify: `src/other.py`", True, 38, "P9-path"),
+        ("Done.", "```bash\ngit mv a b\ngit add a\n```", True, 51, "P11-git-mv-add"),
     ],
 )
 def test_each_plan_rule_alone(root, old, new, record, line, rule):
@@ -820,6 +821,67 @@ def test_depends_value_parses():
     assert sl.depends_value("none") == []
     assert sl.depends_value("Task 1, Task 3") == [1, 3]
     assert sl.depends_value("Task 1 and Task 2") is None
+
+
+def task2_fence(*commands):
+    """PLAN with Task 2's last line (49) replaced by a bash fence (lines 50+)."""
+    return PLAN.replace("Done.", "```bash\n" + "\n".join(commands) + "\n```")
+
+
+def p11(text, root):
+    return [n for n, r in plan_rules(text, root) if r == "P11-git-mv-add"]
+
+
+@pytest.mark.parametrize(
+    ("commands", "lines"),
+    [
+        (["git mv old new", "git add old"], [51]),  # flagged
+        (["git mv old new", "git add -A new"], []),  # new path: fine
+        (["git mv dir/ new", "git add dir"], [51]),  # trailing slash
+        (["git mv -f a b", "git add a"], [51]),  # flag before the source
+        (["git mv a b && git add a"], [50]),  # joined with &&
+        (["git add a", "git mv a b"], []),  # add before mv: not checked
+        (["git mv a b", 'git add "a'], []),  # shlex cannot split: skipped
+        (['run("git mv a b")', "git add a"], []),  # quoted: no command
+        (["git mv a b", "git mv b a", "git add a"], []),  # moved back
+    ],
+    ids=[
+        "flag",
+        "new",
+        "slash",
+        "force",
+        "and",
+        "before",
+        "unsplit",
+        "quoted",
+        "back",
+    ],
+)
+def test_p11_cases(root, commands, lines):
+    plan_root(root)
+    assert p11(task2_fence(*commands), root) == lines
+
+
+def test_p11_other_task_not_flagged(root):
+    plan_root(root)
+    text = PLAN.replace('git commit -m "x"', 'git mv a b\ngit commit -m "x"')
+    text = text.replace("Done.", "```bash\ngit add a\n```")
+    assert p11(text, root) == []
+
+
+def test_p11_inline_spans_count(root):
+    plan_root(root)
+    text = PLAN.replace("Done.", "Run `git mv a b`, then `git add a`.")
+    assert p11(text, root) == [49]
+
+
+def test_p11_message_names_src_and_dst(root):
+    plan_root(root)
+    text = task2_fence("git mv old new", "git add old")
+    messages = [m for _, r, m in sl.lint_plan(text, root) if r == "P11-git-mv-add"]
+    assert len(messages) == 1
+    assert "`git add` names `old`" in messages[0]
+    assert "`git add -A new ...`" in messages[0]
 
 
 AREAS = [

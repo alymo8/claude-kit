@@ -6,6 +6,7 @@
 
 | Date | Spec | Status |
 |---|---|---|
+| 2026-11-24 | [Directory-ready plugin, a sibling default for `/new-project`, and a `git mv` plan check](specs/2026-11-24-directory-ready-design.md) | approved |
 | 2026-11-24 | [Quote hook commands safely and harden the Vibe installer](specs/2026-11-24-hook-quoting-design.md) | approved |
 | 2026-11-23 | [Publish the kit as a Claude Code plugin (agent-kit)](specs/2026-11-23-publish-plugin-design.md) | approved |
 | 2026-11-23 | [Remove the vault tooling that moved to second-brain-kit](specs/2026-11-23-remove-vault-tooling-design.md) | approved |
@@ -46,6 +47,7 @@
 
 | Date | Plan | Status |
 |---|---|---|
+| 2026-11-24 | [Directory-ready plugin Implementation Plan](plans/2026-11-24-directory-ready.md) | approved |
 | 2026-11-24 | [Hook quoting and Vibe installer hardening Implementation Plan](plans/2026-11-24-hook-quoting.md) | approved |
 | 2026-11-23 | [Publish the kit as a Claude Code plugin (agent-kit) Implementation Plan](plans/2026-11-23-publish-plugin.md) | approved |
 | 2026-11-23 | [Remove vault tooling Implementation Plan](plans/2026-11-23-remove-vault-tooling.md) | approved |

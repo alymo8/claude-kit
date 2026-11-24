@@ -28,6 +28,16 @@ def test_relative_markdown_links_resolve():
     assert not broken_links(tracked_markdown())
 
 
+def test_broken_links_skips_inline_code_spans(tmp_path):
+    md = tmp_path / "a.md"
+    md.write_text(
+        "Quoted: `[x](gone.md)` and `a\n[y](gone2.md) b`.\n\n"
+        "Live: [z](missing.md), an open ` tick\n\nthen [w](lost.md).\n",
+        encoding="utf-8",
+    )
+    assert broken_links([md]) == [f"{md} -> missing.md", f"{md} -> lost.md"]
+
+
 def test_claude_md_script_paths_exist():
     text = RULES.read_text(encoding="utf-8")
     refs = SCRIPT_REF_RE.findall(text)

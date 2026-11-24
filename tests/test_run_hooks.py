@@ -223,4 +223,25 @@ def test_real_hooks_json_commands(tmp_path):
         assert argv[0] == sys.executable
         assert (PLUGIN / "hooks").as_posix() in argv[1]
     (stop,) = mod.commands(hooks, "Stop", "startup", PLUGIN, tmp_path)
-    assert stop[-1] == f"{tmp_path.as_posix()}/docs/superpowers"
+    assert stop == [sys.executable, f"{PLUGIN.as_posix()}/scripts/spec-index.py"]
+
+
+def test_stop_hook_writes_index_in_project_folder(tmp_path, project):
+    plugin = make_kit(tmp_path)
+    (plugin / "scripts").mkdir()
+    shutil.copy(PLUGIN / "scripts" / "spec-index.py", plugin / "scripts")
+    command = 'python "${CLAUDE_PLUGIN_ROOT}/scripts/spec-index.py"'
+    stop = [{"hooks": [{"type": "command", "command": command}]}]
+    hooks = {"hooks": {"Stop": stop}}
+    (plugin / "hooks" / "hooks.json").write_text(json.dumps(hooks), "utf-8")
+    subprocess.run(["git", "init", "-q", str(project)], check=True)
+    specs = project / "docs" / "superpowers" / "specs"
+    specs.mkdir(parents=True)
+    (specs / "2026-01-01-a.md").write_text("# A\n", encoding="utf-8")
+    sub = project / "sub"
+    sub.mkdir()
+    stdin = json.dumps({"cwd": str(sub)})
+    result = run(plugin, "codex", sub, event="Stop", stdin=stdin)
+    assert result.returncode == 0, result.stderr
+    assert (project / "docs" / "superpowers" / "README.md").exists()
+    assert not (sub / "docs").exists()
