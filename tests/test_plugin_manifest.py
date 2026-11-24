@@ -209,10 +209,10 @@ def test_description_mentions_pr_review_respond():
     assert "pr-review-respond" in data["description"]
 
 
-def test_version_is_1_1_0():
+def test_version_is_1_1_1():
     plugin_json = PLUGIN / ".claude-plugin" / "plugin.json"
     data = json.loads(plugin_json.read_text(encoding="utf-8"))
-    assert data["version"] == "1.1.0"
+    assert data["version"] == "1.1.1"
 
 
 def test_description_mentions_review():
