@@ -407,6 +407,29 @@ def test_failed_rerun_restore_keeps_staging(tmp_path, monkeypatch):
     assert (staging / "agent-kit.old").is_dir()
 
 
+def test_interrupt_mid_swap_keeps_backup(tmp_path, monkeypatch):
+    out = tmp_path / "plugins"
+    mod = builder()
+    mod.build(out, sys.executable)
+    real = os.rename
+
+    def interrupted(src, dst):
+        src = Path(src)
+        if src.name == "agent-kit" and src.parent.name == STAGING:
+            raise KeyboardInterrupt
+        return real(src, dst)
+
+    monkeypatch.setattr(mod.os, "rename", interrupted)
+    with pytest.raises(KeyboardInterrupt):
+        mod.build(out, sys.executable)
+    staging = tmp_path / STAGING
+    assert (staging / "agent-kit.old" / ".agent-kit-build").is_file()
+    monkeypatch.setattr(mod.os, "rename", real)
+    mod.build(out, sys.executable)
+    assert (out / "agent-kit" / ".agent-kit-build").is_file()
+    assert not staging.exists()
+
+
 def test_stale_backup_next_to_existing_copy_is_dropped(tmp_path):
     out = tmp_path / "plugins"
     assert run_builder(out).returncode == 0

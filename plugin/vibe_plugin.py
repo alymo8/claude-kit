@@ -292,8 +292,16 @@ def build(out: Path, python: str = "python", kit: Path = KIT) -> None:
     except (OSError, ValueError, KeyError) as exc:
         raise BuildError(str(exc)) from exc
     finally:
-        if not keep:
+        if not keep and not stranded_backups(out, staging):
             shutil.rmtree(staging, ignore_errors=True)
+
+
+def stranded_backups(out: Path, staging: Path) -> bool:
+    """True when staging holds a previous copy whose plugin folder is missing."""
+    return any(
+        os.path.lexists(staging / f"{name}.old") and not os.path.lexists(out / name)
+        for name in NAMES
+    )
 
 
 def main(argv: list[str] | None = None) -> int:
