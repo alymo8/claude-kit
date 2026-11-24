@@ -377,10 +377,12 @@ def test_rerun_moves_backup_back_before_removing_staging(tmp_path):
     kit = fake_kit(tmp_path)
     version_file = kit / "vendor" / "superpowers" / "VERSION"
     version_file.write_text("version: 1.0.0\n", encoding="utf-8")
-    with pytest.raises(mod.BuildError, match="source"):
+    with pytest.raises(mod.ChangedError, match="source") as info:
         mod.build(out, sys.executable, kit=kit)
+    assert "previous copy of agent-kit was moved back" in str(info.value)
     assert snapshot(out / "agent-kit") == before
     assert not staging.exists()
+    assert mod.main(["--out", str(out), "--python", sys.executable]) == 0
 
 
 def test_restore_backups_creates_missing_out(tmp_path):

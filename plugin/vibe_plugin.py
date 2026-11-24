@@ -42,7 +42,11 @@ class BuildError(Exception):
     pass
 
 
-class RestoreError(BuildError):
+class ChangedError(BuildError):
+    """The build failed after changing something; the message says what."""
+
+
+class RestoreError(ChangedError):
     """A previous copy could not be put back; the staging folder keeps it."""
 
     def __init__(self, message: str, staging: Path) -> None:
@@ -190,9 +194,13 @@ def stage_superpowers(kit: Path, dest: Path, kit_version: str) -> None:
     write_text(dest / MARKER, kit_version + "\n")
 
 
-def restore_backups(out: Path, staging: Path) -> None:
-    """Move each <name>.old in staging back to out when out/<name> is missing."""
+def restore_backups(out: Path, staging: Path) -> list[str]:
+    """Move each <name>.old in staging back to out when out/<name> is missing.
+
+    Returns the names of the plugins moved back.
+    """
     out, staging = Path(out), Path(staging)
+    restored = []
     for name in NAMES:
         old = staging / f"{name}.old"
         target = out / name
@@ -207,6 +215,8 @@ def restore_backups(out: Path, staging: Path) -> None:
                 f"is kept in {staging}",
                 staging,
             ) from exc
+        restored.append(name)
+    return restored
 
 
 def swap(out: Path, staging: Path) -> None:
@@ -272,9 +282,10 @@ def build(out: Path, python: str = "python", kit: Path = KIT) -> None:
         )
     staging = out.parent / STAGING
     keep = False
+    restored = []
     try:
         if os.path.lexists(staging):
-            restore_backups(out, staging)
+            restored = restore_backups(out, staging)
             shutil.rmtree(staging)
         manifest = kit / "plugin" / ".claude-plugin" / "plugin.json"
         claude = json.loads(manifest.read_text(encoding="utf-8"))
@@ -287,9 +298,14 @@ def build(out: Path, python: str = "python", kit: Path = KIT) -> None:
     except RestoreError:
         keep = True
         raise
-    except BuildError:
-        raise
-    except (OSError, ValueError, KeyError) as exc:
+    except (BuildError, OSError, ValueError, KeyError) as exc:
+        if restored:
+            raise ChangedError(
+                f"{exc}; the previous copy of {', '.join(restored)} was moved back "
+                f"to {out} from {staging} first"
+            ) from exc
+        if isinstance(exc, BuildError):
+            raise
         raise BuildError(str(exc)) from exc
     finally:
         if not keep and not stranded_backups(out, staging):
@@ -314,7 +330,7 @@ def main(argv: list[str] | None = None) -> int:
     out = Path(args.out).resolve()
     try:
         build(out, args.python)
-    except RestoreError as exc:
+    except ChangedError as exc:
         print(f"ERROR: {exc}")
         return 1
     except BuildError as exc:

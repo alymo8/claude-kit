@@ -1065,3 +1065,5 @@ def test_vibe_restore_error_keeps_staging_message(tmp_path, monkeypatch, capsys)
     assert code == 1
     assert str(plugins.parent / ".agent-kit-staging") in printed
     assert "nothing changed" not in printed
+    staging = plugins.parent / ".agent-kit-staging"
+    assert (staging / "agent-kit.old" / ".agent-kit-build").is_file()

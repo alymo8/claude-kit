@@ -603,7 +603,7 @@ def install_vibe(home: Path, skills_dir: Path, python: str) -> int:
         return 1
     try:
         vibe_plugin.build(plugins, python)
-    except vibe_plugin.RestoreError as exc:
+    except vibe_plugin.ChangedError as exc:
         print(f"ERROR: {exc}")
         return 1
     except vibe_plugin.BuildError as exc:
