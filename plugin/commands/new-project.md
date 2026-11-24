@@ -18,8 +18,9 @@ Scaffold a new project from the agent-kit templates. Arguments: `$ARGUMENTS`
    `<plugin root>` is the plugin root stated in the kit map, else `~/.claude/skills/agent-kit`.
    The project is created in the kit's main checkout when the current folder is
    inside a kit checkout or one of its worktrees, else in the kit checkout the
-   plugin runs from (a contributor link), else in the current folder; never in
-   the plugin cache or a worktree. It is on `main`, with one commit. Pass
+   plugin runs from (a contributor link), else, inside another git repo, in the
+   folder that holds that repo (never inside it), else in the current folder;
+   never in the plugin cache or a worktree. It is on `main`, with one commit. Pass
    `--parent <dir>` only if the user asks for a different location.
 3. Show the script's output verbatim. If it exits non-zero, show the error and stop.
 4. Close with the next steps the script printed: the stack's own init command
