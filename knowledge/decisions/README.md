@@ -57,6 +57,7 @@ the next number; superseded ones are never deleted.
 | [0049](0049-ship-many-child-runner.md) | `/ship-many` children run through a runner with a time limit, one resume and keep-awake | accepted | 2026-11-18 |
 | [0050](0050-agent-agnostic-kit.md) | The kit runs in Mistral Vibe, Codex and Cursor from one source | accepted; amended by 0052, 0054 | 2026-11-22 |
 | [0051](0051-vault-tooling-split.md) | The vault tooling lives in second-brain-kit | accepted | 2026-11-23 |
-| [0052](0052-published-plugin.md) | The kit is a published Claude Code plugin (agent-kit) | accepted; extended by 0054 | 2026-11-23 |
+| [0052](0052-published-plugin.md) | The kit is a published Claude Code plugin (agent-kit) | accepted; extended by 0054, 0055 | 2026-11-23 |
 | [0053](0053-prune-learnings-at-ship.md) | Prune learnings at ship | accepted | 2026-11-23 |
 | [0054](0054-vibe-native-plugin.md) | Mistral Vibe gets the kit as two native plugins built by the installer | accepted | 2026-11-23 |
+| [0055](0055-directory-listing.md) | The kit targets Anthropic's plugin directory; /new-project defaults to a sibling folder | accepted | 2026-11-24 |

@@ -1,6 +1,6 @@
 # ADR 0052: The kit is a published Claude Code plugin (agent-kit)
 
-- **Status:** accepted; extended by 0054 ([ADR 0054](0054-vibe-native-plugin.md): the native Vibe plugin of D3 now exists)
+- **Status:** accepted; extended by 0054 ([ADR 0054](0054-vibe-native-plugin.md): the native Vibe plugin of D3 now exists), 0055 ([ADR 0055](0055-directory-listing.md): directory listing and the /new-project sibling default)
 - **Date:** 2026-11-23
 
 ## Context
