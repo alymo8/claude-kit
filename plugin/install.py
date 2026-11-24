@@ -525,12 +525,6 @@ def remove_kit_links(skills_dir: Path) -> None:
             )
 
 
-def write_file(path: Path, text: str) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    with open(path, "w", encoding="utf-8", newline="\n") as handle:
-        handle.write(text)
-
-
 def install_vibe(home: Path, skills_dir: Path, python: str) -> int:
     """Build the agent-kit and superpowers Vibe plugins, remove the old install."""
     if str(PLUGIN) not in sys.path:
@@ -570,12 +564,12 @@ def install_vibe(home: Path, skills_dir: Path, python: str) -> int:
             hooks.unlink()
             print(f"Removed {hooks} (only the kit's hooks were in it)")
         else:
-            write_file(hooks, rest.rstrip("\n") + "\n")
+            vibe_plugin.write_text(hooks, rest.rstrip("\n") + "\n")
             print(f"Wrote {hooks}")
     if new_rules == old_rules:
         print(f"Unchanged {rules}")
     else:
-        write_file(rules, new_rules)
+        vibe_plugin.write_text(rules, new_rules)
         print(f"Wrote {rules}")
     in_use = kit_hooks_in_use(home)
     if not in_use:
