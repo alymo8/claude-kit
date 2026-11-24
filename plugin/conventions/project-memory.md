@@ -67,7 +67,7 @@ churn is expensive and brevity is a feature, not a nicety.
 
 A memory file improves only if what a feature taught gets written down. When
 a feature or change finishes, before its branch merges, the
-`claude-kit:capture-learnings` skill collects the session's learnings and
+`agent-kit:capture-learnings` skill collects the session's learnings and
 writes each to its home: repo commands, gotchas and conventions to this file
 (or to `knowledge/` once this file would pass 100 lines); durable findings to
 the [knowledge layer](knowledge-layer.md); decisions to an ADR in the

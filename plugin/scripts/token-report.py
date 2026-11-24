@@ -44,7 +44,7 @@ SUBCOMMAND_WORDS = {
 }
 USAGE_KEYS = ("input_tokens", "cache_creation_input_tokens", "cache_read_input_tokens")
 FAMILY_RE = re.compile(r"(?:cd\s+\S+\s*(?:&&|;)\s*)*(\S+)")
-SHIP_COMMANDS = {"ship", "/ship", "/claude-kit:ship"}
+SHIP_COMMANDS = {"ship", "/ship", "/agent-kit:ship"}
 COMMAND_RE = re.compile(r"<command-name>\s*(.*?)\s*</command-name>", re.S)
 # Dollars per million tokens: input, cache write (5-minute), cache read, output.
 OPUS_5_5_PRICES = {"input": 4.0, "write": 5.0, "read": 0.20, "output": 20.0}

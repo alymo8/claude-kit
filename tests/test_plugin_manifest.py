@@ -8,7 +8,8 @@ def test_plugin_manifest_is_valid():
     data = json.loads(
         (PLUGIN / ".claude-plugin" / "plugin.json").read_text(encoding="utf-8")
     )
-    assert data["name"] == "claude-kit"
+    assert data["name"] == "agent-kit"
+    assert data["author"] == {"name": "alymo8"}
     assert data["version"]
 
 
@@ -42,6 +43,7 @@ def test_commands_exist_with_frontmatter():
         "ship-fast": "scripts/scaffold.py",
         "spec-html": "scripts/open-spec.py",
         "docker-compact": "scripts/docker-disk.py",
+        "statusline": "scripts/install-statusline.py",
     }
     for name, script in expected.items():
         text = (PLUGIN / "commands" / f"{name}.md").read_text(encoding="utf-8")
@@ -130,6 +132,7 @@ def test_side_effecting_commands_are_user_only():
         "adopt-conventions",
         "spec-html",
         "docker-compact",
+        "statusline",
     }
     for name in user_only | {"handoff"}:
         text = (PLUGIN / "commands" / f"{name}.md").read_text(encoding="utf-8")
@@ -206,10 +209,10 @@ def test_description_mentions_pr_review_respond():
     assert "pr-review-respond" in data["description"]
 
 
-def test_version_is_0_36_1():
+def test_version_is_1_0_0():
     plugin_json = PLUGIN / ".claude-plugin" / "plugin.json"
     data = json.loads(plugin_json.read_text(encoding="utf-8"))
-    assert data["version"] == "0.36.1"
+    assert data["version"] == "1.0.0"
 
 
 def test_description_mentions_review():
@@ -251,3 +254,10 @@ def test_description_mentions_duplicate_intent():
     data = json.loads(plugin_json.read_text(encoding="utf-8"))
     assert "duplicate-intent pass" in data["description"]
     assert "function-catalog.py" in data["description"]
+
+
+def test_statusline_command_has_no_wrapper():
+    assert not (PLUGIN / "agent-skills" / "statusline").exists()
+    plugin_json = PLUGIN / ".claude-plugin" / "plugin.json"
+    data = json.loads(plugin_json.read_text(encoding="utf-8"))
+    assert "/statusline" in data["description"]

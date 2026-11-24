@@ -1,9 +1,9 @@
 import re
 import subprocess
 
-from helpers import REPO, broken_links
+from helpers import CONVENTIONS, PLUGIN, REPO, RULES, broken_links
 
-SCRIPT_REF_RE = re.compile(r"python \.\./(\S+\.py)")
+SCRIPT_REF_RE = re.compile(r"python <plugin root>/(\S+\.py)")
 # Plans embed snippets of other files; template links resolve only once rendered.
 # vendor/ is an unchanged upstream copy.
 SKIP_DIRS = ("docs/superpowers/plans/", "plugin/templates/", "vendor/")
@@ -29,10 +29,10 @@ def test_relative_markdown_links_resolve():
 
 
 def test_claude_md_script_paths_exist():
-    text = (REPO / "AGENTS.md").read_text(encoding="utf-8")
+    text = RULES.read_text(encoding="utf-8")
     refs = SCRIPT_REF_RE.findall(text)
-    assert refs, "CLAUDE.md should reference the renderer as python ../<path>.py"
-    missing = [r for r in refs if not (REPO / r).exists()]
+    assert refs, "rules.md should reference the renderer as python <plugin root>/"
+    missing = [r for r in refs if not (PLUGIN / r).exists()]
     assert not missing, missing
 
 
@@ -43,13 +43,13 @@ def test_claude_md_is_the_agents_stub():
 
 
 def _claude_md_section(title):
-    text = (REPO / "AGENTS.md").read_text(encoding="utf-8")
+    text = RULES.read_text(encoding="utf-8")
     body = text.split(f"\n## {title}\n", 1)[1]
     return body.split("\n## ", 1)[0]
 
 
 def test_claude_md_gates_plans():
-    assert "claude-kit:plan-gate" in _claude_md_section("Specs and plans")
+    assert "agent-kit:plan-gate" in _claude_md_section("Specs and plans")
 
 
 def test_claude_md_has_no_per_section_design_approval():
@@ -62,12 +62,10 @@ def test_docs_wire_ship_fast():
     assert (REPO / "knowledge" / "decisions" / adr).is_file()
     index = (REPO / "knowledge" / "decisions" / "README.md").read_text(encoding="utf-8")
     assert f"]({adr})" in index
-    conv = (REPO / "conventions" / "spec-driven-development.md").read_text(
-        encoding="utf-8"
-    )
+    conv = (CONVENTIONS / "spec-driven-development.md").read_text(encoding="utf-8")
     assert "/ship-fast" in conv and adr in conv
-    for name in ("README.md", "AGENTS.md"):
-        assert "/ship-fast" in (REPO / name).read_text(encoding="utf-8"), name
+    for path in (REPO / "README.md", RULES):
+        assert "/ship-fast" in path.read_text(encoding="utf-8"), path
     skill = (REPO / "plugin" / "skills" / "parallel-tasks" / "SKILL.md").read_text(
         encoding="utf-8"
     )
@@ -91,34 +89,28 @@ def test_docs_wire_ship_fast_interview():
     assert "amended by 0022" in row_0021
     adr_0021 = (decisions / "0021-ship-fast-skips-gates.md").read_text("utf-8")
     assert "amended by 0022" in adr_0021 and adr in adr_0021
-    for name in ("README.md", "AGENTS.md", "conventions/spec-driven-development.md"):
-        text = (REPO / name).read_text(encoding="utf-8")
+    for path in (REPO / "README.md", RULES, CONVENTIONS / "spec-driven-development.md"):
+        text = path.read_text(encoding="utf-8")
         paragraphs = _paragraphs_with(text, "/ship-fast")
-        assert any("interview" in p for p in paragraphs), name
+        assert any("interview" in p for p in paragraphs), path
 
 
 def test_learnings_capture_is_part_of_finishing():
-    claude = (REPO / "AGENTS.md").read_text(encoding="utf-8")
+    claude = RULES.read_text(encoding="utf-8")
     para = claude.split(
         "**A feature is not finished until its workspace is gone.**", 1
     )[1]
     para = para.split("\n\n", 1)[0]
-    assert "claude-kit:capture-learnings" in para
-    convention = (REPO / "conventions" / "project-memory.md").read_text(
-        encoding="utf-8"
-    )
+    assert "agent-kit:capture-learnings" in para
+    convention = (CONVENTIONS / "project-memory.md").read_text(encoding="utf-8")
     assert "## Capturing learnings" in convention
     assert "capture-learnings" in convention.split("## Capturing learnings", 1)[1]
 
 
 def test_claude_md_has_rules_moved_from_memory():
+    rules = " ".join(RULES.read_text(encoding="utf-8").split())
+    assert "never suggests deleting" in rules
     text = " ".join((REPO / "AGENTS.md").read_text(encoding="utf-8").split())
-    for phrase in (
-        "never suggests deleting",
-        "Never write the names of private repos",
-        "fold it into an existing flow step",
-    ):
-        assert phrase in text, phrase
     kit_dev = text.split("## Developing the kit", 1)[1]
     assert "Never write the names of private repos" in kit_dev
     assert "fold it into an existing flow step" in kit_dev
@@ -222,3 +214,68 @@ def test_docs_cover_other_agents():
     readme = " ".join((REPO / "README.md").read_text(encoding="utf-8").split())
     para = readme.split("Mistral Vibe", 1)[1][:400]
     assert "Codex" in para and "Cursor" in para and "docs/setup.md" in para
+
+
+MARKETPLACE_LINES = (
+    "/plugin install superpowers@claude-plugins-official",
+    "/plugin marketplace add alymo8/claude-kit",
+    "/plugin install agent-kit@agent-kit",
+)
+
+
+def _setup_section(heading):
+    """The body of a docs/setup.md section, up to the next heading of its level."""
+    guide = (REPO / "docs" / "setup.md").read_text(encoding="utf-8")
+    level = len(heading.split(" ", 1)[0])
+    body = guide.split(f"\n{heading}\n", 1)[1]
+    ends = [body.find(f"\n{'#' * n} ") for n in range(1, level + 1)]
+    ends = [e for e in ends if e != -1]
+    return body[: min(ends)] if ends else body
+
+
+def test_docs_lead_with_marketplace_install():
+    for path in (REPO / "README.md", REPO / "docs" / "setup.md"):
+        text = path.read_text(encoding="utf-8")
+        positions = [text.find(line) for line in MARKETPLACE_LINES]
+        assert all(p != -1 for p in positions), path
+        assert positions == sorted(positions), path
+        assert text.find("/agent-kit:statusline", positions[-1]) != -1, path
+        if path.name == "setup.md":
+            assert positions[-1] < text.find("python plugin/install.py"), path
+
+
+def test_admin_snippet():
+    section = _setup_section("### For your company admin")
+    for needle in (
+        "strictKnownMarketplaces",
+        "anthropics/claude-plugins-official",
+        "alymo8/claude-kit",
+        '"skills-dir"',
+        "extraKnownMarketplaces",
+        "agent-kit@agent-kit",
+        "superpowers@claude-plugins-official",
+        "https://code.claude.com/docs/en/plugins/org.md",
+    ):
+        assert needle in section, needle
+    readme = (REPO / "README.md").read_text(encoding="utf-8")
+    assert "For your company admin" in readme
+
+
+def test_other_agents_rerun_installer_after_update():
+    section = _setup_section("## Using the kit with Vibe, Codex or Cursor")
+    assert "rerun the installer after updating" in " ".join(section.split())
+
+
+def test_published_plugin_adr_amends_others():
+    decisions = REPO / "knowledge" / "decisions"
+    adr = "0052-published-plugin.md"
+    text = (decisions / adr).read_text(encoding="utf-8")
+    assert "- **Status:** accepted" in text
+    assert "- **Date:** 2026-11-23" in text
+    index = (decisions / "README.md").read_text(encoding="utf-8")
+    assert f"]({adr})" in index
+    for number in ("0005", "0032", "0033", "0034", "0050"):
+        old = next(decisions.glob(f"{number}-*.md"))
+        row = next(line for line in index.splitlines() if f"]({old.name})" in line)
+        assert re.search(r"amended by [\d, ]*0052", row), number
+        assert "amended by 0052" in old.read_text(encoding="utf-8"), number

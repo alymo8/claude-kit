@@ -53,7 +53,7 @@ def main() -> int:
         if index.stderr.strip():
             print(index.stderr.strip(), file=sys.stderr)
     except Exception as exc:  # a hook must never raise
-        print(f"[claude-kit] on_spec_edit error: {exc}", file=sys.stderr)
+        print(f"[agent-kit] on_spec_edit error: {exc}", file=sys.stderr)
     return 0
 
 

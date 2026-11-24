@@ -4,7 +4,7 @@ argument-hint: [node|python]
 disable-model-invocation: true
 ---
 
-Add the claude-kit convention files that are missing from the current repository.
+Add the agent-kit convention files that are missing from the current repository.
 Argument: `$ARGUMENTS` (expected: `node` or `python`).
 
 1. If the stack is missing or not `node` / `python`, ask for it.
@@ -14,7 +14,8 @@ Argument: `$ARGUMENTS` (expected: `node` or `python`).
    python "${CLAUDE_PLUGIN_ROOT}/scripts/scaffold.py" --adopt --stack <stack>
 
    (Fallback path if the variable is not expanded:
-   `~/.claude/skills/claude-kit/scripts/scaffold.py`.) The script never overwrites
+   `<plugin root>/scripts/scaffold.py`.)
+   `<plugin root>` is the plugin root stated in the kit map, else `~/.claude/skills/agent-kit`. The script never overwrites
    and never commits.
 3. Show its `created:` and `skipped (already present):` lists verbatim.
 4. If `.gitignore` was skipped, remind the user to make sure it ignores

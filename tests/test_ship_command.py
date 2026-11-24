@@ -49,7 +49,7 @@ def test_cleanup_does_not_run_inside_the_main_checkout():
 def test_step_zero_requires_a_valid_gate_record():
     step = _step(0)
     assert "spec-lint.py" in step and "--verify-record" in step
-    assert "claude-kit:spec-gate" in step
+    assert "agent-kit:spec-gate" in step
 
 
 def test_failed_gate_is_a_stop_rule():
@@ -73,7 +73,7 @@ def _stops():
 
 def test_step_three_gates_the_plan():
     step = _step(3)
-    assert "claude-kit:plan-gate" in step
+    assert "agent-kit:plan-gate" in step
     assert "docs/superpowers/gates/plans/" in step
 
 
@@ -167,7 +167,7 @@ def test_step_3_adds_depends_on_lines():
 def test_step_4_picks_waves_and_falls_back():
     step = _step(4)
     assert "parallel-plan.py" in step and "waves" in step
-    assert "claude-kit:parallel-tasks" in step
+    assert "agent-kit:parallel-tasks" in step
     assert "non-zero" in step and "not a stop rule" in step
 
 
@@ -208,13 +208,13 @@ def test_plan_writer_answers_the_spec_records_plan_questions():
 
 def test_learnings_are_captured_before_the_pr():
     step = _step(7)
-    assert "claude-kit:capture-learnings" in step
-    assert step.index("claude-kit:capture-learnings") < step.index("gh pr create")
+    assert "agent-kit:capture-learnings" in step
+    assert step.index("agent-kit:capture-learnings") < step.index("gh pr create")
 
 
 def test_learnings_commit_is_tested_before_push():
     step = _step(7)
-    learn = step.index("claude-kit:capture-learnings")
+    learn = step.index("agent-kit:capture-learnings")
     assert learn < step.index("full test suite") < step.index("git push")
     assert step.index("git push") < step.index("gh pr create")
 
@@ -250,7 +250,7 @@ def test_step_three_dispatches_a_plan_subagent():
     prompt = _quoted(3)
     for needle in (
         "superpowers:writing-plans",
-        "claude-kit:plan-gate",
+        "agent-kit:plan-gate",
         "steps 1–6",
         "Verdict:",
         "Record:",
@@ -265,7 +265,7 @@ def test_step_three_does_not_write_the_plan_itself():
 def test_step_four_always_implements_in_subagents():
     step = _step(4)
     assert "superpowers:subagent-driven-development" in step
-    assert "claude-kit:parallel-tasks" in step
+    assert "agent-kit:parallel-tasks" in step
     assert "non-zero" in step and "not a stop rule" in step
     assert "executing-plans" not in step
     assert "finishing-a-development-branch" in step and "not run" in step
@@ -343,10 +343,10 @@ def test_step_four_passes_the_frozen_constraint():
 
 def test_step_six_runs_the_two_axis_review_every_run():
     step = _step(6)
-    assert "on every run, run the `claude-kit:review` skill" in step
+    assert "on every run, run the `agent-kit:review` skill" in step
     for needle in ("`hard`", "`judgement`", "scope creep"):
         assert needle in step, needle
-    review = step.index("claude-kit:review")
+    review = step.index("agent-kit:review")
     assert step.index("superpowers:requesting-code-review") < review
 
 
@@ -363,13 +363,13 @@ def test_pr_body_follows_the_reference():
 
 
 def test_capture_learnings_runs_in_auto_mode():
-    needle = "`claude-kit:capture-learnings` skill with the argument `--auto`"
+    needle = "`agent-kit:capture-learnings` skill with the argument `--auto`"
     assert needle in _step(7)
 
 
 def test_report_lists_review_axes():
     step = _step(12)
-    assert "claude-kit:review" in step
+    assert "agent-kit:review" in step
     assert "`judgement`" in step
 
 

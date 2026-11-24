@@ -123,7 +123,7 @@ def make_ship_project(root: Path, subagents: bool = True) -> Path:
     write_lines(
         folder / "ship1.jsonl",
         [
-            ship_user("<command-name>/claude-kit:ship</command-name> spec.md"),
+            ship_user("<command-name>/agent-kit:ship</command-name> spec.md"),
             ship_assistant("m1", 100, 1_000, 10_000, 10),
             ship_assistant("m1", 100, 1_000, 10_000, 10),
             ship_assistant("m2", 200, 0, 20_000, 20),

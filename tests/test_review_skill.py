@@ -1,4 +1,4 @@
-from helpers import PLUGIN, REPO
+from helpers import CONVENTIONS, PLUGIN, REPO
 
 REVIEW = PLUGIN / "skills" / "review"
 SMELLS = (
@@ -48,7 +48,7 @@ def test_frontmatter():
     assert front["description"].startswith("Use when")
     assert "/ship" in front["description"]
     assert len(front["description"]) <= 1024
-    assert front["argument-hint"] == "[base-ref] [spec.md] [plan.md]"
+    assert front["argument-hint"] == '"[base-ref] [spec.md] [plan.md]"'
     assert "disable-model-invocation" not in front
 
 
@@ -74,7 +74,7 @@ def test_skill_runs_frozen_check_before_dispatch():
     for phrase in (
         "frozen-check.py",
         "--base <base>",
-        "~/.claude/skills/claude-kit/scripts/frozen-check.py",
+        "<plugin root>/scripts/frozen-check.py",
         "Frozen: skipped (no spec or plan)",
     ):
         assert phrase in text, phrase
@@ -128,7 +128,7 @@ def collapsed(path):
 
 
 def test_engineering_practices_name_the_surgical_rules():
-    text = collapsed(REPO / "conventions" / "engineering-practices.md")
+    text = collapsed(CONVENTIONS / "engineering-practices.md")
     for phrase in (
         "### Surgical diffs and simplicity",
         *(f"**{name}.**" for name in SURGICAL_RULES),
@@ -141,7 +141,7 @@ def test_engineering_practices_name_the_surgical_rules():
 
 
 def test_knowledge_layer_names_the_reviewer_only_file():
-    text = collapsed(REPO / "conventions" / "knowledge-layer.md")
+    text = collapsed(CONVENTIONS / "knowledge-layer.md")
     assert "knowledge/review-standards.md" in text
     assert "never link it from `CLAUDE.md`" in text
 

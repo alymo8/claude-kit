@@ -90,8 +90,8 @@ the hand-over. Never invent an ask.
 
 ## 4. Verify
 
-From the plugin root (`${CLAUDE_PLUGIN_ROOT}`, fallback
-`~/.claude/skills/claude-kit`), with a new screenshot folder outside the repo
+From the plugin root (`${CLAUDE_PLUGIN_ROOT}`, fallback: the plugin root stated in the kit
+map, else `~/.claude/skills/agent-kit`), with a new screenshot folder outside the repo
 (the session scratchpad when there is one):
 
     python scripts/check-deck.py <deck.html> --minutes <N> --out <shots-dir>

@@ -63,7 +63,7 @@ pinned per project once its stack is known — and that choice is itself worth a
   whose approval covers the run (ADR 0018, ADR 0036): during execution, take the
   reading the spec most supports and note it.
 
-The standards reviewer of claude-kit:review checks these rules (ADR 0044).
+The standards reviewer of agent-kit:review checks these rules (ADR 0044).
 
 ## 3. Code review
 

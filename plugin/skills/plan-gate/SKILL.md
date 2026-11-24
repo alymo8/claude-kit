@@ -20,7 +20,8 @@ did not settle.
 - **Spec:** the path on the plan's `**Spec:**` line.
 - **Spec gate record:** `docs/superpowers/gates/<spec file name>`.
 - **Linter:** `python <this skill's directory>/../../scripts/spec-lint.py`
-  (fallback: `~/.claude/skills/claude-kit/scripts/spec-lint.py`).
+  (fallback: `<plugin root>/scripts/spec-lint.py`).
+  `<plugin root>` is the plugin root stated in the kit map, else `~/.claude/skills/agent-kit`.
 - **Rubric:** `rubric.md` in this skill's directory (discovery rounds).
 - **Verify rubric:** `../spec-gate/verify.md` from this skill's directory
   (verification rounds).
@@ -34,7 +35,7 @@ did not settle.
    `- **Status:** draft`. Run the linter on the plan and fix every other
    violation in the plan, re-running until it exits 0. If `P4-spec-gated` is
    then the only violation left, stop with verdict `fail`: write no record,
-   and report that the spec must pass `claude-kit:spec-gate` first. Never
+   and report that the spec must pass `agent-kit:spec-gate` first. Never
    edit the spec from this gate.
 2. **Review round.** This is a **discovery round**. Dispatch a **new**
    general-purpose subagent every round (never reuse one; a reviewer anchors
@@ -148,7 +149,7 @@ did not settle.
    - **fail:** "Plan gate failed." Then each Open item as a direct question
      with the options and your recommendation; a spec finding names the spec
      section to change. After the user answers, update the plan (or the spec,
-     which is then gated again with `claude-kit:spec-gate`) and run this gate
+     which is then gated again with `agent-kit:spec-gate`) and run this gate
      again from step 1.
 
 When `/ship` runs this skill, it runs steps 1–6 only; `/ship` decides what

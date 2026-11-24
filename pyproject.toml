@@ -1,5 +1,5 @@
 [project]
-name = "claude-kit"
+name = "agent-kit"
 version = "0.1.0"
 description = "Workspace conventions, a Claude Code plugin, and shared tooling"
 requires-python = ">=3.11"

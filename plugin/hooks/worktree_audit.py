@@ -101,7 +101,7 @@ def report(cwd: Path) -> str:
     branches = leftover_branches(cwd, default) if default else []
     if not worktrees and not branches:
         return ""
-    lines = ["[claude-kit] Leftover from earlier feature work in this repo:"]
+    lines = ["[agent-kit] Leftover from earlier feature work in this repo:"]
     if worktrees:
         lines.append("  worktrees: " + ", ".join(worktrees))
     if branches:
@@ -116,7 +116,7 @@ def main() -> int:
         if text:
             print(text)
     except Exception as exc:  # a hook must never raise
-        print(f"[claude-kit] worktree audit error: {exc}", file=sys.stderr)
+        print(f"[agent-kit] worktree audit error: {exc}", file=sys.stderr)
     return 0
 
 

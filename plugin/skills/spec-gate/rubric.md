@@ -49,8 +49,8 @@ never edit the spec.
    fix is to add the ADR file to Scope In and a one-paragraph ADR summary
    to the Design. A SHOULD match is a `minor` finding that is reported
    only: never add an ADR to Scope In for it without the user.
-   (In the kit repo, `conventions/decision-log.md` is the workspace
-   convention itself.)
+   (In the kit repo, `<plugin root>/conventions/decision-log.md`, the plugin
+   root stated in the kit map, is the workspace convention itself.)
 9. **Frozen evaluator.** If the Success criteria name a test or eval file, or
    a test suite the change adds, and the spec has neither a `- **Frozen:**`
    header bullet nor a Decisions entry saying why nothing is frozen, raise a

@@ -16,7 +16,7 @@ def test_frontmatter_user_only():
 
 def test_runs_status_script_and_path_flag():
     assert '"${CLAUDE_PLUGIN_ROOT}/scripts/docker-disk.py"' in TEXT
-    assert "~/.claude/skills/claude-kit/scripts/docker-disk.py" in TEXT
+    assert "<plugin root>/scripts/docker-disk.py" in TEXT
     assert "--path" in TEXT and "skipped" in TEXT
 
 

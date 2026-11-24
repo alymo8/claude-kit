@@ -10,8 +10,8 @@ Part of `commands/ship-fast.md`, which reads this file when it reaches it. That 
    1. **Idea.** With no idea text, ask "What are we building, and for
       whom?" and wait for the answer in the user's words. This counts as 1.
    2. **Home.** If the current directory is inside a git repository that
-      is not the claude-kit repository itself (the one whose
-      `plugin/.claude-plugin/plugin.json` has `"name": "claude-kit"`), that
+      is not the agent-kit repository itself (the one whose
+      `plugin/.claude-plugin/plugin.json` has `"name": "agent-kit"`), that
       repository is the home: state it in one line and read its stack from
       its files; do not ask. Otherwise Home is a grill question: a new
       repository (name, and `node` or `python`) or the path of an existing
@@ -25,7 +25,7 @@ Part of `commands/ship-fast.md`, which reads this file when it reaches it. That 
       not asked on its own: it is the first question of the grill's first
       round. Stop there: do not write brainstorming's spec, run any review
       of it, or invoke writing-plans.
-   4. **Grill.** Run `claude-kit:grill` on that design with these
+   4. **Grill.** Run `agent-kit:grill` on that design with these
       overrides: its tree holds the design's open product choices and the
       areas below **instead of** the `coverage.md` areas, and it asks at
       most the budget left, most important first, aiming for one round and

@@ -26,11 +26,14 @@ Read by the standards reviewer of `claude-kit:review`, not by implementers.
   starts its own session also needs `SIGTERM`/`SIGHUP` handlers in the
   parent, or it outlives a killed parent.
 - A hook that joins several pieces of context guards each piece on its own
-  (try/except per piece, a `[claude-kit]` note on stderr): one unreadable
+  (try/except per piece, an `[agent-kit]` note on stderr): one unreadable
   file must not silence every other piece through the outer catch-all.
 - Code that rewrites a managed block inside a user's file refuses (exit 1,
   nothing written) when the begin/end markers are unpaired or repeated;
   cutting between mismatched markers deletes the user's own text.
+- An early-exit check (an error path that returns before later steps) must
+  not come before a step the spec says runs "in every case"; move the
+  check after that step or into the step that needs it.
 - A value written into a user's TOML file goes in as a basic string
   (`json.dumps(value)`), never a `'...'` literal: a path with `'` in it
   breaks the file.

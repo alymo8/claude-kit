@@ -2,11 +2,16 @@ import json
 import shutil
 import subprocess
 
-from helpers import PLUGIN, REPO, clean_env, run_script
+import pytest
+from helpers import PLUGIN, REPO, clean_env, load_module, run_script
 
 HOOK = PLUGIN / "hooks" / "workspace_rules_inject.py"
 GIT = ["git", "-c", "user.name=t", "-c", "user.email=t@example.com"]
 GIT += ["-c", "commit.gpgsign=false"]
+AGENTS = ("vibe", "codex", "cursor")
+RULES_TEXT = "# Rules\n\n## How we work\n\nx\n"
+AGENT_TEXT = "follow them as you would an AGENTS.md"
+CLAUDE_TEXT = "as you would a CLAUDE.md"
 
 
 def run(script=HOOK, stdin="{}", **env: str):
@@ -22,48 +27,146 @@ def context(result) -> str:
     return out["additionalContext"]
 
 
-def make_kit(tmp_path, claude_md, agents_md=None):
-    kit = tmp_path / "kit"
-    (kit / "plugin" / "hooks").mkdir(parents=True)
-    shutil.copy(HOOK, kit / "plugin" / "hooks" / HOOK.name)
-    if claude_md is not None:
-        (kit / "CLAUDE.md").write_text(claude_md, encoding="utf-8")
-    if agents_md is not None:
-        (kit / "AGENTS.md").write_text(agents_md, encoding="utf-8")
-    return kit
+def make_kit(root, rules=RULES_TEXT, name="agent-kit"):
+    (root / "plugin" / "hooks").mkdir(parents=True, exist_ok=True)
+    (root / "plugin" / "rules.md").write_text(rules, encoding="utf-8")
+    (root / ".claude-plugin").mkdir(exist_ok=True)
+    marketplace = root / ".claude-plugin" / "marketplace.json"
+    marketplace.write_text(json.dumps({"name": name}), encoding="utf-8")
+    shutil.copy(HOOK, root / "plugin" / "hooks" / HOOK.name)
+    return root
 
 
-def test_outside_the_kit_injects_rules_without_kit_dev(tmp_path):
+def make_copy(tmp_path):
+    copy = tmp_path / "cache" / "agent-kit" / "1.0.0"
+    shutil.copytree(PLUGIN, copy, ignore=shutil.ignore_patterns("__pycache__"))
+    return copy / "hooks" / HOOK.name
+
+
+def git_repo(path):
+    subprocess.run(GIT + ["init", "-q", str(path)], check=True)
+    subprocess.run(GIT + ["-C", str(path), "add", "-A"], check=True)
+    subprocess.run(GIT + ["-C", str(path), "commit", "-qm", "i"], check=True)
+
+
+def test_outside_any_kit_injects_rules(tmp_path):
     result = run(CLAUDE_PROJECT_DIR=str(tmp_path))
     assert result.returncode == 0, result.stderr
     text = context(result)
-    assert text.startswith("Workspace rules (claude-kit, from ")
-    assert f"{REPO.as_posix()}/AGENTS.md" in text
+    assert text.startswith("Workspace rules (agent-kit, from ")
+    assert f"{PLUGIN.as_posix()}/rules.md" in text
     assert "## How we work" in text
     assert "## Developing the kit" not in text
 
 
-def test_inside_the_kit_is_silent():
-    for project in (REPO, REPO / "plugin"):
-        result = run(CLAUDE_PROJECT_DIR=str(project))
-        assert result.returncode == 0
-        assert result.stdout == "", project
+def test_copy_injects_in_unrelated_repo(tmp_path):
+    hook = make_copy(tmp_path)
+    copy = hook.parents[1].resolve()
+    other = tmp_path / "other"
+    other.mkdir()
+    (other / "README.md").write_text("o\n", encoding="utf-8")
+    git_repo(other)
+    result = run(hook, CLAUDE_PROJECT_DIR=str(other))
+    assert result.returncode == 0, result.stderr
+    text = context(result)
+    assert f"{copy.as_posix()}/rules.md" in text
+    assert "## How we work" in text
 
 
-def test_kit_worktree_elsewhere_is_silent(tmp_path):
-    kit = make_kit(tmp_path, "# Rules\n\n## How we work\n\nx\n")
-    subprocess.run(GIT + ["init", "-q", str(kit)], check=True)
-    subprocess.run(GIT + ["-C", str(kit), "add", "-A"], check=True)
-    subprocess.run(GIT + ["-C", str(kit), "commit", "-qm", "init"], check=True)
+@pytest.mark.parametrize("hook_from", ["kit", "copy"])
+@pytest.mark.parametrize("agent", ["", "vibe", "codex", "cursor"])
+def test_rules_table(tmp_path, agent, hook_from):
+    kit = make_kit(tmp_path / "kit")
+    git_repo(kit)
     worktree = tmp_path / "wt"
     subprocess.run(
         GIT + ["-C", str(kit), "worktree", "add", "-q", str(worktree)], check=True
     )
-    hook = kit / "plugin" / "hooks" / HOOK.name
-    assert run(hook, CLAUDE_PROJECT_DIR=str(worktree)).stdout == ""
+    child = kit / "child"
+    child.mkdir()
+    (child / "README.md").write_text("c\n", encoding="utf-8")
+    git_repo(child)
     other = tmp_path / "other"
     other.mkdir()
-    assert "## How we work" in context(run(hook, CLAUDE_PROJECT_DIR=str(other)))
+    (other / "README.md").write_text("o\n", encoding="utf-8")
+    git_repo(other)
+    if hook_from == "kit":
+        hook = kit / "plugin" / "hooks" / HOOK.name
+    else:
+        hook = make_copy(tmp_path)
+    extra = {"CLAUDE_KIT_AGENT": agent} if agent else {}
+    for project in (kit, kit / "plugin", child, worktree):
+        result = run(hook, CLAUDE_PROJECT_DIR=str(project), **extra)
+        assert result.returncode == 0, result.stderr
+        if agent == "":
+            assert result.stdout == "", project
+        else:
+            text = context(result)
+            assert "## How we work" in text, project
+            assert AGENT_TEXT in text, project
+    result = run(hook, CLAUDE_PROJECT_DIR=str(other), **extra)
+    text = context(result)
+    assert "## How we work" in text
+    if agent == "":
+        assert CLAUDE_TEXT in text
+
+
+def test_old_branch_worktree(tmp_path):
+    kit = tmp_path / "kit"
+    kit.mkdir()
+    (kit / "README.md").write_text("old\n", encoding="utf-8")
+    git_repo(kit)
+    make_kit(kit)
+    subprocess.run(GIT + ["-C", str(kit), "add", "-A"], check=True)
+    subprocess.run(GIT + ["-C", str(kit), "commit", "-qm", "kit"], check=True)
+    old = tmp_path / "old"
+    subprocess.run(
+        GIT + ["-C", str(kit), "worktree", "add", "-q", "--detach", str(old), "HEAD~1"],
+        check=True,
+    )
+    assert not (old / "plugin" / "rules.md").exists()
+    hook = kit / "plugin" / "hooks" / HOOK.name
+    assert run(hook, CLAUDE_PROJECT_DIR=str(old)).stdout == ""
+    for agent in AGENTS:
+        env = {"CLAUDE_PROJECT_DIR": str(old), "CLAUDE_KIT_AGENT": agent}
+        assert AGENT_TEXT in context(run(hook, **env))
+
+
+@pytest.mark.parametrize("marketplace", ["{oops", "[]", '{"name": "other"}'])
+def test_malformed_or_foreign_marketplace_is_not_a_kit(tmp_path, marketplace):
+    folder = tmp_path / "folder"
+    (folder / "plugin").mkdir(parents=True)
+    (folder / "plugin" / "rules.md").write_text(RULES_TEXT, encoding="utf-8")
+    (folder / ".claude-plugin").mkdir()
+    (folder / ".claude-plugin" / "marketplace.json").write_text(
+        marketplace, encoding="utf-8"
+    )
+    module = load_module(HOOK, "workspace_rules_inject")
+    assert module.is_kit_checkout(folder) is False
+    result = run(CLAUDE_PROJECT_DIR=str(folder / "plugin"))
+    assert result.returncode == 0, result.stderr
+    assert "## How we work" in context(result)
+
+
+def test_kit_checkout_helpers(tmp_path):
+    kit = make_kit(tmp_path / "kit")
+    module = load_module(HOOK, "workspace_rules_inject")
+    assert module.KIT_NAME == "agent-kit"
+    assert module.is_kit_checkout(kit) is True
+    assert module.find_kit(kit / "plugin" / "hooks") == kit
+    assert module.find_kit(tmp_path) is None
+    assert module.plugin_root() == PLUGIN.resolve()
+    assert module.plugin_kit() == REPO.resolve()
+
+
+def test_inside_the_real_kit_is_silent():
+    for project in (REPO, REPO / "plugin"):
+        result = run(CLAUDE_PROJECT_DIR=str(project))
+        assert result.returncode == 0
+        assert result.stdout == "", project
+        for agent in AGENTS:
+            env = {"CLAUDE_PROJECT_DIR": str(project), "CLAUDE_KIT_AGENT": agent}
+            assert AGENT_TEXT in context(run(**env)), (agent, project)
 
 
 def test_project_dir_from_stdin(tmp_path):
@@ -86,26 +189,20 @@ def test_zero_turns_it_off(tmp_path):
     assert result.stdout == ""
 
 
-def test_missing_claude_md_prints_nothing(tmp_path):
-    kit = make_kit(tmp_path, None)
+def test_missing_rules_prints_nothing(tmp_path):
+    hooks = tmp_path / "bare" / "plugin" / "hooks"
+    hooks.mkdir(parents=True)
+    shutil.copy(HOOK, hooks / HOOK.name)
     other = tmp_path / "other"
     other.mkdir()
-    result = run(kit / "plugin" / "hooks" / HOOK.name, CLAUDE_PROJECT_DIR=str(other))
+    result = run(hooks / HOOK.name, CLAUDE_PROJECT_DIR=str(other))
     assert result.returncode == 0
     assert result.stdout == ""
 
 
-def test_whole_file_when_no_kit_dev_section(tmp_path):
-    kit = make_kit(tmp_path, "# Rules\n\n## Only\n\nkeep me\n")
-    other = tmp_path / "other"
-    other.mkdir()
-    hook = kit / "plugin" / "hooks" / HOOK.name
-    assert "keep me" in context(run(hook, CLAUDE_PROJECT_DIR=str(other)))
-
-
 def test_size_cap(tmp_path):
     # Claude Code truncates hook context above 10,000 characters to a preview,
-    # so keep a margin; trim the workspace part of CLAUDE.md if this fails.
+    # so keep a margin; trim plugin/rules.md if this fails.
     assert len(context(run(CLAUDE_PROJECT_DIR=str(tmp_path)))) <= 9_500
 
 
@@ -117,70 +214,3 @@ def test_registered_after_kit_map_without_matcher():
     rules = groups[kit + 1]
     assert "hooks/workspace_rules_inject.py" in rules["hooks"][0]["command"]
     assert "matcher" not in rules
-
-
-AGENTS = ("vibe", "codex", "cursor")
-RULES = "# Rules\n\n## How we work\n\nx\n"
-
-
-def git_repo(path):
-    subprocess.run(GIT + ["init", "-q", str(path)], check=True)
-    subprocess.run(GIT + ["-C", str(path), "add", "-A"], check=True)
-    subprocess.run(GIT + ["-C", str(path), "commit", "-qm", "i"], check=True)
-
-
-def test_rules_come_from_agents_md(tmp_path):
-    kit = make_kit(tmp_path, "@AGENTS.md\n", agents_md=RULES)
-    other = tmp_path / "other"
-    other.mkdir()
-    hook = kit / "plugin" / "hooks" / HOOK.name
-    text = context(run(hook, CLAUDE_PROJECT_DIR=str(other)))
-    assert f"{kit.as_posix()}/AGENTS.md)" in text
-    assert "as you would a CLAUDE.md" in text
-    assert "## How we work" in text
-
-
-def test_stub_gives_same_rules_as_full_claude_md(tmp_path):
-    stub = make_kit(tmp_path / "a", "@AGENTS.md\n", agents_md=RULES)
-    full = make_kit(tmp_path / "b", RULES)
-    other = tmp_path / "other"
-    other.mkdir()
-    texts = []
-    for kit in (stub, full):
-        hook = kit / "plugin" / "hooks" / HOOK.name
-        texts.append(context(run(hook, CLAUDE_PROJECT_DIR=str(other))))
-    assert texts[0].split("\n\n", 1)[1] == texts[1].split("\n\n", 1)[1]
-
-
-def test_agent_gets_rules_in_child_repo_inside_kit(tmp_path):
-    kit = make_kit(tmp_path, "@AGENTS.md\n", agents_md=RULES)
-    git_repo(kit)
-    child = kit / "child"
-    child.mkdir()
-    (child / "README.md").write_text("c\n", encoding="utf-8")
-    git_repo(child)
-    hook = kit / "plugin" / "hooks" / HOOK.name
-    assert run(hook, CLAUDE_PROJECT_DIR=str(child)).stdout == ""
-    for agent in AGENTS:
-        env = {"CLAUDE_PROJECT_DIR": str(child), "CLAUDE_KIT_AGENT": agent}
-        text = context(run(hook, **env))
-        assert "## How we work" in text
-        assert "follow them as you would an AGENTS.md" in text
-
-
-def test_agent_silent_in_kit_root_subfolder_and_worktree(tmp_path):
-    kit = make_kit(tmp_path, "@AGENTS.md\n", agents_md=RULES)
-    git_repo(kit)
-    worktree = tmp_path / "wt"
-    subprocess.run(
-        GIT + ["-C", str(kit), "worktree", "add", "-q", str(worktree)], check=True
-    )
-    hook = kit / "plugin" / "hooks" / HOOK.name
-    for agent in AGENTS:
-        for project in (kit, kit / "plugin", worktree):
-            env = {"CLAUDE_PROJECT_DIR": str(project), "CLAUDE_KIT_AGENT": agent}
-            assert run(hook, **env).stdout == "", (agent, project)
-    for agent in AGENTS:
-        for project in (REPO, REPO / "plugin"):
-            env = {"CLAUDE_PROJECT_DIR": str(project), "CLAUDE_KIT_AGENT": agent}
-            assert run(**env).stdout == "", (agent, project)

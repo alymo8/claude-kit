@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from helpers import PLUGIN, REPO
+from helpers import PLUGIN, REPO, RULES
 
 SHIP_MANY = (PLUGIN / "commands" / "ship-many.md").read_text(encoding="utf-8")
 SHIP_CHILD = (PLUGIN / "scripts" / "ship-child.py").read_text(encoding="utf-8")
@@ -25,7 +25,7 @@ def test_user_only_frontmatter():
 
 def test_child_command_and_defaults():
     for needle in (
-        '"/claude-kit:ship ',
+        '"/agent-kit:ship ',
         '"--permission-mode"',
         '"auto"',
         '"--permission-prompts"',
@@ -104,7 +104,7 @@ def test_collect_and_status_order():
 def test_scripts_named():
     assert "spec-lint.py" in SHIP_MANY and "--verify-record" in SHIP_MANY
     assert "parallel-plan.py" in SHIP_MANY and " specs " in SHIP_MANY
-    assert "claude-kit:spec-gate" in SHIP_MANY
+    assert "agent-kit:spec-gate" in SHIP_MANY
 
 
 def test_five_stop_rules():
@@ -126,7 +126,7 @@ def test_exact_title_match():
 
 
 def test_docs_wire_ship_many():
-    assert "/ship-many" in (REPO / "AGENTS.md").read_text(encoding="utf-8")
+    assert "/ship-many" in RULES.read_text(encoding="utf-8")
     adr = "0018-ship-many-headless-children.md"
     assert (REPO / "knowledge" / "decisions" / adr).is_file()
     index = (REPO / "knowledge" / "decisions" / "README.md").read_text(encoding="utf-8")

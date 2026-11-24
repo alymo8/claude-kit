@@ -1,6 +1,6 @@
 # Setting up the kit
 
-How to install claude-kit on a new machine, on Windows, macOS or Linux, and
+How to install agent-kit on a new machine, on Windows, macOS or Linux, and
 work the same way as everyone else on the team.
 
 ## Prerequisites
@@ -24,9 +24,53 @@ work the same way as everyone else on the team.
 
 ## Install
 
+In Claude Code, run:
+
 ```
-git clone https://github.com/alymo8/claude-kit.git
-cd claude-kit
+/plugin install superpowers@claude-plugins-official
+/plugin marketplace add alymo8/claude-kit
+/plugin install agent-kit@agent-kit
+```
+
+Optionally run `/agent-kit:statusline` to add the kit's status line.
+
+To update, marketplace users get a new version through `/plugin` when the
+version changes.
+
+### For your company admin
+
+Managed work laptops often allowlist the sources plugins may come from, so
+the marketplace commands above fail until an admin allows them. Add this to
+the managed settings to allow the kit and superpowers, and to install both
+for every user:
+
+```json
+{
+  "strictKnownMarketplaces": [
+    {"source": "github", "repo": "anthropics/claude-plugins-official"},
+    {"source": "github", "repo": "alymo8/claude-kit"},
+    {"source": "skills-dir"}
+  ],
+  "extraKnownMarketplaces": {
+    "agent-kit": {"source": {"source": "github", "repo": "alymo8/claude-kit"}}
+  },
+  "enabledPlugins": {
+    "agent-kit@agent-kit": true,
+    "superpowers@claude-plugins-official": true
+  }
+}
+```
+
+`{"source": "skills-dir"}` keeps the contributor install (a link under
+`~/.claude/skills/`) working. See
+<https://code.claude.com/docs/en/plugins/org.md> for where managed settings
+live and what each key does.
+
+### From a checkout (contributors)
+
+```
+git clone https://github.com/alymo8/claude-kit.git agent-kit
+cd agent-kit
 python plugin/install.py
 ```
 
@@ -34,18 +78,31 @@ The installer detects the OS (Windows, macOS or Linux) and prints it; it
 never asks. It checks `python` first and stops with the fix for that OS if it
 is missing or older than 3.11, changing nothing. On macOS the fix names the
 exact Homebrew folder to add when one is installed. It then links
-`~/.claude/skills/claude-kit` to the checkout's `plugin/` folder (a junction
+`~/.claude/skills/agent-kit` to the checkout's `plugin/` folder (a junction
 on Windows, a symlink elsewhere), so the kit loads in place and edits are
 live. It adds the kit's status line to `~/.claude/settings.json` when none is
 set, and warns if `git`, `gh` or superpowers is missing. Running it again is
 safe. Start a new Claude Code session (or run `/reload-plugins`) afterwards.
+The installer removes the old link from before the rename to `agent-kit` and
+migrates its status line,
+and does not link when the marketplace copy of `agent-kit` is installed.
 
 On Windows you can also run `plugin\install.ps1`, which wraps the same
 installer. If PowerShell refuses to run it (execution policy), use
 `powershell -ExecutionPolicy Bypass -File plugin\install.ps1`.
 
-To update, `git pull` in the checkout. Skill and command edits are live;
+To update a checkout, `git pull` in it. Skill and command edits are live;
 hook edits need a new session or `/reload-plugins`.
+
+### Upgrading from the old name
+
+The kit was renamed to `agent-kit`. After pulling, run
+`python plugin/install.py` once: it removes the old link from before the
+rename and migrates the status line and the agent-file blocks. Commands from
+before the rename now start with `/agent-kit:` instead. A contributor who also
+installs the plugin from the marketplace should rerun the installer
+afterwards: it then removes its own `agent-kit` link, so only one copy of the
+kit loads.
 
 ## Using the kit with Vibe, Codex or Cursor
 
@@ -79,9 +136,12 @@ skills and edit its hook file by hand, or point `--home` at the folder that
 holds `.codex` or `.vibe`. Links into a kit checkout you have since deleted
 are reported as `Skipped`; remove them by hand and rerun.
 
+Vibe, Codex and Cursor users: rerun the installer after updating the
+checkout, once per agent, until a native Vibe plugin exists.
+
 Next steps:
 
-- Codex: run `/hooks` and trust the claude-kit hooks.
+- Codex: run `/hooks` and trust the agent-kit hooks.
 - Vibe and Cursor: start a new session.
 - Cursor runs session-start hooks without waiting for them, so the kit map
   may not reach the model. If it does not, paste the line the installer
@@ -118,7 +178,7 @@ it to `vibe`, `codex` or `cursor` for the hooks it runs.
 
 | Variable | Default | Effect |
 |---|---|---|
-| `CLAUDE_KIT_LEAN_CONTEXT` | on | `0` stops injecting the lean-context rule (also deny `Skill(claude-kit:lean-context)`) |
+| `CLAUDE_KIT_LEAN_CONTEXT` | on | `0` stops injecting the lean-context rule (also deny `Skill(agent-kit:lean-context)`) |
 | `CLAUDE_KIT_PRECOMPACT` | on | `0` stops steering the compaction summary toward dead ends and open problems |
 | `CLAUDE_KIT_KIT_MAP` | on | `0` stops injecting the kit map |
 | `CLAUDE_KIT_WORKSPACE_RULES` | on | `0` stops injecting the workspace rules in repos outside the kit folder |

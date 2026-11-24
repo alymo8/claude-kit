@@ -60,28 +60,29 @@ flowchart LR
 ```
 
 Amber: a human decision. Blue: an independent check. The playbooks behind
-each step are in [`conventions/`](conventions/); the tooling that automates them
+each step are in [`plugin/conventions/`](plugin/conventions/); the tooling that automates them
 is in [`plugin/`](plugin/).
 
 ## What's here
 
 - **[`AGENTS.md`](AGENTS.md)** — the workspace instructions every agent reads (Claude
-  Code through the [`CLAUDE.md`](CLAUDE.md) stub that imports it): how we work,
-  decision verification, on-demand spec HTML views, environment, and file-opening
-  conventions.
-- **[`conventions/`](conventions/)** — six self-contained playbooks that generalize
+  Code through the [`CLAUDE.md`](CLAUDE.md) stub that imports it). The workspace rules (how we
+  work, decision verification, on-demand spec HTML views, environment, and
+  file-opening conventions) live in [`plugin/rules.md`](plugin/rules.md), which
+  `AGENTS.md` imports, so they ship with the plugin.
+- **[`plugin/conventions/`](plugin/conventions/)** — six self-contained playbooks that generalize
   my way of working to any new project:
-  - [Knowledge layer](conventions/knowledge-layer.md) — a version-controlled,
+  - [Knowledge layer](plugin/conventions/knowledge-layer.md) — a version-controlled,
     domain-organized knowledge base as the foundation.
-  - [Decision log (ADRs)](conventions/decision-log.md) — locked-in decisions as
+  - [Decision log (ADRs)](plugin/conventions/decision-log.md) — locked-in decisions as
     numbered, durable records.
-  - [Spec-driven development](conventions/spec-driven-development.md) — brainstorm →
+  - [Spec-driven development](plugin/conventions/spec-driven-development.md) — brainstorm →
     spec → plan → build.
-  - [Engineering practices](conventions/engineering-practices.md) — test-first,
+  - [Engineering practices](plugin/conventions/engineering-practices.md) — test-first,
     coding standards, and a CI + AI + human review gate.
-  - [Project memory file](conventions/project-memory.md) — a checked-in `CLAUDE.md`
+  - [Project memory file](plugin/conventions/project-memory.md) — a checked-in `CLAUDE.md`
     per repo: build/test commands, architecture, conventions, gotchas.
-  - [Session hygiene](conventions/session-hygiene.md) — short sessions, a
+  - [Session hygiene](plugin/conventions/session-hygiene.md) — short sessions, a
     per-branch handoff file, a context meter, lean exploration.
 - **[`plugin/`](plugin/)** — a Claude Code plugin: the `supabase-cli`,
   `lean-context`, `grill` (opt-in, `CLAUDE_KIT_GRILL=1`), `audit`,
@@ -99,12 +100,21 @@ is in [`plugin/`](plugin/).
   index after edits and at every stop; report leftover worktrees, inject the
   branch handoff, inject the lean-context rule unless `CLAUDE_KIT_LEAN_CONTEXT=0`, inject the kit map unless `CLAUDE_KIT_KIT_MAP=0`, inject the workspace rules in repos outside the kit folder unless `CLAUDE_KIT_WORKSPACE_RULES=0`, inject the grill rule when `CLAUDE_KIT_GRILL=1`,
   and nudge past a context threshold at the right moments;
-  snapshot git state at session end). Install once per machine, on any OS,
-  with `python plugin/install.py` (see the [setup guide](docs/setup.md)) —
-  it checks the prerequisites, links `~/.claude/skills/claude-kit` to this
-  folder (a junction on Windows, a symlink elsewhere) so edits are live, and
-  adds the kit's status line to `~/.claude/settings.json` when none is
-  configured. It also
+  snapshot git state at session end). Install once per machine from the
+  marketplace, in Claude Code:
+  `/plugin install superpowers@claude-plugins-official`,
+  `/plugin marketplace add alymo8/claude-kit`, then
+  `/plugin install agent-kit@agent-kit`; optionally run
+  `/agent-kit:statusline` to add the kit's status line. On a managed
+  laptop, see "For your company admin" in the
+  [setup guide](docs/setup.md#for-your-company-admin). Contributors, and
+  Vibe, Codex and Cursor users, install from a checkout with
+  `python plugin/install.py` instead (see the
+  [setup guide](docs/setup.md)): it checks the prerequisites, links
+  `~/.claude/skills/agent-kit` to this folder (a junction on Windows, a
+  symlink elsewhere) so edits are live, and adds the kit's status line to
+  `~/.claude/settings.json` when none is configured. Coming from the old
+  name? See [upgrading](docs/setup.md#upgrading-from-the-old-name). The kit also
   provides two commands: `/new-project <name> <node|python>` scaffolds a new
   repo with every convention in place, and `/adopt-conventions <node|python>`
   adds the missing pieces to an existing one. Scaffolded CI pins every

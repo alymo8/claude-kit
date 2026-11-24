@@ -29,7 +29,6 @@ def kit_references(repo: Path) -> set[str]:
     agents = repo / "AGENTS.md"
     if agents.is_file():
         paths.append(agents)
-    paths.extend(repo.glob("conventions/*.md"))
     return _scan(p for p in paths if p.is_file())
 
 

@@ -22,8 +22,8 @@ section 1 lets the audit write to. The scratch-file rule is unchanged.
 ## Inventory
 
 Run `python "${CLAUDE_PLUGIN_ROOT}/scripts/user-config-inventory.py"` (fallback
-`~/.claude/skills/claude-kit/scripts/user-config-inventory.py`) and read its
-stdout; redirect long output to the `audit-scratch` folder. It prints one JSON
+`<plugin root>/scripts/user-config-inventory.py`) and read its
+stdout; redirect long output to the `audit-scratch` folder. `<plugin root>` is the plugin root stated in the kit map, else `~/.claude/skills/agent-kit`. It prints one JSON
 object with the keys `settings`, `mcp_servers`, `plugins`, `skills`,
 `scheduled_tasks`, `instructions` and `errors`. Every item has `file` and a
 1-based `line`; env and header values never appear, only key names. Hook and

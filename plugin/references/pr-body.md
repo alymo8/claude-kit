@@ -30,7 +30,7 @@ Read by `commands/ship.md` step 7 and `references/ship-fast-finish.md` step 7 wh
   `Plan decisions (auto-approved)` when the record has
   `- **Approved by:** /ship (auto)` and `Plan decisions` otherwise.
 - Merge danger.
-- Review: per `claude-kit:review` axis (Standards, Spec), one line on the
+- Review: per `agent-kit:review` axis (Standards, Spec), one line on the
   findings fixed and one on the `judgement` findings left; plus the findings
   the final whole-branch review fixed.
 - Hardening proposals.

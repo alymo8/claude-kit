@@ -1,6 +1,6 @@
 # ADR 0005: Kit is a skills-dir Claude Code plugin in `plugin/`, installed by junction
 
-- **Status:** accepted; amended by 0033 ([ADR 0033](0033-cross-platform-installer.md))
+- **Status:** accepted; amended by 0033 ([ADR 0033](0033-cross-platform-installer.md)); amended by 0052 ([ADR 0052](0052-published-plugin.md): a marketplace install exists beside the contributor link, now `~/.claude/skills/agent-kit`)
 - **Date:** 2026-09-14
 
 ## Context

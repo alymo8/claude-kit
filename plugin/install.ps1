@@ -1,10 +1,10 @@
 <#
 .SYNOPSIS
-  Install claude-kit as a Claude Code skills-dir plugin (Windows wrapper).
+  Install agent-kit as a Claude Code skills-dir plugin (Windows wrapper).
 
 .DESCRIPTION
   Runs plugin\install.py, the cross-platform installer (ADR 0033), with the
-  same parameters. It junctions <SkillsDir>\claude-kit to this plugin folder,
+  same parameters. It junctions <SkillsDir>\agent-kit to this plugin folder,
   checks the prerequisites (python 3.11+, git, gh, the superpowers plugin) and
   adds the kit's status line when none is configured. Idempotent; refuses to
   overwrite anything else at that path. With -Agent vibe, codex or cursor it

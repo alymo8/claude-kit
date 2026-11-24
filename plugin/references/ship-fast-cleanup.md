@@ -11,7 +11,7 @@ networks it created or pulled that are not in the step-4 baseline, and
 `docker buildx rm <slug>`; never run a prune without a
 `label=claude-kit.task=<slug>` filter. If the task used Docker, then run
 `python "${CLAUDE_PLUGIN_ROOT}/scripts/docker-disk.py"` (fallback
-`~/.claude/skills/claude-kit/scripts/docker-disk.py`) and put its
+`<plugin root>/scripts/docker-disk.py`) and put its
 `docker disk:` line in your clean-up reply; it changes nothing and never
 prompts. Then
 `git -C <main-checkout> worktree remove <worktree-path>`,
@@ -22,4 +22,4 @@ on this branch (`.claude/handoffs/poc_<slug>.md`) lives in the feature
 worktree and goes with `worktree remove`; leave the main checkout's handoff
 files alone. Delete the step-4 Docker baseline file and any scratch files
 you created outside the repo; the spec under `~/.claude/ship-fast-specs/`
-is not a scratch file and stays. The repository itself always stays.
+is not a scratch file and stays. The repository itself always stays. `<plugin root>` is the plugin root stated in the kit map, else `~/.claude/skills/agent-kit`.

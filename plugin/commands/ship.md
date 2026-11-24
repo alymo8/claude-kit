@@ -8,18 +8,18 @@ Ship the approved spec at `$ARGUMENTS` (if empty: the newest `*.md` under
 `docs/superpowers/specs/`; name it in one line and continue).
 
 Invoking `/ship` is the user's approval for everything below, including the merge:
-the human-approval gate in `conventions/engineering-practices.md` is waived for this
+the human-approval gate in `${CLAUDE_PLUGIN_ROOT}/conventions/engineering-practices.md` is waived for this
 change. Do not ask for confirmation at any step. The Stop rules below override
 every ask, menu, option list, or checkpoint inside the skills this command
 invokes: where a skill says "ask" or "wait for the answer", take the path this
 command names and continue. Report once, at the end.
 
-Where `${CLAUDE_PLUGIN_ROOT}` is not expanded, use `~/.claude/skills/claude-kit` in its place.
+Where `${CLAUDE_PLUGIN_ROOT}` is not expanded, use the plugin root stated in the kit map, else `~/.claude/skills/agent-kit`, in its place.
 
 ## Stop rules
 
 These are the only reasons to stop. When one fires: write the handoff with the
-`claude-kit:handoff` skill, state the blocker and what you tried, and end your turn.
+`agent-kit:handoff` skill, state the blocker and what you tried, and end your turn.
 
 - CI is red after 3 fix attempts on this branch (attempts are counted across
   steps 5 and 8 together).
@@ -34,7 +34,7 @@ These are the only reasons to stop. When one fires: write the handoff with the
   or `decisions not approved` holds an irreversible plan-introduced decision
   (step 3a). Report the record's Plan-introduced decisions and Open items as
   questions (if the gate stopped at `P4-spec-gated` with no record: that
-  reason, and that the spec must pass `claude-kit:spec-gate`). Besides a
+  reason, and that the spec must pass `agent-kit:spec-gate`). Besides a
   `fail`'s Open items, only irreversible plan-introduced decisions need the
   user. A record with a `Stopped on irreversible` line stops again on every
   resumed run: rerunning `/ship` is not an answer. When the user answers:
@@ -71,7 +71,7 @@ rule.
 0. **Gate.** Run
    `python "${CLAUDE_PLUGIN_ROOT}/scripts/spec-lint.py" --verify-record <spec>`.
    If it prints `ok:`, set the spec's Status to `approved` if it is not
-   already, and continue. Otherwise run the `claude-kit:spec-gate` skill on
+   already, and continue. Otherwise run the `agent-kit:spec-gate` skill on
    the spec, steps 1–6 (skip step 7's question: invoking `/ship` is the
    approval), then set the Status to `approved`; a fail verdict is a stop
    rule.
@@ -127,7 +127,7 @@ rule.
    > new plan over an existing one; the plan gate's own fixes to it are
    > expected.
    >
-   > Then run the `claude-kit:plan-gate` skill on the plan, steps 1–6 only (do
+   > Then run the `agent-kit:plan-gate` skill on the plan, steps 1–6 only (do
    > not run step 7 and do not ask anything). Do not commit and do not offer
    > an execution choice. Return exactly three lines: `Plan: <repo-relative
    > path>`, `Verdict: pass | pass-with-decisions | fail`, and `Record:
@@ -182,7 +182,7 @@ rule.
    If it exits non-zero, write a `Ruling:` ledger line with its messages and
    implement with `superpowers:subagent-driven-development` (SDD); this is
    not a stop rule, because the plan still runs one task at a time. If every
-   wave has one task, use SDD too. Otherwise use `claude-kit:parallel-tasks`
+   wave has one task, use SDD too. Otherwise use `agent-kit:parallel-tasks`
    with `<plan>` as its argument (under `/ship` its inline paths use SDD's
    task loop). An SDD stop reason that is not a `/ship` stop rule is settled
    with a `Ruling:` ledger line; a ruling on an irreversible, destructive or
@@ -218,7 +218,7 @@ rule.
    `parallel-tasks`'), for example on a run resumed in another session, first
    use `superpowers:requesting-code-review` on `origin/main..HEAD`, then
    `superpowers:receiving-code-review`, and fix every finding you can verify.
-   Then, on every run, run the `claude-kit:review` skill with base
+   Then, on every run, run the `agent-kit:review` skill with base
    `origin/main`, the spec and the plan. Fix every `hard` standards finding
    and every spec finding of kind (a) or (c) you can verify; remove scope
    creep (b) unless removing it breaks a requirement. Fix a `judgement`
@@ -228,7 +228,7 @@ rule.
    frozen check, push. A finding from any of these reviews that needs a
    scope, product or behaviour decision the spec does not settle is a stop
    rule.
-7. **PR.** First run the `claude-kit:capture-learnings` skill with the
+7. **PR.** First run the `agent-kit:capture-learnings` skill with the
    argument `--auto`. If it made a commit, run the full test suite and lint
    from `CLAUDE.md`, then run the frozen check and `git push`. The PR title
    is the spec's **title**: the first line outside code fences that starts

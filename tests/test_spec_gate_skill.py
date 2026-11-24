@@ -103,8 +103,8 @@ def test_docs_wire_the_gate():
     def text(rel):
         return (REPO / rel).read_text(encoding="utf-8")
 
-    assert "claude-kit:spec-gate" in text("AGENTS.md")
-    assert "## Spec gate" in text("conventions/spec-driven-development.md")
+    assert "agent-kit:spec-gate" in text("plugin/rules.md")
+    assert "## Spec gate" in text("plugin/conventions/spec-driven-development.md")
     adr = "0015-spec-gate-replaces-full-read.md"
     assert (REPO / "knowledge" / "decisions" / adr).is_file()
     assert f"]({adr})" in text("knowledge/decisions/README.md")
@@ -117,7 +117,7 @@ def test_adr_0020_and_convention_wire_the_new_rounds():
     adr = "0020-gates-end-with-verification.md"
     assert (REPO / "knowledge" / "decisions" / adr).is_file()
     assert f"]({adr})" in text("knowledge/decisions/README.md")
-    conv = text("conventions/spec-driven-development.md")
+    conv = text("plugin/conventions/spec-driven-development.md")
     spec_gate = conv.split("## Spec gate", 1)[1].split("\n## ", 1)[0]
     plan_gate = conv.split("## Plan gate", 1)[1].split("\n## ", 1)[0]
     for section in (spec_gate, plan_gate):
@@ -157,7 +157,7 @@ def test_pass_message_sends_the_user_to_a_fresh_ship_session():
     passed = step7.split("**pass:**", 1)[1].split("**fail:**", 1)[0]
     passed = " ".join(passed.split())
     assert "/clear" in passed
-    assert "/claude-kit:ship docs/superpowers/specs/" in passed
+    assert "/agent-kit:ship docs/superpowers/specs/" in passed
 
 
 def test_rubric_checks_frozen_bullet():
@@ -171,7 +171,7 @@ def test_rubric_checks_frozen_bullet():
 
 
 def test_frozen_field_is_documented():
-    sdd = (REPO / "conventions" / "spec-driven-development.md").read_text(
+    sdd = (REPO / "plugin" / "conventions" / "spec-driven-development.md").read_text(
         encoding="utf-8"
     )
     section = sdd.split("## Frozen files", 1)[1].split("\n## ", 1)[0]

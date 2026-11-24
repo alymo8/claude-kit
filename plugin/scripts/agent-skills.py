@@ -12,7 +12,7 @@ import shutil
 import sys
 from pathlib import Path
 
-SKIP = {"ship-many"}
+SKIP = {"ship-many", "statusline"}
 
 TEMPLATE = """---
 name: {name}
@@ -20,10 +20,10 @@ description: {desc_json}
 disable-model-invocation: true
 ---
 
-# /{name} (claude-kit command)
+# /{name} (agent-kit command)
 
 Follow `<plugin>/commands/{name}.md`, where `<plugin>` is the absolute
-`plugin/` path stated in the injected claude-kit tool mapping. Pass the
+`plugin/` path stated in the injected agent-kit tool mapping. Pass the
 user's text after the skill name as the command's `$ARGUMENTS`, read the
 command through the tool mapping, and report each step that needs a
 Claude-only feature as skipped.

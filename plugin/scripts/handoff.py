@@ -197,7 +197,7 @@ def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     cwd = Path(args.cwd).resolve()
     if work_tree(cwd) is None:
-        print("[claude-kit] handoff: not inside a git work tree", file=sys.stderr)
+        print("[agent-kit] handoff: not inside a git work tree", file=sys.stderr)
         return 1
     if args.subcommand == "path":
         print(handoff_path(cwd).as_posix())

@@ -58,9 +58,9 @@ archive discipline.
 - **Keep it current.** When new research arrives, fold it into the relevant
   canonical doc (updating `last_updated`) instead of appending a new parallel doc.
 - **Reviewer-only standards:** `knowledge/review-standards.md` holds judgement-call
-  review rules. The standards reviewer of `claude-kit:review` reads it; implementers
+  review rules. The standards reviewer of `agent-kit:review` reads it; implementers
   do not, so never link it from `CLAUDE.md` or any file loaded at session start.
-  `claude-kit:capture-learnings` creates it on first need.
+  `agent-kit:capture-learnings` creates it on first need.
 
 ## Personal vault
 

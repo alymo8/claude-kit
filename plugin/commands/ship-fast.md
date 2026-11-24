@@ -16,14 +16,14 @@ including creating a private GitHub repository when the spec asks for one.
 Do not ask for confirmation except in step 0 (its Approval item included),
 step 3b, a product or risky engineering question (see Questions), and the
 Stop rules. Inside step 0,
-`superpowers:brainstorming` and `claude-kit:grill` put their questions to
+`superpowers:brainstorming` and `agent-kit:grill` put their questions to
 the user, within step 0's budget. Anywhere else, where a skill this command
 invokes says "ask" or "wait for the answer", take the path this command
 names and continue. Do not check local `main` or stop for its state, and
 skip the workspace's pre-flight branch check: invoking `/ship-fast` waives
 it. Never delete a repository, and never suggest deleting one.
 
-Where `${CLAUDE_PLUGIN_ROOT}` is not expanded, use `~/.claude/skills/claude-kit` in its place.
+Where `${CLAUDE_PLUGIN_ROOT}` is not expanded, use the plugin root stated in the kit map, else `~/.claude/skills/agent-kit`, in its place.
 
 ## Input
 
@@ -99,7 +99,7 @@ every answered question and every product choice "assumed (not asked)";
 ## Stop rules
 
 These are the only reasons to stop. When one fires: write the handoff with
-the `claude-kit:handoff` skill, state the blocker and what you tried, and
+the `agent-kit:handoff` skill, state the blocker and what you tried, and
 end your turn. A stop after step 5 launched the app leaves it running and
 gives its stop command. Every stop after step 0 also states the absolute path of the
 spec to pass on the rerun, in the stop message and in the handoff: for a
@@ -209,7 +209,7 @@ and follow it.
    `python "${CLAUDE_PLUGIN_ROOT}/scripts/parallel-plan.py" waves <plan>`. If it
    exits non-zero, or every wave has one task, implement the tasks in order
    in this session with `superpowers:test-driven-development`. Otherwise
-   run `claude-kit:parallel-tasks` with `<plan>` as its argument (at most 3
+   run `agent-kit:parallel-tasks` with `<plan>` as its argument (at most 3
    tasks at once). Inside `parallel-tasks`, skip its final whole-branch
    review (step 6 below is the review) but still remove its temp directory,
    settle any pre-flight concern about the task list having no

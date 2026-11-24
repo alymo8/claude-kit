@@ -119,30 +119,30 @@ def test_missing_source_becomes_startup(tmp_path, project, agent):
 def test_failing_script_is_skipped_with_stderr(tmp_path, project):
     result = run(make_kit(tmp_path), "codex", project)
     assert result.returncode == 0
-    assert "[claude-kit]" in result.stderr and "fails.py" in result.stderr
+    assert "[agent-kit]" in result.stderr and "fails.py" in result.stderr
 
 
 def test_slow_script_times_out(tmp_path, capsys):
     mod = load_module(RUN, "kit_run_hooks")
     argv = [sys.executable, "-c", "import time; time.sleep(5)"]
     assert mod.run_one(argv, "{}", clean_env(), tmp_path, timeout=1) == ""
-    assert "[claude-kit]" in capsys.readouterr().err
+    assert "[agent-kit]" in capsys.readouterr().err
 
 
 def test_stop_expands_project_dir_and_adds_no_extras(tmp_path, project):
     result = run(make_kit(tmp_path), "codex", project, event="Stop")
     text = context(result, "codex", event="Stop")
     assert f"stop {project.resolve().as_posix()}/docs" in text
-    assert "claude-kit agent tools" not in text
+    assert "agent-kit agent tools" not in text
 
 
 def test_mapping_injected_with_plugin_path(tmp_path, project):
     plugin = make_kit(tmp_path)
     text = context(run(plugin, "cursor", project), "cursor")
-    assert text.startswith("# claude-kit agent tools")
+    assert text.startswith("# agent-kit agent tools")
     assert plugin.resolve().as_posix() in text
     assert "<plugin>" not in text
-    assert "~/.claude/skills/claude-kit" in text
+    assert "~/.claude/skills/agent-kit" in text
     assert "`code-review`" in text and "requesting-code-review" in text
 
 
@@ -178,7 +178,7 @@ def test_bad_arguments_exit_0(tmp_path, project):
     result = run(make_kit(tmp_path), "bogus", project)
     assert result.returncode == 0
     assert result.stdout == ""
-    assert "[claude-kit]" in result.stderr
+    assert "[agent-kit]" in result.stderr
 
 
 @pytest.mark.parametrize("stdin", ["", "not json"])

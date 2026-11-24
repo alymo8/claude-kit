@@ -21,10 +21,10 @@ def test_check_passes_on_committed_wrappers():
     assert result.returncode == 0, result.stdout + result.stderr
 
 
-def test_one_wrapper_per_command_except_ship_many():
+def test_one_wrapper_per_command_except_claude_only():
     commands = {p.stem for p in (PLUGIN / "commands").glob("*.md")}
     wrappers = {p.name for p in WRAPPERS.iterdir() if p.is_dir()}
-    assert wrappers == commands - {"ship-many"}
+    assert wrappers == commands - {"ship-many", "statusline"}
 
 
 def test_wrapper_frontmatter_and_body():
