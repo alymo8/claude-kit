@@ -5,7 +5,9 @@ Usage: install.py [--agent {claude,vibe,codex,cursor}] [--home DIR]
                   [--skills-dir DIR] [--settings FILE] [--python CMD]
 
 First checks that the command the hooks run (default "python") is Python
-3.11+, and exits 1 with nothing changed if not. Warns when git, gh or the
+3.11+, and exits 1 with nothing changed if not. For Vibe, Codex and Cursor it
+first refuses a python path holding ", $, a backtick or %, which no hook shell
+quoting protects. Warns when git, gh or the
 superpowers plugin is missing. Then, for Claude Code, in three steps:
 
 1. Removes the old link (<skills-dir>/<LEGACY_LINK>) when it points at a kit
@@ -319,8 +321,30 @@ def skill_sources(kit: Path = KIT) -> list[Path]:
     return found
 
 
+SAFE = "_./:\\-"
+REFUSED = ('"', "$", "`", "%")
+
+
+def quote_python(python: str) -> str:
+    """The python path, double-quoted unless every character is safe bare."""
+    if all(c.isalnum() or c in SAFE for c in python):
+        return python
+    return f'"{python}"'
+
+
+def unquotable(python: str) -> str | None:
+    """The first character of python that no hook quoting protects, or None."""
+    return next((c for c in python if c in REFUSED), None)
+
+
+def refusal(python: str, char: str) -> str:
+    return (
+        f"--python {python} contains {char}, which a hook command cannot quote safely"
+    )
+
+
 def hook_command(python: str, agent: str, event: str, runner: Path = RUNNER) -> str:
-    exe = f'"{python}"' if " " in python else python
+    exe = quote_python(python)
     return f'{exe} "{Path(runner).as_posix()}" --agent {agent} --event {event}'
 
 
@@ -627,6 +651,10 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
     home = Path(args.home)
     print(f"Detected: {os_name(sys.platform)}")
+    char = unquotable(args.python)
+    if args.agent != "claude" and char:
+        print(f"ERROR: {refusal(args.python, char)}; nothing changed.")
+        return 1
     if not check_python(args.python):
         return 1
     warn_missing_tools()

@@ -1,5 +1,6 @@
 import json
 import os
+import shlex
 import shutil
 import subprocess
 import sys
@@ -834,12 +835,98 @@ def test_vibe_foreign_plugin_folder_changes_nothing(tmp_path, name):
     assert snapshot(tmp_path / "home") == before
 
 
+PATHS = [
+    "python",
+    "C:/Python311/python.exe",
+    "C:/Program Files/python.exe",
+    "C:/Users/O'Neil/python.exe",
+    "C:/a&b/python.exe",
+    "C:/py(3)/python.exe",
+    "C:/Users/José/python.exe",
+]
+UNCHANGED = ["python", "C:/Python311/python.exe", "C:/Users/José/python.exe"]
+BAD = [
+    'C:/a"b/python.exe',
+    "C:/a$b/python.exe",
+    "C:/a`b/python.exe",
+    "C:/a%b/python.exe",
+]
+
+
 def test_vibe_runner_command_matches_hook_command(tmp_path):
     builder = load_module(PLUGIN / "vibe_plugin.py", "vibe_plugin")
     runner = tmp_path / "run.py"
-    for python in ("python", "C:/Program Files/python.exe"):
+    for python in [*PATHS, "C:\\Python311\\python.exe"]:
         expected = installer().hook_command(python, "vibe", "Stop", runner=runner)
         assert builder.runner_command(python, runner, "Stop") == expected
+
+
+def refusal_line(python):
+    char = next(c for c in python if c in '"$`%')
+    return (
+        f"ERROR: --python {python} contains {char}, which a hook command "
+        "cannot quote safely; nothing changed."
+    )
+
+
+@pytest.mark.parametrize("python", PATHS)
+def test_hook_command_splits_back_to_python(tmp_path, python):
+    runner = tmp_path / "run.py"
+    command = installer().hook_command(python, "codex", "Stop", runner=runner)
+    assert shlex.split(command)[:2] == [python, runner.as_posix()]
+
+
+@pytest.mark.parametrize("python", UNCHANGED)
+def test_hook_command_unchanged_for_plain_paths(tmp_path, python):
+    runner = tmp_path / "run.py"
+    command = installer().hook_command(python, "codex", "Stop", runner=runner)
+    assert command == f'{python} "{runner.as_posix()}" --agent codex --event Stop'
+
+
+def test_hook_command_keeps_backslash_path_bare(tmp_path):
+    python = "C:\\Python311\\python.exe"
+    runner = tmp_path / "run.py"
+    command = installer().hook_command(python, "codex", "Stop", runner=runner)
+    assert command.startswith(python + " ")
+
+
+def test_codex_hooks_rerun_with_quoted_python_is_stable():
+    mod = installer()
+    python = "C:/Users/O'Neil/python.exe"
+    once = mod.json_hooks("", "codex", python)
+    assert mod.json_hooks(once, "codex", python) == once
+    assert len(json.loads(once)["hooks"]["Stop"]) == 1
+
+
+@pytest.mark.parametrize("agent", ["vibe", "codex"])
+@pytest.mark.parametrize("python", BAD)
+def test_unquotable_python_refused(tmp_path, agent, python):
+    mod = installer()
+    base = vibe(tmp_path)
+    base.mkdir(parents=True)
+    block = f"{mod.TOML_BEGIN}\nold = 1\n{mod.TOML_END}\n"
+    (base / "hooks.toml").write_text(block, encoding="utf-8")
+    before = snapshot(tmp_path)
+    result = run_agent(tmp_path, agent, "--python", python)
+    assert result.returncode == 1, out(result)
+    assert refusal_line(python) in result.stdout
+    assert "is not on PATH" not in result.stdout
+    assert snapshot(tmp_path) == before
+
+
+def test_claude_install_does_not_refuse_python_path(tmp_path):
+    result = run_install(tmp_path, python="C:/a%b/python.exe")
+    assert result.returncode == 1
+    assert "cannot quote safely" not in result.stdout
+    assert "is not on PATH" in result.stdout
+
+
+def test_refusal_text_matches_builder():
+    builder = load_module(PLUGIN / "vibe_plugin.py", "vibe_plugin")
+    for python in BAD:
+        char = installer().unquotable(python)
+        assert char == builder.unquotable(python)
+        assert installer().refusal(python, char) == builder.refusal(python, char)
 
 
 def test_vibe_build_turns_stuck_staging_into_build_error(tmp_path, monkeypatch):
