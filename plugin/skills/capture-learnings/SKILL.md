@@ -1,6 +1,6 @@
 ---
 name: capture-learnings
-description: Use when /ship or /ship-fast reaches its PR step, or when a feature or change is finished by hand before its branch merges. Writes the session's learnings (gotchas, commands that work, conventions, decisions, the user's corrections) to the repo's CLAUDE.md, knowledge/, an ADR or auto-memory, as one commit on the feature branch, and returns a Learnings summary and hardening proposals for the caller's report.
+description: Use when /ship or /ship-fast reaches its PR step, or when a feature or change is finished by hand before its branch merges. Writes the session's learnings (gotchas, commands that work, conventions, decisions, the user's corrections) to the repo's CLAUDE.md, knowledge/, an ADR or auto-memory, as one commit on the feature branch, prunes entries the feature made stale, and returns a Learnings summary and hardening proposals for the caller's report.
 argument-hint: [--auto]
 ---
 
@@ -37,7 +37,8 @@ build them only on a yes, as a separate commit with its tests.
    destination first, and update an existing entry instead of adding a
    duplicate. On a rerun or resume this drops what an earlier run wrote,
    so nothing new means no commit. Zero learnings is a valid result: write
-   nothing and return `none`. Run `git fetch origin` first and read each
+   nothing new; step 4 still runs, and step 7 returns `none` only when
+   step 4 pruned nothing either. Run `git fetch origin` first and read each
    destination on `origin/main` too (`git show origin/main:<path>`): a
    parallel run may already have merged the same learning there.
 3. **Route** each kept learning by kind:
@@ -68,7 +69,56 @@ build them only on a yes, as a separate commit with its tests.
      no ADR; list the decision in the summary as `not written:`.
    - The session has no auto-memory directory: list preference learnings
      in the summary as `not written:`.
-4. **Harden.** Inputs: step 1's candidates plus every review finding
+4. **Prune.** Fix the entries this feature made wrong. Inputs: the
+   feature's changed files, `git diff --name-status origin/main...HEAD`
+   (renames and deletions included; step 2 already ran `git fetch origin`),
+   plus the spec and plan when present. Edit files in place now; step 6
+   commits them. Read each target on `origin/main` too
+   (`git show origin/main:<path>`) and skip an entry already fixed there: a
+   parallel run may have pruned it. Step 2's filter does not apply here.
+   Never prune a learning routed in step 3 of this run.
+   - **Repo files:** the root `CLAUDE.md`, every nested `CLAUDE.md` in a
+     directory the diff touched or an ancestor of one, and every
+     `knowledge/**/*.md` doc (`knowledge/decisions/` excluded) that names a
+     changed, renamed or deleted path, or a command, script, flag or
+     setting the diff changed. For each entry (a bullet, a table row or a
+     short paragraph): if it names a path the diff deleted or renamed,
+     repoint it to the new path, or remove it if the thing is gone; if it
+     states a command, flag, setting or behaviour the diff changed,
+     rewrite it to the new truth, or remove it if the feature made it moot
+     (a gotcha the feature fixed); otherwise leave it alone, even if it
+     looks stale for another reason. Edits are terse and imperative. A
+     touched `knowledge/` doc gets `last_updated: <today>`.
+   - **ADRs are never edited.** If the diff contradicts an accepted ADR and
+     the feature added no ADR that supersedes it, add the summary line
+     `not written: ADR <NNNN> may be superseded: <why>`.
+   - **Auto-memory**, only when the session has an auto-memory directory:
+     read its `MEMORY.md` and the memory files whose name, description or
+     body names this repo, the feature's branch, spec or PR, or a skill or
+     command the diff changed.
+     - `type: project`: when this feature resolves an open item the memory
+       records (a pending check, a next step, a deferred item), rewrite
+       that item in place as `done <YYYY-MM-DD> (<ref>): <item>`, where
+       `<ref>` is `#<PR number>` once a PR exists, else the branch name,
+       and give its `MEMORY.md` line the same `done <date> (<ref>)`
+       wording. When the feature contradicts the memory's main fact, rewrite
+       the fact. Delete the file and its `MEMORY.md` line only when nothing
+       in it stays true.
+     - `type: feedback` and `type: user`: never edit or delete; a code
+       change does not invalidate a preference. If the diff seems to
+       conflict with one, add the summary line
+       `not written: memory <file> may conflict: <why>`.
+     - Reference memories: rewrite a pointer the diff moved; otherwise
+       leave them alone.
+     - Follow the session's memory instructions. Edit by exact replacement
+       of the lines that change, re-reading the file right before each
+       edit, never by rewriting the whole file: `/ship-many` children may
+       write memory at the same time. Memory edits are not committed, so
+       the summary lines are their only record.
+
+   Prune runs the same with and without `--auto`, with no approval pause.
+   A rerun finds nothing left to prune in what an earlier run fixed.
+5. **Harden.** Inputs: step 1's candidates plus every review finding
    fixed in this feature (from the review reports that reached this
    session) and every CI failure's cause; step 2's filter still applies.
    Classify each mistake (something done wrong, then corrected by a
@@ -100,29 +150,33 @@ build them only on a yes, as a separate commit with its tests.
    - **Navigation and information access:** what was hard to find:
      `harden (navigation): <what was hard to find> → <pointer to add,
      where>`.
-5. **Write and commit.** Entries are terse and imperative, with exact
+6. **Write and commit.** Entries are terse and imperative, with exact
    commands in code spans or fences. Never write secrets, credentials,
    connection strings or personal data, and no names of other private
    repos or of user accounts, in any repo (visibility can change). For
    auto-memory, re-read `MEMORY.md` right before adding the pointer line,
    and add one line rather than rewriting the file: parallel runs may
    write it at the same time. Commit the repo files, including
-   `knowledge/review-standards.md` when step 4 wrote to it, on the feature
-   branch as one commit with the subject `Capture learnings` and the
-   session's attribution line. Auto-memory writes are not committed. If no
-   repo file changed, make no commit.
-6. **Return** the Learnings summary for the caller's report:
+   `knowledge/review-standards.md` when step 5 wrote to it, and step 4's
+   prune edits, on the feature branch as one commit with the subject
+   `Capture learnings` and the session's attribution line. Auto-memory
+   writes are not committed. If no repo file changed, make no commit.
+7. **Return** the Learnings summary for the caller's report:
    - one line per written learning: `<destination>: <learning>` (a rule
      written to the standards file appears as
      `knowledge/review-standards.md: <rule>`);
-   - one line per decision or preference listed instead of written,
-     starting `not written:`;
-   - when nothing was written: `none`, then each dropped candidate with
-     the step-2 rule that dropped it;
+   - one line per prune edit to a repo file:
+     `pruned: <file>: <old entry, shortened> → <new entry | removed>`;
+   - one line per memory edit:
+     `memory: <file>: <resolved | rewritten | deleted>: <why>`;
+   - one line per decision or preference listed instead of written, and
+     per step-4 ADR or memory conflict, starting `not written:`;
+   - when no learning was written and nothing was pruned: `none`, then
+     each dropped candidate with the step-2 rule that dropped it;
    - after the learnings lines, a `Hardening:` block with one line per
-     `harden (...)` line from step 4, or `Hardening: none`.
+     `harden (...)` line from step 5, or `Hardening: none`.
 
    If the branch already has a `Capture learnings` commit from an earlier
-   run, start the summary with that commit's entries (from `git show`),
-   each starting `already written:`, so a resumed run's report still lists
-   them.
+   run, start the summary with that commit's entries and prune edits (from
+   `git show`), each starting `already written:`, so a resumed run's
+   report still lists them.
