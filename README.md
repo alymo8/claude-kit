@@ -5,6 +5,34 @@ with [Claude Code](https://claude.com/claude-code). This repo is the workspace-l
 setup that sits above my individual project repos — it defines *how* I work, not
 *what* any one project does.
 
+## Install
+
+Anyone can install the kit from this repo's plugin marketplace, without a
+checkout. In Claude Code:
+
+```
+/plugin install superpowers@claude-plugins-official
+/plugin marketplace add alymo8/claude-kit
+/plugin install agent-kit@agent-kit
+```
+
+This adds every `/agent-kit:*` command and skill, the session hooks, the
+conventions and the workspace rules. New versions arrive through `/plugin`.
+Run `/agent-kit:statusline` to add the kit's status line.
+
+You need:
+
+- **The superpowers plugin**, the first line above: the kit's flow uses its
+  skills.
+- **Python 3.11 or later, reachable as `python`.** Every hook runs `python`,
+  so `python3` alone is not enough.
+- **git and gh**, signed in (`gh auth login`), for `/ship` and worktrees.
+
+On a company-managed install an admin may need to allow the marketplace
+first: see [For your company admin](docs/setup.md#for-your-company-admin).
+The [setup guide](docs/setup.md) covers each OS, installing from a checkout
+(contributors, Vibe, Codex and Cursor) and upgrading from the old name.
+
 ## How I build and ship
 
 Every change goes from idea to `main` in three phases. Thinking is written
