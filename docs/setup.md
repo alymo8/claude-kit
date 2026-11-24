@@ -151,8 +151,10 @@ old links are removed. Rerunning is safe: for Codex and Cursor it relinks
 moved skills and removes links to skills that no longer exist. The installer
 does not read `CODEX_HOME` or `VIBE_HOME`: if you moved an agent's home, link
 the skills and edit its hook file by hand, or point `--home` at the folder
-that holds `.codex` or `.vibe`. Links into a kit checkout you have since
-deleted are reported as `Skipped`; remove them by hand and rerun.
+that holds `.codex` or `.vibe`. For Codex and Cursor, links into a kit
+checkout you have since deleted are reported as `Skipped`; remove them by
+hand and rerun. For Vibe, a same-named link into another checkout is reported
+as `Kept <name>` and left in place.
 
 Vibe, Codex and Cursor users: rerun the installer after updating the
 checkout, once per agent: Vibe runs a copy, and Codex and Cursor pick up new

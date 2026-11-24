@@ -5,7 +5,9 @@ Usage: install.py [--agent {claude,vibe,codex,cursor}] [--home DIR]
                   [--skills-dir DIR] [--settings FILE] [--python CMD]
 
 First checks that the command the hooks run (default "python") is Python
-3.11+, and exits 1 with nothing changed if not. Warns when git, gh or the
+3.11+, and exits 1 with nothing changed if not. For Vibe, Codex and Cursor it
+first refuses a python path holding ", $, a backtick or %, which no hook shell
+quoting protects. Warns when git, gh or the
 superpowers plugin is missing. Then, for Claude Code, in three steps:
 
 1. Removes the old link (<skills-dir>/<LEGACY_LINK>) when it points at a kit
@@ -319,8 +321,30 @@ def skill_sources(kit: Path = KIT) -> list[Path]:
     return found
 
 
+SAFE = "_./:\\-"
+REFUSED = ('"', "$", "`", "%")
+
+
+def quote_python(python: str) -> str:
+    """The python path, double-quoted unless every character is safe bare."""
+    if all(c.isalnum() or c in SAFE for c in python):
+        return python
+    return f'"{python}"'
+
+
+def unquotable(python: str) -> str | None:
+    """The first character of python that no hook quoting protects, or None."""
+    return next((c for c in python if c in REFUSED), None)
+
+
+def refusal(python: str, char: str) -> str:
+    return (
+        f"--python {python} contains {char}, which a hook command cannot quote safely"
+    )
+
+
 def hook_command(python: str, agent: str, event: str, runner: Path = RUNNER) -> str:
-    exe = f'"{python}"' if " " in python else python
+    exe = quote_python(python)
     return f'{exe} "{Path(runner).as_posix()}" --agent {agent} --event {event}'
 
 
@@ -488,12 +512,14 @@ def has_kit_command(data: object) -> bool:
     return is_kit_command(data)
 
 
-def kit_hooks_in_use(home: Path) -> list[Path]:
-    """The Codex and Cursor hook files that still run the kit's hooks.
+def kit_hooks_in_use(home: Path) -> tuple[list[Path], list[Path]]:
+    """The Codex and Cursor hook files that may still run the kit's hooks.
 
-    A missing file is not in use; one that cannot be read or parsed is.
+    Returns (files holding a kit hook command, files that cannot be read or
+    parsed); a missing file is in neither list.
     """
-    found = []
+    found: list[Path] = []
+    unreadable: list[Path] = []
     for agent in ("codex", "cursor"):
         path = home / f".{agent}" / "hooks.json"
         if not path.exists():
@@ -501,28 +527,50 @@ def kit_hooks_in_use(home: Path) -> list[Path]:
         try:
             data = json.loads(path.read_text(encoding="utf-8"))
         except (OSError, ValueError):
-            found.append(path)
+            unreadable.append(path)
             continue
         if has_kit_command(data):
             found.append(path)
-    return found
+    return found, unreadable
 
 
-def remove_kit_links(skills_dir: Path) -> None:
-    """Remove the links into this checkout's skill roots (dangling ones too)."""
+def kit_links(skills_dir: Path) -> list[Path]:
+    """The links in skills_dir into this checkout's skill roots (dangling too)."""
     if not skills_dir.is_dir():
-        return
-    names = {f.name for f in skill_sources()}
+        return []
+    found = []
     for entry in sorted(skills_dir.iterdir()):
         target = link_target(entry)
         if target is not None and under_kit_roots(target, entry):
-            remove_link(entry)
+            found.append(entry)
+    return found
+
+
+def remove_kit_links(skills_dir: Path) -> bool:
+    """Remove the links into this checkout's skill roots (dangling ones too).
+
+    Returns True when every kit link was removed (also when there were none).
+    """
+    if not skills_dir.is_dir():
+        return True
+    ok = True
+    kit = set(kit_links(skills_dir))
+    names = {f.name for f in skill_sources()}
+    for entry in sorted(skills_dir.iterdir()):
+        if entry in kit:
+            try:
+                remove_link(entry)
+            except OSError as exc:
+                print(f"Could not remove {entry.name}: {exc}")
+                ok = False
+                continue
             print(f"Removed old link {entry.name}")
-        elif target is not None and entry.name in names:
+        elif entry.name in names and link_target(entry) is not None:
             print(
                 f"Kept {entry.name}: it links outside this kit checkout (remove it"
                 " by hand if it points into an old checkout)"
             )
+    return ok
 
 
 def install_vibe(home: Path, skills_dir: Path, python: str) -> int:
@@ -555,34 +603,60 @@ def install_vibe(home: Path, skills_dir: Path, python: str) -> int:
         return 1
     try:
         vibe_plugin.build(plugins, python)
+    except vibe_plugin.ChangedError as exc:
+        print(f"ERROR: {exc}")
+        return 1
     except vibe_plugin.BuildError as exc:
         print(f"ERROR: {exc}; nothing changed.")
         return 1
     print(f"Installed the agent-kit and superpowers plugins in {plugins}")
+    ok = True
     if rest != old:
-        if rest.strip() == "":
-            hooks.unlink()
-            print(f"Removed {hooks} (only the kit's hooks were in it)")
-        else:
-            vibe_plugin.write_text(hooks, rest.rstrip("\n") + "\n")
-            print(f"Wrote {hooks}")
+        try:
+            if rest.strip() == "":
+                hooks.unlink()
+                print(f"Removed {hooks} (only the kit's hooks were in it)")
+            else:
+                vibe_plugin.write_text(hooks, rest.rstrip("\n") + "\n")
+                print(f"Wrote {hooks}")
+        except OSError as exc:
+            print(
+                f"ERROR: could not update {hooks} ({exc}); the plugins are "
+                f"installed, but remove the kit block from {hooks} by hand or "
+                "rerun."
+            )
+            ok = False
     if new_rules == old_rules:
         print(f"Unchanged {rules}")
     else:
-        vibe_plugin.write_text(rules, new_rules)
-        print(f"Wrote {rules}")
-    in_use = kit_hooks_in_use(home)
-    if not in_use:
-        remove_kit_links(skills_dir)
-    else:
-        print(
-            f"WARNING: kept the kit's skill links in {skills_dir}: "
-            f"{', '.join(str(p) for p in in_use)} still run the kit's hooks, so "
-            "Vibe lists the kit's skills twice (bare and agent-kit:-prefixed) "
-            "until Codex and Cursor stop using them."
-        )
+        try:
+            vibe_plugin.write_text(rules, new_rules)
+            print(f"Wrote {rules}")
+        except OSError as exc:
+            print(
+                f"ERROR: could not write {rules} ({exc}); the plugins are "
+                f"installed, but update the kit block in {rules} by hand or "
+                "rerun."
+            )
+            ok = False
+    in_use, unreadable = kit_hooks_in_use(home)
+    if not in_use and not unreadable:
+        ok = remove_kit_links(skills_dir) and ok
+    elif kit_links(skills_dir):
+        for path in unreadable:
+            print(
+                f"Kept the kit's skill links: {path} cannot be read, so it may "
+                "still use them."
+            )
+        if in_use:
+            print(
+                f"WARNING: kept the kit's skill links in {skills_dir}: "
+                f"{', '.join(str(p) for p in in_use)} still run the kit's hooks, "
+                "so Vibe lists the kit's skills twice (bare and agent-kit:-"
+                "prefixed) until Codex and Cursor stop using them."
+            )
     print(NEXT_STEP["vibe"])
-    return 0
+    return 0 if ok else 1
 
 
 def install_agent(agent: str, home: Path, skills_dir: Path, python: str) -> int:
@@ -627,6 +701,10 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
     home = Path(args.home)
     print(f"Detected: {os_name(sys.platform)}")
+    char = unquotable(args.python)
+    if args.agent != "claude" and char:
+        print(f"ERROR: {refusal(args.python, char)}; nothing changed.")
+        return 1
     if not check_python(args.python):
         return 1
     warn_missing_tools()

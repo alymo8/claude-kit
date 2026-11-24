@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import re
 import subprocess
+from pathlib import Path
 
 from helpers import FENCE_RE, LINK_RE, PLUGIN, REPO, RULES
 
@@ -45,16 +46,19 @@ def test_frontmatter_hints_are_quoted():
     assert 'argument-hint: "[name] [node|python]"' in new
 
 
-def tracked(*paths: str) -> list[str]:
-    out = subprocess.run(
-        ["git", "ls-files", *paths],
-        cwd=REPO,
-        capture_output=True,
-        text=True,
-        encoding="utf-8",
-        check=True,
-    ).stdout
-    return [line for line in out.splitlines() if line]
+def tracked(*paths: str, root: Path = REPO) -> list[str]:
+    lines = []
+    for extra in ([], ["--others", "--exclude-standard"]):
+        out = subprocess.run(
+            ["git", "ls-files", *extra, *paths],
+            cwd=root,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            check=True,
+        ).stdout
+        lines += [line for line in out.splitlines() if line]
+    return lines
 
 
 def test_plugin_links_stay_inside_plugin():
@@ -165,13 +169,13 @@ LEGACY_FILES = {
 LEGACY_RE = re.compile(r"^\s*LEGACY_\w+ = ")
 
 
-def test_claude_kit_only_in_allowed_places():
+def claude_kit_hits(root: Path) -> list[str]:
     hits = []
-    for rel in tracked():
+    for rel in tracked(root=root):
         if rel.startswith(RENAME_SKIP_PREFIXES) or rel in RENAME_SKIP_FILES:
             continue
         try:
-            text = (REPO / rel).read_text(encoding="utf-8")
+            text = (root / rel).read_text(encoding="utf-8")
         except (UnicodeDecodeError, OSError):
             continue
         for number, line in enumerate(text.splitlines(), 1):
@@ -181,7 +185,22 @@ def test_claude_kit_only_in_allowed_places():
                 line = line.replace(allowed, "")
             if "claude-kit" in line:
                 hits.append(f"{rel}:{number}")
+    return hits
+
+
+def test_claude_kit_only_in_allowed_places():
+    hits = claude_kit_hits(REPO)
     assert not hits, "\n".join(hits)
+
+
+def test_guards_check_untracked_unignored_files(tmp_path):
+    subprocess.run(["git", "init", "-q", str(tmp_path)], check=True)
+    (tmp_path / ".gitignore").write_text("ignored.md\n", encoding="utf-8")
+    (tmp_path / "new.md").write_text("see claude-kit\n", encoding="utf-8")
+    (tmp_path / "ignored.md").write_text("claude-kit\n", encoding="utf-8")
+    files = tracked(root=tmp_path)
+    assert "new.md" in files and "ignored.md" not in files
+    assert claude_kit_hits(tmp_path) == ["new.md:1"]
 
 
 def test_no_plugin_file_names_old_skills_link():

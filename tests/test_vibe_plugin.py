@@ -277,6 +277,167 @@ def test_hooks_toml_quotes_spaces(tmp_path):
 
 def test_hooks_toml_survives_quote_in_python_path(tmp_path):
     python = "C:/Users/O'Neil/python.exe"
-    text = builder().hooks_toml(python, tmp_path / "run.py")
-    hooks = tomllib.loads(text)["hooks"]
-    assert hooks[0]["command"].startswith(python + " ")
+    runner = tmp_path / "run.py"
+    hooks = tomllib.loads(builder().hooks_toml(python, runner))["hooks"]
+    for hook in hooks:
+        assert shlex.split(hook["command"])[:2] == [python, runner.as_posix()]
+
+
+PATHS = [
+    "python",
+    "C:/Python311/python.exe",
+    "C:/Program Files/python.exe",
+    "C:/Users/O'Neil/python.exe",
+    "C:/a&b/python.exe",
+    "C:/py(3)/python.exe",
+    "C:/Users/José/python.exe",
+]
+BAD = [
+    'C:/a"b/python.exe',
+    "C:/a$b/python.exe",
+    "C:/a`b/python.exe",
+    "C:/a%b/python.exe",
+]
+
+
+@pytest.mark.parametrize("python", PATHS)
+def test_runner_command_splits_back_to_python(tmp_path, python):
+    runner = tmp_path / "run.py"
+    command = builder().runner_command(python, runner, "Stop")
+    assert shlex.split(command)[:2] == [python, runner.as_posix()]
+
+
+@pytest.mark.parametrize("python", BAD)
+def test_builder_refuses_unquotable_python(tmp_path, python):
+    out = tmp_path / "plugins"
+    char = next(c for c in python if c in '"$`%')
+    result = run_builder(out, "--python", python)
+    assert result.returncode == 1
+    expected = (
+        f"ERROR: --python {python} contains {char}, which a hook command "
+        "cannot quote safely; nothing changed."
+    )
+    assert expected in result.stdout
+    assert not out.exists() and not (tmp_path / STAGING).exists()
+    mod = builder()
+    with pytest.raises(mod.BuildError, match="cannot quote safely"):
+        mod.build(out, python)
+
+
+def fail_restore(mod, monkeypatch, out):
+    """Make the superpowers swap fail and the agent-kit restore fail too."""
+    real = os.rename
+
+    def flaky(src, dst):
+        src, dst = Path(src), Path(dst)
+        if src.name == "superpowers" and src.parent.name == STAGING:
+            raise OSError("locked")
+        if src.name == "agent-kit.old" and dst.parent == out.resolve():
+            raise OSError("restore blocked")
+        return real(src, dst)
+
+    monkeypatch.setattr(mod.os, "rename", flaky)
+
+
+def test_failed_restore_keeps_staging_with_backup(tmp_path, monkeypatch):
+    out = tmp_path / "plugins"
+    mod = builder()
+    mod.build(out, sys.executable)
+    fail_restore(mod, monkeypatch, out)
+    with pytest.raises(mod.RestoreError) as info:
+        mod.build(out, sys.executable)
+    staging = (tmp_path / STAGING).resolve()
+    assert info.value.staging == staging
+    assert str(staging) in str(info.value) and "agent-kit" in str(info.value)
+    assert "nothing changed" not in str(info.value)
+    assert (staging / "agent-kit.old" / ".agent-kit-build").is_file()
+    assert not (out / "agent-kit").exists()
+
+
+def test_builder_cli_restore_error_drops_nothing_changed(tmp_path, monkeypatch, capsys):
+    out = tmp_path / "plugins"
+    mod = builder()
+    mod.build(out, sys.executable)
+    fail_restore(mod, monkeypatch, out)
+    code = mod.main(["--out", str(out), "--python", sys.executable])
+    printed = capsys.readouterr().out
+    assert code == 1
+    assert str((tmp_path / STAGING).resolve()) in printed
+    assert "nothing changed" not in printed
+
+
+def test_rerun_moves_backup_back_before_removing_staging(tmp_path):
+    out = tmp_path / "plugins"
+    mod = builder()
+    mod.build(out, sys.executable)
+    before = snapshot(out / "agent-kit")
+    staging = tmp_path / STAGING
+    staging.mkdir()
+    os.rename(out / "agent-kit", staging / "agent-kit.old")
+    kit = fake_kit(tmp_path)
+    version_file = kit / "vendor" / "superpowers" / "VERSION"
+    version_file.write_text("version: 1.0.0\n", encoding="utf-8")
+    with pytest.raises(mod.ChangedError, match="source") as info:
+        mod.build(out, sys.executable, kit=kit)
+    assert "previous copy of agent-kit was moved back" in str(info.value)
+    assert snapshot(out / "agent-kit") == before
+    assert not staging.exists()
+    assert mod.main(["--out", str(out), "--python", sys.executable]) == 0
+
+
+def test_restore_backups_creates_missing_out(tmp_path):
+    staging = tmp_path / STAGING
+    (staging / "agent-kit.old").mkdir(parents=True)
+    (staging / "agent-kit.old" / ".agent-kit-build").write_text("1\n")
+    out = tmp_path / "plugins"
+    builder().restore_backups(out, staging)
+    assert (out / "agent-kit" / ".agent-kit-build").is_file()
+    assert not (staging / "agent-kit.old").exists()
+
+
+def test_failed_rerun_restore_keeps_staging(tmp_path, monkeypatch):
+    staging = tmp_path / STAGING
+    (staging / "agent-kit.old").mkdir(parents=True)
+    mod = builder()
+
+    def blocked(src, dst):
+        raise OSError("blocked")
+
+    monkeypatch.setattr(mod.os, "rename", blocked)
+    with pytest.raises(mod.RestoreError, match="blocked"):
+        mod.build(tmp_path / "plugins", sys.executable)
+    assert (staging / "agent-kit.old").is_dir()
+
+
+def test_interrupt_mid_swap_keeps_backup(tmp_path, monkeypatch):
+    out = tmp_path / "plugins"
+    mod = builder()
+    mod.build(out, sys.executable)
+    real = os.rename
+
+    def interrupted(src, dst):
+        src = Path(src)
+        if src.name == "agent-kit" and src.parent.name == STAGING:
+            raise KeyboardInterrupt
+        return real(src, dst)
+
+    monkeypatch.setattr(mod.os, "rename", interrupted)
+    with pytest.raises(KeyboardInterrupt):
+        mod.build(out, sys.executable)
+    staging = tmp_path / STAGING
+    assert (staging / "agent-kit.old" / ".agent-kit-build").is_file()
+    monkeypatch.setattr(mod.os, "rename", real)
+    mod.build(out, sys.executable)
+    assert (out / "agent-kit" / ".agent-kit-build").is_file()
+    assert not staging.exists()
+
+
+def test_stale_backup_next_to_existing_copy_is_dropped(tmp_path):
+    out = tmp_path / "plugins"
+    assert run_builder(out).returncode == 0
+    junk = tmp_path / STAGING / "agent-kit.old"
+    junk.mkdir(parents=True)
+    (junk / "junk.txt").write_text("x", encoding="utf-8")
+    assert run_builder(out).returncode == 0
+    assert not (tmp_path / STAGING).exists()
+    assert not (out / "agent-kit" / "junk.txt").exists()
