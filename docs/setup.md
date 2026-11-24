@@ -116,33 +116,53 @@ python plugin/install.py --agent cursor
 ```
 
 On Windows, `plugin\install.ps1 -Agent vibe` (or `codex`, `cursor`) does the
-same. For that agent the installer:
+same. For Codex and Cursor the installer:
 
 - links the kit skills, one wrapper skill per kit command and the bundled
   superpowers skills (`vendor/superpowers/`) into `~/.agents/skills/`;
 - adds the kit's hook runner (`plugin/hooks/run.py`) to the agent's user hook
-  file (`~/.vibe/hooks.toml`, `~/.codex/hooks.json` or
-  `~/.cursor/hooks.json`), which injects the workspace rules, kit map
-  and handoff at session start;
-- for Vibe and Codex, adds a fallback line to `~/.vibe/AGENTS.md` or
-  `~/.codex/AGENTS.md` that tells the agent to run the runner itself when the
-  kit map is missing from its context.
+  file (`~/.codex/hooks.json` or `~/.cursor/hooks.json`), which injects the
+  workspace rules, kit map and handoff at session start;
+- for Codex, adds a fallback line to `~/.codex/AGENTS.md` that tells the
+  agent to run the runner itself when the kit map is missing from its
+  context.
+
+For Vibe the installer:
+
+- builds two native plugins, `agent-kit` and `superpowers`, under
+  `~/.vibe/plugins/`, so `/plugins` lists them and the skills are
+  `/agent-kit:<name>` and `/superpowers:<name>`;
+- removes the kit's block from `~/.vibe/hooks.toml`, deleting the file if
+  nothing else is in it;
+- removes the old kit skill links from `~/.agents/skills/` unless Codex or
+  Cursor still runs the kit's hooks;
+- keeps the fallback line in `~/.vibe/AGENTS.md`, pointing at the copy;
+- refuses, with nothing changed, when `~/.vibe/plugins/agent-kit` or
+  `~/.vibe/plugins/superpowers` exists and was not built by the kit.
+
+The Vibe plugins are a copy, so rerun the installer after updating the
+checkout. To turn the kit off in Vibe, add `disabled_plugins = ["agent-kit"]`
+to `~/.vibe/config.toml`. A later Codex or Cursor install re-creates the
+skill links that Vibe also reads, so Vibe then lists the kit's skills twice.
 
 `--home` changes the base of every default path, and `--skills-dir` and
-`--python` work as for Claude Code. Rerunning is safe: it relinks moved
-skills and removes links to skills that no longer exist. The installer does
-not read `CODEX_HOME` or `VIBE_HOME`: if you moved an agent's home, link the
-skills and edit its hook file by hand, or point `--home` at the folder that
-holds `.codex` or `.vibe`. Links into a kit checkout you have since deleted
-are reported as `Skipped`; remove them by hand and rerun.
+`--python` work as for Claude Code; for Vibe, `--skills-dir` only names where
+old links are removed. Rerunning is safe: for Codex and Cursor it relinks
+moved skills and removes links to skills that no longer exist. The installer
+does not read `CODEX_HOME` or `VIBE_HOME`: if you moved an agent's home, link
+the skills and edit its hook file by hand, or point `--home` at the folder
+that holds `.codex` or `.vibe`. Links into a kit checkout you have since
+deleted are reported as `Skipped`; remove them by hand and rerun.
 
 Vibe, Codex and Cursor users: rerun the installer after updating the
-checkout, once per agent, until a native Vibe plugin exists.
+checkout, once per agent: Vibe runs a copy, and Codex and Cursor pick up new
+or removed skills only then.
 
 Next steps:
 
 - Codex: run `/hooks` and trust the agent-kit hooks.
-- Vibe and Cursor: start a new session.
+- Vibe: start a new session (or run /reload-plugins).
+- Cursor: start a new session.
 - Cursor runs session-start hooks without waiting for them, so the kit map
   may not reach the model. If it does not, paste the line the installer
   prints into Cursor's user rules.

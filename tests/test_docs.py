@@ -279,3 +279,39 @@ def test_published_plugin_adr_amends_others():
         row = next(line for line in index.splitlines() if f"]({old.name})" in line)
         assert re.search(r"amended by [\d, ]*0052", row), number
         assert "amended by 0052" in old.read_text(encoding="utf-8"), number
+
+
+def test_docs_cover_vibe_plugins():
+    heading = "## Using the kit with Vibe, Codex or Cursor"
+    section = " ".join(_setup_section(heading).split())
+    for needle in (
+        "~/.vibe/plugins/",
+        'disabled_plugins = ["agent-kit"]',
+        "/reload-plugins",
+        "twice",
+    ):
+        assert needle in section, needle
+    assert "until a native Vibe plugin exists" not in section
+    tools = (PLUGIN / "references" / "agent-tools.md").read_text(encoding="utf-8")
+    assert "`agent-kit:<name>`" in tools and "`/agent-kit:ship`" in tools
+    readme = " ".join((REPO / "README.md").read_text(encoding="utf-8").split())
+    assert readme.count("~/.vibe/plugins/") >= 2
+    agents = (REPO / "AGENTS.md").read_text(encoding="utf-8")
+    assert "python plugin/install.py --agent vibe" in agents
+
+
+def test_vibe_plugin_adr_0054():
+    decisions = REPO / "knowledge" / "decisions"
+    adr = "0054-vibe-native-plugin.md"
+    text = (decisions / adr).read_text(encoding="utf-8")
+    assert "- **Status:** accepted" in text and "- **Date:** 2026-11-23" in text
+    assert "0050" in text and "drift" in text
+    index = (decisions / "README.md").read_text(encoding="utf-8")
+    assert f"]({adr})" in index
+    for number, word in (("0050", "amended"), ("0052", "extended")):
+        old = next(decisions.glob(f"{number}-*.md"))
+        row = next(line for line in index.splitlines() if f"]({old.name})" in line)
+        assert f"{word} by" in row and "0054" in row, number
+        lines = old.read_text(encoding="utf-8").splitlines()
+        status = next(line for line in lines if line.startswith("- **Status:**"))
+        assert f"{word} by 0054" in status, number

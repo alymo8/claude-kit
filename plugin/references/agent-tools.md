@@ -10,6 +10,9 @@ The kit's plugin folder is <plugin>.
 `superpowers:<name>` and `agent-kit:<name>` mean the skill `<name>`. Load it
 the way this agent loads any skill.
 
+In Vibe the kit's skills are the plugin skills `agent-kit:<name>` and
+`superpowers:<name>`, so Claude's names work as written.
+
 ## Subagents
 
 "Dispatch a subagent" or "use the Agent tool": use this agent's subagent
@@ -29,6 +32,8 @@ short checklist in chat.
 ## Slash commands
 
 A slash command such as `/ship`: run the wrapper skill of the same name.
+In Vibe, /ship is `/agent-kit:ship` (each command is the plugin skill of the
+same name).
 
 ## Paths
 
