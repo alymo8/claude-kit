@@ -45,7 +45,10 @@ P7-placeholder (as L5, without "etc."); P8-empty (as L6); P9-path
 (``- Modify:`` paths outside parentheses exist, or a Create or Test bullet of
 this or an earlier task names them);
 P10-depends (each task has at most one ``**Depends on:**`` line, valued
-``none`` or ``Task N`` items, comma-separated, naming distinct earlier tasks).
+``none`` or ``Task N`` items, comma-separated, naming distinct earlier tasks);
+P11-git-mv-add (no ``git add`` after a ``git mv`` in the same task names a
+source the move took away; bare ``git mv``/``git add`` in fence lines and
+backtick spans, split on ``&&`` and ``;``).
 
 --hash prints the SHA-256 of the spec with line endings normalised and its
 first Status bullet removed, so approving a spec keeps the same hash.
@@ -71,6 +74,7 @@ import argparse
 import hashlib
 import os
 import re
+import shlex
 import subprocess
 import sys
 from datetime import date
@@ -704,6 +708,53 @@ def depends_problems(
     return out
 
 
+def git_commands(text: str) -> list[tuple[str, list[str]]]:
+    """(subcommand, args) of each bare ``git mv``/``git add`` in text, in order.
+
+    Text is split on ``&&`` and ``;``; a segment shlex cannot split is skipped.
+    """
+    out = []
+    for segment in re.split(r"&&|;", text):
+        try:
+            tokens = shlex.split(segment)
+        except ValueError:
+            continue
+        if len(tokens) >= 2 and tokens[0] == "git" and tokens[1] in ("mv", "add"):
+            out.append((tokens[1], tokens[2:]))
+    return out
+
+
+def git_mv_add_problems(
+    tasks: list[tuple[int, int, list[Line]]],
+) -> list[tuple[int, str]]:
+    """(line, message) for each ``git add`` naming a path an earlier ``git mv``
+    of the same task moved away."""
+    out = []
+    for _, _, body in tasks:
+        moved: dict[str, str] = {}
+        for number, line, code in body:
+            texts = [line] if code else SPAN_RE.findall(line)
+            for text in texts:
+                for sub, args in git_commands(text):
+                    paths = [a for a in args if not a.startswith("-")]
+                    if sub == "mv":
+                        if len(paths) >= 2:
+                            for source in paths[:-1]:
+                                moved[source.rstrip("/")] = paths[-1]
+                        continue
+                    hit = next((p for p in paths if p.rstrip("/") in moved), None)
+                    if hit is not None:
+                        dst = moved[hit.rstrip("/")]
+                        out.append(
+                            (
+                                number,
+                                f"`git add` names `{hit}`, which `git mv` moved; "
+                                f"add the new path with `git add -A {dst} ...`",
+                            )
+                        )
+    return out
+
+
 def lint_plan(text: str, root: Path) -> list[tuple[int, str, str]]:
     """All violations in a plan, as (line, rule, message), sorted by line."""
     lines = parse(text)
@@ -719,6 +770,7 @@ def lint_plan(text: str, root: Path) -> list[tuple[int, str, str]]:
         + check_task_parts(tasks, fence_openers(text))
         + check_plan_paths(tasks, root)
         + [(n, "P10-depends", m) for n, _, m in depends_problems(tasks)]
+        + [(n, "P11-git-mv-add", m) for n, m in git_mv_add_problems(tasks)]
     )
     return sorted(found, key=lambda v: (v[0], v[1]))
 
