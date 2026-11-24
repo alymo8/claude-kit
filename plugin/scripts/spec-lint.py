@@ -711,7 +711,8 @@ def depends_problems(
 def git_commands(text: str) -> list[tuple[str, list[str]]]:
     """(subcommand, args) of each bare ``git mv``/``git add`` in text, in order.
 
-    Text is split on ``&&`` and ``;``; a segment shlex cannot split is skipped.
+    Text is split on ``&&`` and ``;`` before shlex, quotes ignored, so a quoted
+    ``;`` can split a command; a segment shlex cannot split is skipped.
     """
     out = []
     for segment in re.split(r"&&|;", text):

@@ -213,7 +213,7 @@ def test_version_is_1_2_0():
     assert data["version"] == "1.2.0"
 
 
-def test_homepage_and_repository():
+def test_homepage_repository_and_keywords():
     plugin_json = PLUGIN / ".claude-plugin" / "plugin.json"
     data = json.loads(plugin_json.read_text(encoding="utf-8"))
     assert data["homepage"] == "https://github.com/alymo8/claude-kit"
