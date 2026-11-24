@@ -207,10 +207,25 @@ def test_description_mentions_pr_review_respond():
     assert "pr-review-respond" in data["description"]
 
 
-def test_version_is_1_1_0():
+def test_version_is_1_2_0():
     plugin_json = PLUGIN / ".claude-plugin" / "plugin.json"
     data = json.loads(plugin_json.read_text(encoding="utf-8"))
-    assert data["version"] == "1.1.0"
+    assert data["version"] == "1.2.0"
+
+
+def test_homepage_and_repository():
+    plugin_json = PLUGIN / ".claude-plugin" / "plugin.json"
+    data = json.loads(plugin_json.read_text(encoding="utf-8"))
+    assert data["homepage"] == "https://github.com/alymo8/claude-kit"
+    assert data["repository"] == "https://github.com/alymo8/claude-kit"
+    assert data["keywords"] == [
+        "spec-driven",
+        "workflow",
+        "specs",
+        "code-review",
+        "git-worktrees",
+        "conventions",
+    ]
 
 
 def test_description_mentions_review():
