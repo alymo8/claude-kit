@@ -106,8 +106,23 @@ kit loads.
 
 ## Using the kit with Vibe, Codex or Cursor
 
-The kit also runs in Mistral Vibe, Codex and Cursor (ADR 0050). From the
-checkout, run the installer once per agent:
+The kit also runs in Mistral Vibe, Codex and Cursor (ADR 0050). In Vibe you
+need no checkout of the repo (ADR 0057); one line installs the kit and, run
+again, upgrades it:
+
+```
+python -c "import urllib.request; exec(urllib.request.urlopen('https://raw.githubusercontent.com/alymo8/claude-kit/main/plugin/install-vibe.py').read())"
+```
+
+It downloads the repo tarball into `~/.vibe/.agent-kit-src/` and runs
+`python plugin/install.py --agent vibe` from it, so it needs Python 3.11+
+and no git. A folder under `.agent-kit-src` that the one-liner did not write
+is refused, never replaced. `--ref`, `--repo`, `--home` and `--python` are
+documented in the script (`plugin/install-vibe.py`); `--tarball` installs a
+local copy of the tarball instead.
+
+Contributors, and Codex and Cursor users, install from a checkout, running
+the installer once per agent:
 
 ```
 python plugin/install.py --agent vibe
