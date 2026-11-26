@@ -1,4 +1,4 @@
-# ADR 0056: Vibe users install the kit with a one-line remote bootstrap
+# ADR 0057: Vibe users install the kit with a one-line remote bootstrap
 
 - **Status:** accepted
 - **Date:** 2026-11-25

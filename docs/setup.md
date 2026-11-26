@@ -107,7 +107,7 @@ kit loads.
 ## Using the kit with Vibe, Codex or Cursor
 
 The kit also runs in Mistral Vibe, Codex and Cursor (ADR 0050). In Vibe you
-need no checkout of the repo (ADR 0056); one line installs the kit and, run
+need no checkout of the repo (ADR 0057); one line installs the kit and, run
 again, upgrades it:
 
 ```
