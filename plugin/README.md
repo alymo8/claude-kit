@@ -21,6 +21,10 @@ The first line installs the superpowers plugin, whose skills the kit's flow
 uses. Hooks run `python`, which must be Python 3.11 or later; `/ship` and the
 worktree flow also need `git` and `gh`, signed in.
 
+In Mistral Vibe, install without a checkout with one line; see
+[the setup guide](https://github.com/alymo8/claude-kit/blob/main/docs/setup.md):
+`python -c "import urllib.request; exec(urllib.request.urlopen('https://raw.githubusercontent.com/alymo8/claude-kit/main/plugin/install-vibe.py').read())"`.
+
 A contributor who works from a checkout of the repo and also installs the
 plugin from the marketplace reruns `python plugin/install.py` afterwards: it
 then removes its own `agent-kit` link, so only one copy of the kit loads.

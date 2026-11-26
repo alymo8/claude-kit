@@ -61,3 +61,4 @@ the next number; superseded ones are never deleted.
 | [0053](0053-prune-learnings-at-ship.md) | Prune learnings at ship | accepted | 2026-11-23 |
 | [0054](0054-vibe-native-plugin.md) | Mistral Vibe gets the kit as two native plugins built by the installer | accepted | 2026-11-23 |
 | [0055](0055-directory-listing.md) | The kit targets Anthropic's plugin directory; /new-project defaults to a sibling folder | accepted | 2026-11-24 |
+| [0056](0056-vibe-remote-install.md) | Vibe users install the kit with a one-line remote bootstrap, no checkout | accepted | 2026-11-25 |

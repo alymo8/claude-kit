@@ -28,6 +28,19 @@ You need:
   so `python3` alone is not enough.
 - **git and gh**, signed in (`gh auth login`), for `/ship` and worktrees.
 
+In Mistral Vibe, without a checkout of this repo (Python 3.11+):
+
+```
+python -c "import urllib.request; exec(urllib.request.urlopen('https://raw.githubusercontent.com/alymo8/claude-kit/main/plugin/install-vibe.py').read())"
+```
+
+It installs — re-run to upgrade — ADR 0054's two native plugins under
+`~/.vibe/plugins`; the source is cached there. The
+[setup guide](docs/setup.md) covers Codex, Cursor and contributors, who
+install from a checkout. In Vibe the superpowers plugin ships inside the
+build, and `--ref`, `--repo`, `--home` and `--python` are documented in the
+script.
+
 On a company-managed install an admin may need to allow the marketplace
 first: see [For your company admin](docs/setup.md#for-your-company-admin).
 The [setup guide](docs/setup.md) covers each OS, installing from a checkout
