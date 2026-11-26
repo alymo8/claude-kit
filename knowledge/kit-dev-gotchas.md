@@ -255,3 +255,13 @@ The commands keep the rules and leave out the reasons; the reasons are here.
   (`git ls-tree --name-only origin/main knowledge/decisions/`), not local
   `main`. Renumbering after the spec gate changes the spec hash and forces
   a full re-gate.
+- A tool call's output is not in `chunks/` while the turn runs: the live
+  turn appends to `journal/<n>.jsonl` inside the session's
+  `~/.vibe/logs/session/unified/<id>/` folder, and `chunks/*.json` is
+  written only at turn boundaries. A script looking for fresh output
+  (`archive-session.py`'s token search) must read `journal/` too, newest
+  first.
+- The shell tool's environment names no session (`VIBE_SESSION=1` is only a
+  flag), and the server rewrites `meta.json` with every turn while
+  preserving unknown-or-known fields. The one way for a command to find
+  its own session is the token round trip in `/archive-session` (ADR 0056).
