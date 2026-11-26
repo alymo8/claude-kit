@@ -179,7 +179,9 @@ is in [`plugin/`](plugin/).
   `present` skill) builds a timed, self-contained HTML deck from a repo, spec or
   plan, with every slide rendered and checked by `check-deck.py`. Every deck
   closes with what was built, what was out of scope, a path-to-production
-  readiness table and the ask.
+  readiness table and the ask. `/archive-session` archives the conversation
+  from within it — it leaves the Vibe sessions list without being deleted —
+  and restores an archived one.
   The `pr-review-respond` skill works through the review comments on
   your open PR: it triages each, shows you the actions and drafted replies
   for one approval, then fixes, pushes and replies in each thread, and

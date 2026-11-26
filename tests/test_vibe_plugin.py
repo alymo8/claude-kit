@@ -94,7 +94,7 @@ def test_superpowers_manifest_follows_version_file(built):
 def test_skill_sets(built):
     kit = skill_names(PLUGIN / "skills") | skill_names(PLUGIN / "agent-skills")
     assert skill_names(built / "agent-kit" / "skills") == kit
-    assert len(kit) == 20
+    assert len(kit) == 21
     vendored = skill_names(VENDOR / "skills")
     assert skill_names(built / "superpowers" / "skills") == vendored
     assert len(vendored) == 12
