@@ -16,11 +16,16 @@ def test_marketplace_fields():
     data = json.loads(MARKETPLACE.read_text(encoding="utf-8"))
     assert data["name"] == "agent-kit"
     assert data["owner"]["name"] == "alymo8"
-    [entry] = data["plugins"]
+    entries = {e["name"]: e for e in data["plugins"]}
+    entry = entries["agent-kit"]
     assert entry["name"] == "agent-kit"
     assert entry["source"] == "./plugin"
     assert entry["description"].strip()
     assert "version" not in entry
+    lite = entries["agent-kit-lite"]
+    assert lite["source"] == "./lite"
+    assert lite["description"].strip()
+    assert "version" not in lite
 
 
 def test_marketplace_file_is_tracked():

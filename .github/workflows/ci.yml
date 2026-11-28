@@ -16,6 +16,6 @@ jobs:
         with:
           python-version: "3.12"
       - run: pip install "markdown~=3.10" "pytest>=8" "ruff~=0.16"
-      - run: ruff check plugin tests
-      - run: ruff format --check plugin tests
+      - run: ruff check plugin tests scripts
+      - run: ruff format --check plugin tests scripts
       - run: pytest

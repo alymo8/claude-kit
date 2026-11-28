@@ -12,7 +12,7 @@ project memory for the kit itself (last section).
 pip install "markdown~=3.10" "pytest>=8" "ruff~=0.16"   # once per machine
 pytest                                                   # full suite
 pytest tests/test_render_spec.py::test_title_from_h1     # one test
-ruff check plugin tests; ruff format --check plugin tests
+ruff check plugin tests scripts; ruff format --check plugin tests scripts
 ```
 
 Hook edits (`plugin/hooks/`) need a new session or `/reload-plugins`; `SKILL.md`
@@ -24,6 +24,8 @@ symlink, ADR 0005). Never run `plugin/install.py` (or its wrapper
 Vibe runs a copy of the plugin, so to try an edit in Vibe rerun
 `python plugin/install.py --agent vibe` (then /reload-plugins or a new session).
 
+- After editing `plugin/` or bumping its version, rerun
+  `python scripts/build-lite.py` and commit `lite/`.
 - This repo is public. Never write the names of private repos or a machine's
   username into tracked files; refer to them generically ("a project repo") and
   use `%USERPROFILE%` or `<repo-root>` in paths. Grep the diff for them before
