@@ -7,7 +7,8 @@ argument-hint: "[repo-dir | spec.md [plan.md]]"
 # Present
 
 Build a timed HTML deck from a repo, a spec or a plan. The deck is
-`template.html` (next to this file) with its slides replaced; every claim on it
+`template.html` <!-- lite-only (agent-kit-lite only; agent-kit ignores this block) (shipped as `template.html.txt`) -->
+(next to this file) with its slides replaced; every claim on it
 comes from the sources, and every slide is looked at before hand-over.
 
 ## 1. Sources
@@ -54,6 +55,9 @@ the hand-over. Never invent an ask.
   between `<!-- SLIDES START -->` and `<!-- SLIDES END -->`; keep the CSS and
   script. Use the template's layouts (title, cards, flow, callout, table, two
   columns).
+<!-- lite-only (agent-kit-lite only; agent-kit ignores this block)
+- In agent-kit-lite the template is `template.html.txt` next to this file: copy it to the deck's `.html` path.
+-->
 - Every `<section class="slide">` gets `data-time="m:ss"`, its start time; the
   last starts before the end. Title and Questions get about 30 seconds each,
   content slides about a minute; without a demo its time goes to content.
@@ -90,6 +94,7 @@ the hand-over. Never invent an ask.
 
 ## 4. Verify
 
+<!-- full-only -->
 From the plugin root (`${CLAUDE_PLUGIN_ROOT}`, fallback: the plugin root stated in the kit
 map, else `~/.claude/skills/agent-kit`), with a new screenshot folder outside the repo
 (the session scratchpad when there is one):
@@ -101,6 +106,10 @@ every slide and prints each PNG. Open and look at every slide's PNG: no
 overflow, clipping, overlap or unreadable text. After any edit, rerun with
 `--slides <changed numbers>` into a new folder and look again. Exit 2 means no
 browser was found: say in the hand-over that the slides were not rendered.
+<!-- /full-only -->
+<!-- lite-only (agent-kit-lite only; agent-kit ignores this block)
+Check the deck by reading it: every `<section class="slide">` has a `data-time="m:ss"` start time, the times rise from slide to slide, the last slide starts before the length in minutes, and nothing loads from the network (no `src=` or `href=` value, `@import` or CSS `url(` outside HTML comments that starts with `http:`, `https:` or `//`). Fix each failure and check again. agent-kit-lite renders no screenshots: say so in the hand-over and ask the user to page through the deck once in a browser.
+-->
 
 ## 5. Hand over
 

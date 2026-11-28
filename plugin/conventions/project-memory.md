@@ -56,10 +56,15 @@ churn is expensive and brevity is a feature, not a nicety.
 - **Imperative and concrete.** Exact commands in fenced blocks; no "the usual build".
 - **Update it in the same PR** that changes a command, layout, or convention it
   documents — a stale memory file is worse than none, because it is trusted.
+<!-- full-only -->
 - **Bootstrap it with `/new-project` (new repo) or `/adopt-conventions` (existing
   repo)**, which write the skeleton with the stack's commands filled in; then run
   `/init` to draft architecture and gotchas, and prune hard — the draft is a
   starting point, not the deliverable.
+<!-- /full-only -->
+<!-- lite-only (agent-kit-lite only; agent-kit ignores this block)
+- **Bootstrap it with `/init`** to draft the commands, architecture and gotchas, then prune hard — the draft is a starting point, not the deliverable.
+-->
 - Workspace-wide preferences live in the workspace `CLAUDE.md` one level up; the
   project file records only what is *specific to this repo*.
 

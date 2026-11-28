@@ -8,8 +8,10 @@ Projects follow the six conventions in [`conventions/`](conventions/) (knowledge
 layer, decision log, spec-driven development, engineering practices, project
 memory, session hygiene). Read the relevant file before applying it. Scale them to
 the project: full strength once a project has more than one contributor, outlives a
-weekend, or makes choices worth remembering; lighter for throwaway work. In a child
-repo, the kit map injected at session start gives these files' absolute paths.
+weekend, or makes choices worth remembering; lighter for throwaway work.
+<!-- full-only -->
+In a child repo, the kit map injected at session start gives these files' absolute paths.
+<!-- /full-only -->
 
 ## Verify key decisions with me, and agree on criteria upfront
 
@@ -38,10 +40,12 @@ I take part by answering them and giving instructions. The spec gate and the
 plan gate review the documents, and my sign-off is each gate's verdict and
 key decisions.
 
+<!-- full-only -->
 With `CLAUDE_KIT_GRILL=1`, the `agent-kit:grill` skill runs between the
 design summary and the spec
 ([ADR 0019](https://github.com/alymo8/claude-kit/blob/main/knowledge/decisions/0019-spec-grill-opt-in.md)); its rounds and the
 shared-understanding confirmation are the only pause.
+<!-- /full-only -->
 
 ## Specs and plans
 
@@ -50,11 +54,14 @@ Specs and plans are Markdown under `docs/superpowers/specs/` and
 spec or plan (neither the `.md` nor an HTML view) and never render one unless I
 ask**, even when asking me to review it; after writing or updating one, tell me
 the `.md` path only. One exception: `/ship-fast` opens the `.md` of the spec
-it asks me to approve (ADR 0024). `/spec-html [path]` renders and opens a view on demand (latest
+it asks me to approve (ADR 0024).
+<!-- full-only -->
+`/spec-html [path]` renders and opens a view on demand (latest
 spec/plan when no path is given). Bulk render from inside a repo:
 `python <plugin root>/scripts/render-spec.py [spec.md]` (needs `pip install markdown`);
 never copy the renderer into a repo. `<plugin root>` is the plugin root stated in
 the kit map, else `~/.claude/skills/agent-kit`.
+<!-- /full-only -->
 
 **Gate every spec.** After writing or revising a spec, run the
 `agent-kit:spec-gate` skill on it before asking me to review it. My review is
@@ -120,14 +127,14 @@ owner does that.
 Before a task first uses Docker, follow "Docker hygiene" in
 [conventions/engineering-practices.md](conventions/engineering-practices.md#docker-hygiene)
 (baseline, labels, clean-up; never an unfiltered prune).
-The kit's session-start hook reports leftover worktrees and branches; treat that as
-a to-do, but **never delete anything with unmerged commits or uncommitted changes
+<!-- full-only -->The kit's session-start hook reports leftover worktrees and branches; treat that as a to-do, but<!-- /full-only --><!-- lite-only (agent-kit-lite only; agent-kit ignores this block) Treat leftover worktrees and branches as a to-do, but -->
+**never delete anything with unmerged commits or uncommitted changes
 without asking me first.** The normal end of a working session on a feature is
 `/handoff` then `/clear`; the next session on the branch starts from the handoff.
 
-**When I invoke `/ship <spec.md>` or `/ship-many <spec.md> ...`, that is my
+**When I invoke `/ship <spec.md>`<!-- full-only --> or `/ship-many <spec.md> ...`<!-- /full-only -->, that is my
 approval to run to a squash-merge on `main` with no further check-ins**,
 stopping only on the rules in the command
 ([ADR 0018](https://github.com/alymo8/claude-kit/blob/main/knowledge/decisions/0018-ship-many-headless-children.md)).
 `/ship-fast` (it interviews me for a POC spec) stops at a PR I merge myself and
-cleans up only when I ask. The README describes all three.
+cleans up only when I ask. <!-- full-only -->The README describes all three.<!-- /full-only --><!-- lite-only (agent-kit-lite only; agent-kit ignores this block) The README describes both. -->

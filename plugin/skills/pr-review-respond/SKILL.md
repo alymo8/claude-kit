@@ -9,6 +9,7 @@ argument-hint: "[PR number]"
 Work through one round of review comments on the user's own open PR. Nothing
 is pushed or posted before the user approves the triage table in step 4.
 
+<!-- full-only -->
 The script is `review-threads.py` in the plugin's scripts folder:
 `python "${CLAUDE_PLUGIN_ROOT}/scripts/review-threads.py" [PR]` (fallback
 `<plugin root>/scripts/review-threads.py`). `<plugin root>` is the plugin root stated in the kit map, else `~/.claude/skills/agent-kit`. It prints JSON:
@@ -17,6 +18,25 @@ The script is `review-threads.py` in the plugin's scripts folder:
 `path`, `line`, `outdated` and its `comments`). Exit 1 means `gh` failed:
 show its stderr and stop. A `warning:` line on stderr means only the first
 100 entries were read; say so in the report.
+<!-- /full-only -->
+<!-- lite-only (agent-kit-lite only; agent-kit ignores this block)
+Read the review items with `gh`. Take `<owner>` and `<name>` from
+`gh repo view --json owner,name` and `<number>` from the arguments, else from
+`gh pr view --json number`, and write them into this query literally:
+
+    gh api graphql -f query='query { viewer { login } repository(owner: "<owner>", name: "<name>") { pullRequest(number: <number>) { number url state headRefName author { login } reviewThreads(first: 100) { pageInfo { hasNextPage } nodes { id isResolved isOutdated path line comments(first: 100) { pageInfo { hasNextPage } nodes { databaseId author { login } body url createdAt } } } } reviews(first: 100) { pageInfo { hasNextPage } nodes { databaseId author { login } state body url submittedAt } } comments(first: 100) { pageInfo { hasNextPage } nodes { databaseId author { login } body url createdAt } } } } }'
+
+From its JSON take `pr` (`number`), `url`, `state`, `head` (`headRefName`), `author`,
+`viewer` (`viewer.login`) and `items`: each unresolved thread whose last comment
+is not by `viewer` (a `thread`, with `thread_id` its `id`, `reply_to` its first
+comment's `databaseId`, `path`, `line`, `outdated` and its `comments`), then each
+`review` with a non-empty body and each conversation `comment`, in both
+cases by someone other than `viewer` and newer than `viewer`'s latest
+conversation comment. A null author is `ghost`. Below, "the script" means this query and
+"its output" these fields. A failing `gh` command means stop: show its
+stderr. Any `hasNextPage` that is true means only the first 100 entries
+were read: say so in the report. No more pages are fetched.
+-->
 
 ## 1. Preconditions
 

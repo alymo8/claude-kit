@@ -59,7 +59,7 @@ pinned per project once its stack is known — and that choice is itself worth a
 - **Deleting is a win.** A change that deletes code and keeps the same behaviour
   is a win; prefer it to adding code.
 - **Ask during design.** When the request is ambiguous, ask during design
-  (brainstorming, spec). This never adds a check-in to `/ship` or `/ship-many`,
+  (brainstorming, spec). This never adds a check-in to `/ship`<!-- full-only --> or `/ship-many`<!-- /full-only -->,
   whose approval covers the run (ADR 0018, ADR 0036): during execution, take the
   reading the spec most supports and note it.
 
@@ -81,9 +81,11 @@ This raises merge friction deliberately, in exchange for a consistent quality fl
 and a second (AI) set of eyes on every change. It requires branch protection and CI
 wiring, set up when the code phase begins.
 
+<!-- full-only -->
 The scaffolder (`/new-project`, `/adopt-conventions`) ships `ci.yml`,
 `secret-scan.yml`, a PR template carrying the Definition of done, and a
 `claude-review.yml` that stays disabled until the repo has credentials.
+<!-- /full-only -->
 
 ## Docker hygiene
 
@@ -98,9 +100,11 @@ created or pulled that are not in the baseline, and remove its builder
 (`docker buildx rm <slug>`, which drops that build cache). Never run a prune
 (`docker system|volume|image|container|network|builder prune`) without a
 `label=claude-kit.task=<slug>` filter, and never remove anything in the baseline.
+<!-- full-only -->
 The clean-up also runs `plugin/scripts/docker-disk.py` (it reports only on
 Windows) and reports its line; compaction is only on demand, via
 `/docker-compact` (ADR 0038).
+<!-- /full-only -->
 
 ## Definition of done
 
