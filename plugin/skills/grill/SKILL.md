@@ -73,5 +73,11 @@ spec or act on the design until they confirm.
 ## Hand-off to the spec
 
 The settled decisions go into the spec's `## Decisions`. The coverage list
-becomes its `## Coverage` section, in the format in `coverage.md`. With
-`CLAUDE_KIT_GRILL=1`, `spec-lint.py` rule `L9-coverage` checks that section.
+becomes its `## Coverage` section, in the format in `coverage.md`.
+<!-- full-only -->
+With `CLAUDE_KIT_GRILL=1`, `spec-lint.py` rule `L9-coverage` checks that section.
+<!-- /full-only -->
+<!-- lite-only (agent-kit-lite only; agent-kit ignores this block)
+The spec gate checks that section (the `L9-coverage` entry in
+`../../references/spec-lint-checks.md` from this skill's directory).
+-->

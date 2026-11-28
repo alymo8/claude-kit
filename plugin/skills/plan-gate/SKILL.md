@@ -19,9 +19,18 @@ did not settle.
   `docs/superpowers/plans/` whose file name sorts last. Name it in one line.
 - **Spec:** the path on the plan's `**Spec:**` line.
 - **Spec gate record:** `docs/superpowers/gates/<spec file name>`.
+<!-- full-only -->
 - **Linter:** `python <this skill's directory>/../../scripts/spec-lint.py`
   (fallback: `<plugin root>/scripts/spec-lint.py`).
   `<plugin root>` is the plugin root stated in the kit map, else `~/.claude/skills/agent-kit`.
+<!-- /full-only -->
+<!-- lite-only (agent-kit-lite only; agent-kit ignores this block)
+- **Lint checklist:** `../../references/spec-lint-checks.md` from this skill's
+  directory. In this file, "run the linter" means apply its Plan rules by
+  reading the plan (P4-spec-gated runs its Gate record check on the spec),
+  "exits 0" and "clean" mean no rule is broken, and a violation is a line it
+  reports.
+-->
 - **Rubric:** `rubric.md` in this skill's directory (discovery rounds).
 - **Verify rubric:** `../spec-gate/verify.md` from this skill's directory
   (verification rounds).
@@ -101,8 +110,16 @@ did not settle.
    - `pass-with-decisions`: the same, but the plan-introduced decisions are
      not empty.
    - `fail`: anything else.
-6. **Record.** Run the linter with `--hash` on the plan and on the spec after
-   the last plan edit. Write `docs/superpowers/gates/plans/<plan file name>`
+6. **Record.**
+   <!-- full-only -->
+   Run the linter with `--hash` on the plan and on the spec after
+   the last plan edit.
+   <!-- /full-only -->
+   <!-- lite-only (agent-kit-lite only; agent-kit ignores this block)
+   After the last plan edit, compute the lite ids of the plan and of the spec
+   with the pipeline under "Lite document id" in the lint checklist.
+   -->
+   Write `docs/superpowers/gates/plans/<plan file name>`
    (create the folder if needed; overwrite an older record):
 
    ```
@@ -128,12 +145,26 @@ did not settle.
 
    - <each spec finding and each unresolved blocking finding, or "none">
    ```
+   <!-- lite-only (agent-kit-lite only; agent-kit ignores this block)
+   In the record, the two hash lines are
+   `- **Plan SHA-256:** lite-git:<plan id>` and
+   `- **Spec SHA-256:** lite-git:<spec id>`, in place of the template's
+   placeholders.
+   -->
 
    The decisions section holds the plan-introduced decisions as defined in
-   step 4; that exact list is what the user approves. Then run the linter
+   step 4; that exact list is what the user approves.
+   <!-- full-only -->
+   Then run the linter
    with `--verify-record` on the plan: on `pass` it must print `ok:`; on
    `pass-with-decisions` it prints `decisions not approved` until the user
    approves.
+   <!-- /full-only -->
+   <!-- lite-only (agent-kit-lite only; agent-kit ignores this block)
+   Then run the Gate record check in the lint checklist on the plan: on `pass`
+   it must report `ok:`; on `pass-with-decisions` it reports
+   `decisions not approved:` until the user approves.
+   -->
 7. **Report to the user.** One short message. Name the plan by path only;
    never open or render it.
    - **pass:** "Plan gate passed in D discovery + V verification rounds; no

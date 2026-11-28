@@ -16,9 +16,17 @@ can settle do not block: they are handed to the plan.
 
 - **Spec:** `$ARGUMENTS` if given, else the `*.md` under `docs/superpowers/specs/`
   whose file name sorts last (the newest date prefix). Name it in one line.
+<!-- full-only -->
 - **Linter:** `python <this skill's directory>/../../scripts/spec-lint.py`
   (fallback: `<plugin root>/scripts/spec-lint.py`).
   `<plugin root>` is the plugin root stated in the kit map, else `~/.claude/skills/agent-kit`.
+<!-- /full-only -->
+<!-- lite-only (agent-kit-lite only; agent-kit ignores this block)
+- **Lint checklist:** `../../references/spec-lint-checks.md` from this skill's
+  directory. In this file, "run the linter" means apply its Spec rules by
+  reading the spec, "exits 0" and "clean" mean no rule is broken, and a
+  violation is a line it reports.
+-->
 - **Rubric:** `rubric.md` in this skill's directory (discovery rounds).
 - **Verify rubric:** `verify.md` in this skill's directory (verification
   rounds).
@@ -41,10 +49,16 @@ can settle do not block: they are handed to the plan.
    > format it defines.
    > The kit's decision-log playbook is at `<path>`.
 
+   <!-- full-only -->
    `<path>` is the decision-log playbook's absolute path from the kit
    map in this session's context, or `none` when no kit map is present (the
-   reviewer gets no session-start output). Do not pass it any conversation,
-   summary or plan.
+   reviewer gets no session-start output).
+   <!-- /full-only -->
+   <!-- lite-only (agent-kit-lite only; agent-kit ignores this block)
+   `<path>` is the absolute path of `<plugin root>/conventions/decision-log.md`,
+   with `<plugin root>` two folders above this skill's directory.
+   -->
+   Do not pass it any conversation, summary or plan.
 3. **Fix.** Before applying this round's fixes, copy the spec to the
    scratchpad as `<name>.before-round-<N>.md`. For each `[blocking]` finding:
    - If fixing it needs a scope, product or behaviour choice that the spec
@@ -95,7 +109,14 @@ can settle do not block: they are handed to the plan.
 5. **Verdict.** `pass` when the linter is clean, the last round (discovery or
    verification) returned no `[blocking]` findings, and there are no decision
    findings. Otherwise `fail`. `[plan]` findings never affect the verdict.
-6. **Record.** Run the linter with `--hash` on the spec after its last edit.
+6. **Record.**
+   <!-- full-only -->
+   Run the linter with `--hash` on the spec after its last edit.
+   <!-- /full-only -->
+   <!-- lite-only (agent-kit-lite only; agent-kit ignores this block)
+   After the spec's last edit, compute its lite id with the pipeline under
+   "Lite document id" in the lint checklist.
+   -->
    Write `docs/superpowers/gates/<spec file name>` (create the folder if
    needed; overwrite an older record):
 
@@ -125,9 +146,19 @@ can settle do not block: they are handed to the plan.
 
    - <each decision finding and each unresolved blocking finding, or "none">
    ```
+   <!-- lite-only (agent-kit-lite only; agent-kit ignores this block)
+   In the record, the Spec SHA-256 line is `- **Spec SHA-256:** lite-git:<id>`,
+   in place of the template's placeholder.
+   -->
 
+   <!-- full-only -->
    Then run the linter with `--verify-record` on the spec. On a pass verdict
    it must print `ok:`.
+   <!-- /full-only -->
+   <!-- lite-only (agent-kit-lite only; agent-kit ignores this block)
+   Then run the Gate record check in the lint checklist on the spec: on a pass
+   verdict it must report `ok:`.
+   -->
 7. **Report to the user.** One short message. Name the spec by path only;
    never open or render it.
    - **pass:** "Gate passed in D discovery + V verification rounds; M
