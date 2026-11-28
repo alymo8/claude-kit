@@ -22,6 +22,8 @@
 !/tests/
 !/vendor/
 !/.github/
+!/scripts/
+!/lite/
 
 # ...and never track secrets or local state, even inside the whitelisted dirs
 # (un-ignoring a directory above tracks everything beneath it).
