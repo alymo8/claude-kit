@@ -63,3 +63,4 @@ the next number; superseded ones are never deleted.
 | [0055](0055-directory-listing.md) | The kit targets Anthropic's plugin directory; /new-project defaults to a sibling folder | accepted | 2026-11-24 |
 | [0056](0056-archive-session.md) | /archive-session archives a session from within it through Vibe's own flag | accepted | 2026-11-26 |
 | [0057](0057-vibe-remote-install.md) | Vibe users install the kit with a one-line remote bootstrap, no checkout | accepted | 2026-11-25 |
+| [0058](0058-directory-lite-plugin.md) | A Markdown-only agent-kit-lite plugin, generated from plugin/, is what the directory lists | accepted | 2026-11-28 |

@@ -20,6 +20,17 @@ This adds every `/agent-kit:*` command and skill, the session hooks, the
 conventions and the workspace rules. New versions arrive through `/plugin`.
 Run `/agent-kit:statusline` to add the kit's status line.
 
+### Two plugins
+
+- **`agent-kit`**, the full kit from this marketplace: hooks, scripts and
+  every command.
+- **`agent-kit-lite`**, Markdown only, generated into `lite/` from `plugin/`
+  for Anthropic's plugin directory once it is listed. Until then,
+  `/plugin install agent-kit-lite@agent-kit` installs it from this
+  marketplace.
+
+See [ADR 0058](knowledge/decisions/0058-directory-lite-plugin.md).
+
 You need:
 
 - **The superpowers plugin**, the first line above: the kit's flow uses its

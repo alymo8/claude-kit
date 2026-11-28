@@ -1,8 +1,11 @@
-# Submitting agent-kit to Anthropic's plugin directory
+# Submitting agent-kit-lite to Anthropic's plugin directory
 
 Anthropic's plugin directory is managed at `claude.ai/directory/manage`; one
-listing reaches claude.ai, Cowork and Claude Code. The repo is kept
-checklist-clean by `tests/test_directory_ready.py`; the submission itself is
+listing reaches claude.ai, Cowork and Claude Code. The directory takes hooks
+and scripts only from Verified organizations, so it lists `agent-kit-lite`, a
+Markdown-only plugin built into `lite/` from `plugin/`
+([ADR 0058](../knowledge/decisions/0058-directory-lite-plugin.md)). The full
+`agent-kit` stays on this repo's own marketplace. The submission itself is
 the repository owner's to make. This guide walks through the portal in order.
 
 ## Before you start
@@ -12,18 +15,22 @@ the repository owner's to make. This guide walks through the portal in order.
   before you submit:
 
   ```
-  claude plugin validate ./plugin --strict
-  pytest tests/test_directory_ready.py
+  claude plugin validate ./lite --strict
+  pytest tests/test_lite_build.py tests/test_directory_ready.py
   ```
 
-  `claude plugin validate` checks the manifest only; the pytest file checks
-  the rest of the pre-submission checklist (README, licence, file limits,
-  hook commands, reserved words in the name).
+  `claude plugin validate` checks the manifest only; the pytest files check
+  that `lite/` matches the build and holds only files the directory accepts,
+  and the rest of the pre-submission checklist (README, licence, file limits,
+  reserved words in the name).
+- The portal takes the icon (`lite/.claude-plugin/icon.png`) only the first
+  time you save or submit the plugin; after that it is final.
 
 ## Source
 
 - **Repository:** `alymo8/claude-kit` (public, on github.com).
-- **Plugin path:** `plugin`
+- **Plugin path:** `lite`
+- **Plugin name:** `agent-kit-lite`
 - **Tracked branch:** `main`
 
 Each commit on the tracked branch is scanned, then a reviewer publishes the
@@ -42,42 +49,31 @@ The portal validates the source before you can go on.
 
 Drafted text; edit it in the portal as you like.
 
-- **One-line summary:** Spec-driven workflow for Claude Code: specs, gates,
-  worktrees, review and merge.
-- **Short description:** agent-kit turns a spec into a merged pull request:
-  it gates specs and plans, builds in git worktrees, reviews the diff against
-  the spec, and ships with `/ship`. Session hooks keep handoff files and nudge
-  you before the context grows expensive. It also scaffolds new projects with
-  shared conventions.
+- **One-line summary:** Spec-driven workflow for Claude Code: gated specs and
+  plans, review, and /ship from spec to pull request.
+- **Short description:** agent-kit-lite turns a spec into a pull request: it
+  gates specs and plans, builds in git worktrees, reviews the diff against the
+  spec, ships with `/ship` and `/ship-fast`, and writes handoffs so the next
+  session can continue. It has no hooks and no scripts; the full kit, with
+  session hooks, is on the repository's own marketplace.
 - **Keywords:** `spec-driven`, `workflow`, `specs`, `code-review`,
   `git-worktrees`, `conventions`
 
 ## Data handling
 
-Drafted answers, taken from the Network section of
-[`plugin/README.md`](../plugin/README.md). Check them against that section
+Drafted answers, taken from the Data and network section of
+[`lite/README.md`](../lite/README.md). Check them against that section
 before you submit, in case it has changed.
 
 - **Does the plugin collect or send data?** No telemetry. Nothing is sent to
   the plugin's authors or any third party.
-- **Does it make network calls?** Hooks open no network connection, with one
-  exception: the SessionEnd hook `handoff_snapshot.py` runs `gh pr view` (a
-  GitHub API call with the user's own `gh` sign-in) when the current branch
-  has an upstream and `gh` is installed, to record the branch's pull-request
-  URL in a local handoff file. Commands and skills the user invokes call
-  GitHub through the user's own `git` and `gh`: `/ship`, `/ship-many` and
-  `/ship-fast` fetch, push branches and open pull requests (`/ship` and
-  `/ship-many` also merge them); the `pr-review-respond` skill reads review
-  threads (`scripts/review-threads.py`, one `gh api graphql` query) and posts
-  replies; `audit-deep` runs `gh run list`; `present` runs `gh pr view`.
-  `/ship-many` starts headless `claude -p` sessions (`scripts/ship-child.py`).
-  The `supabase-cli` skill guides `supabase` CLI commands that reach the
-  user's Supabase project, and projects scaffolded by `/new-project` carry CI
-  workflows that download gitleaks and install packages in the user's own CI.
+- **Does it make network calls?** It has no hooks, so nothing runs on its
+  own. Commands and skills the user invokes call GitHub through the user's
+  own `git` and `gh`: `/ship` and `/ship-fast` fetch, push branches and open
+  pull requests (`/ship` also merges them); the `pr-review-respond` skill
+  reads review threads with one `gh api graphql` query and posts replies.
 - **What does it store locally?** Handoff files under `.claude/handoffs/` in
-  the user's repo (git state and the last few prompts of the session), the
-  spec index `docs/superpowers/README.md`, and a small context-nudge marker
-  file in the session's scratchpad or temp folder.
+  the user's repo, written when the user runs `/handoff`.
 - **Credentials:** the plugin reads none and stores none; `gh` and `git` use
   the user's existing sign-in.
 
@@ -90,6 +86,8 @@ store them.
 ## After publishing
 
 - Every version bump on `main` is scanned and reviewed again before it is
-  published, so keep `tests/test_directory_ready.py` passing.
+  published, so keep `tests/test_lite_build.py` passing.
+- Rerun `python scripts/build-lite.py` after each `plugin/` change and commit
+  the regenerated `lite/` with it.
 - Once the listing is live, add the directory route to the Install section of
   the repo `README.md`, as a separate change.
