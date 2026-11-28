@@ -11,8 +11,13 @@ output is one report of findings, each tied to a `path:line` and a quote.
 
 ## User mode
 
+<!-- full-only -->
 If `$ARGUMENTS` is `--user`, read `user-mode.md` in this skill's directory and
 follow it instead of everything below (Setup, the four passes and Output).
+<!-- /full-only -->
+<!-- lite-only (agent-kit-lite only; agent-kit ignores this block)
+If `$ARGUMENTS` is `--user`, say that the user-scope audit needs the full agent-kit plugin, and stop.
+-->
 
 ## Setup
 
@@ -84,8 +89,13 @@ Silent failures first: they are real bugs that read fine as prose.
 
 ## Pass 4: duplicate intent
 
+<!-- full-only -->
 Read `duplicates.md` in this skill's directory and follow it, with the target
 repo as `<repo>`.
+<!-- /full-only -->
+<!-- lite-only (agent-kit-lite only; agent-kit ignores this block)
+Skip this pass in agent-kit-lite. Its output is the single line `Skipped: the duplicate-intent pass needs the full agent-kit plugin.`
+-->
 
 ## Output
 

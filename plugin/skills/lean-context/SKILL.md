@@ -28,7 +28,7 @@ then `/clear`) is what limits how long it is carried.
 4. **Long output goes to a file first.** Redirect tests, builds and logs to the
    scratchpad, then look for the *first* failure as well as the summary; the
    root cause is usually the earliest error, not the last.
-   Example: `pytest > "$SCRATCH/test.log" 2>&1; grep -n -m5 -E 'FAIL|Error' "$SCRATCH/test.log"; tail -15 "$SCRATCH/test.log"`.
+   Example: `pytest > <scratchpad>/test.log 2>&1; grep -n -m5 -E 'FAIL|Error' <scratchpad>/test.log; tail -15 <scratchpad>/test.log`.
 5. **Never echo what you just wrote**, and never re-read a file to confirm an
    edit; the tool result already confirmed it.
 6. **Write down what you learned** in the plan or the handoff instead of
@@ -42,4 +42,4 @@ Measured across 67 sessions: Bash was 82% of tool output, and cat, sed, grep,
 ls and find sweeps were most of that. Re-reads of the same file were rare; the
 waste was output carried for hundreds of turns, which the restart cap addresses.
 Reading narrowly for its own sake trades quality for tokens the cap already
-saves (ADR 0011). Details: the session-hygiene playbook (path in the kit map).
+saves (ADR 0011). Details: <!-- full-only -->the session-hygiene playbook (path in the kit map)<!-- /full-only --><!-- lite-only (agent-kit-lite only; agent-kit ignores this block) the session-hygiene playbook (`../../conventions/session-hygiene.md` from this skill's directory) -->.

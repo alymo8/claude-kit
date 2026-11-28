@@ -1,5 +1,6 @@
 # Duplicate-intent pass
 
+<!-- full-only -->
 Pass 4 of `audit` and Phase H of `audit-deep` follow this procedure. The
 session that runs the audit always runs it itself, never a subagent, because
 subagents cannot start subagents. It finds functions that do the same thing
@@ -147,3 +148,7 @@ dispatched units, `<n>` = catalogued functions.
 
 Delete the scratch files this pass made. The folder itself is deleted at the
 end of the audit, as `rules.md` says.
+<!-- /full-only -->
+<!-- lite-only (agent-kit-lite only; agent-kit ignores this block)
+agent-kit-lite skips this pass (see Pass 4 in `SKILL.md`).
+-->

@@ -13,10 +13,15 @@ keyboard. The [knowledge layer](knowledge-layer.md) feeds this flow, and the
    a direction. (Use the `superpowers:brainstorming` skill for creative/feature
    work.)
 
+   <!-- full-only -->
    With the kit's opt-in grill on (`CLAUDE_KIT_GRILL=1`), the
    `agent-kit:grill` skill then interviews you on the agreed design and a
    coverage checklist (`plugin/skills/grill/coverage.md`) before the spec is
    written.
+   <!-- /full-only -->
+   <!-- lite-only (agent-kit-lite only; agent-kit ignores this block)
+   If you ask for it, the `agent-kit:grill` skill then interviews you on the agreed design and a coverage checklist (the grill skill's `coverage.md`) before the spec is written.
+   -->
 2. **Spec.** Write a design document that captures *what* is being built and *why*:
    purpose, scope (explicitly including **out of scope**), structure, the decisions
    made during brainstorming, and success criteria. The spec is the contract the
@@ -54,9 +59,11 @@ to be moved or configured.
   `draft` → `approved` → `implemented`, or `superseded`. When the work a plan
   describes merges, set the spec and plan to `implemented` in the same PR. When a
   later spec replaces one, mark the old spec `superseded` and link its successor.
+<!-- full-only -->
 - `docs/superpowers/README.md` is a **generated index** of specs and plans (date,
   title, status). The kit's spec-index hook regenerates it after every spec/plan
   edit and at every stop; do not edit it by hand.
+<!-- /full-only -->
 - Significant decisions that emerge during spec or plan work are promoted to
   **ADRs** — the spec explains and the ADR locks in.
 
@@ -69,17 +76,22 @@ A good spec answers, in roughly this order:
 - **Structure / design** — the shape of the solution.
 - **Decisions** — the choices made and the alternatives rejected, with reasons.
 - **Success criteria** — how we will know it is done and correct.
+<!-- full-only -->
 - **Coverage** (required when `CLAUDE_KIT_GRILL=1`, for specs dated
   2026-10-01 or later) — one `- **<Area>:**` bullet per area in
   `plugin/skills/grill/coverage.md`, saying where the spec addresses it or
   `N/A` with the reason. `spec-lint.py` rule `L9-coverage` checks it
   ([ADR 0019](https://github.com/alymo8/claude-kit/blob/main/knowledge/decisions/0019-spec-grill-opt-in.md)).
+<!-- /full-only -->
+<!-- lite-only (agent-kit-lite only; agent-kit ignores this block)
+- **Coverage** (optional; checked only when present) — one `- **<Area>:**` bullet per area in the grill skill's `coverage.md`, saying where the spec addresses it or `N/A` with the reason. The spec gate checks it with rule `L9-coverage`.
+-->
 - **Frozen** (optional) — see [Frozen files](#frozen-files).
 
 ## Spec gate
 
 Every spec passes the kit's spec gate (`agent-kit:spec-gate`) before review.
-The gate lints the spec with `plugin/scripts/spec-lint.py`, then runs up to
+The gate lints the spec <!-- full-only -->with `plugin/scripts/spec-lint.py`<!-- /full-only --><!-- lite-only (agent-kit-lite only; agent-kit ignores this block) against its lint checklist -->, then runs up to
 three discovery rounds of a fresh-context reviewer that tries to plan the
 work from the spec alone. A finding is `[blocking]` only in one of six
 classes (wrong-build, contradiction, false-claim, uncheckable, open-what,
@@ -113,8 +125,9 @@ stale, `/ship` runs the gate itself, and stops if the gate fails.
 ## Plan gate
 
 Every plan passes the kit's plan gate (`agent-kit:plan-gate`) before it is
-executed. The gate lints the plan with `plugin/scripts/spec-lint.py` (plan
-rules apply to files in a `plans` folder), then runs up to three discovery
+executed.
+The gate lints the plan <!-- full-only -->with `plugin/scripts/spec-lint.py` (plan rules apply to files in a `plans` folder)<!-- /full-only --><!-- lite-only (agent-kit-lite only; agent-kit ignores this block) against its lint checklist (plan rules apply to files in a `plans` folder) -->,
+then runs up to three discovery
 rounds of a fresh-context reviewer that maps every spec item to a task, tries
 to execute each task cold, checks task order and code claims, and checks
 that the plan answers the spec gate record's Plan questions
@@ -162,11 +175,12 @@ decision. A value starting with `none` (any case) freezes nothing, whatever
 follows it: ``- **Frozen:** none (`tests/x.py` is written by Task 1)`` freezes
 no file.
 
-`plugin/scripts/frozen-check.py` enforces this before each push in `/ship`
-and `/ship-fast`. Only the main session writes a
+<!-- full-only -->`plugin/scripts/frozen-check.py` enforces this before each push in `/ship` and `/ship-fast`.<!-- /full-only --><!-- lite-only (agent-kit-lite only; agent-kit ignores this block) `/ship` and `/ship-fast` check this before each push. -->
+Only the main session writes a
 `Frozen-change-approved: <path>` trailer, and only after the user approves
 the change; implementers and subagents never write it (ADR 0042).
 
+<!-- full-only -->
 ## Parallel plan tasks
 
 A task may carry one `**Depends on:**` line under its `**Files:**` block:
@@ -184,6 +198,12 @@ other task under `/ship` runs through
 `/ship`, a fresh subagent writes the plan and runs the plan gate on it, and
 `/ship` acts on the verdict. The plan gate checks the line with rule
 `P10-depends`.
+<!-- /full-only -->
+<!-- lite-only (agent-kit-lite only; agent-kit ignores this block)
+## Plan task order
+
+A task may carry one `**Depends on:**` line under its `**Files:**` block: `none`, or the earlier tasks whose results it uses (`Task 1, Task 3`). The plan gate checks the line with rule `P10-depends`. In agent-kit-lite, `/ship` and `/ship-fast` run tasks one at a time, in plan order.
+-->
 
 ## Fast path for POCs
 
@@ -219,12 +239,17 @@ the repo and this file?*
 
 ## Rendered views
 
+<!-- full-only -->
 The `.md` is the only source of truth and the only thing produced by default. A
 co-located, self-contained HTML rendering (same basename) is available **on demand
 only** — `/spec-html [path]` renders and opens it — never generated automatically
 when a spec is written. The HTML is a local reading view, not a deliverable: it is
 gitignored (`docs/superpowers/**/*.html`) and only the `.md` is tracked. (See the
 workspace `CLAUDE.md` for the shared renderer.)
+<!-- /full-only -->
+<!-- lite-only (agent-kit-lite only; agent-kit ignores this block)
+The `.md` is the only source of truth and the only thing produced; nothing renders it automatically.
+-->
 
 ## Definition of done
 

@@ -13,8 +13,8 @@ not ask the user to confirm them.
 
 ## Mode
 
-With the argument `--auto` (passed by `/ship` and `/ship-fast`, so
-`/ship-many` children pass it too), never build a mechanical proposal:
+With the argument `--auto` (passed by `/ship` and `/ship-fast`<!-- full-only -->, so `/ship-many` children pass it too<!-- /full-only -->),
+never build a mechanical proposal:
 report it in the `Hardening:` block only. Without it (a hand run), after
 returning the summary, offer once to build the mechanical proposals, and
 build them only on a yes, as a separate commit with its tests.
@@ -113,8 +113,8 @@ build them only on a yes, as a separate commit with its tests.
        leave them alone.
      - Follow the session's memory instructions. Edit by exact replacement
        of the lines that change, re-reading the file right before each
-       edit, never by rewriting the whole file: `/ship-many` children may
-       write memory at the same time. Memory edits are not committed, so
+       edit, never by rewriting the whole file<!-- full-only -->: `/ship-many` children may write memory at the same time<!-- /full-only -->.
+       Memory edits are not committed, so
        the summary lines are their only record.
 
    Prune runs the same with and without `--auto`, with no approval pause.

@@ -24,8 +24,8 @@ at 150k, by 65%.
 Tokens are not dollars: a cache read costs a twentieth of fresh input on Opus
 5.5 ($0.20 against $4 per million tokens), so a long context is cheaper than
 its token count suggests. It still dominates the bill, because every turn reads
-it again. Re-measured in dollars at Opus 5.5 list prices across 235 sessions
-(`token-report.py --all --dollars`):
+it again.
+Re-measured in dollars at Opus 5.5 list prices across 235 sessions<!-- full-only --> (`token-report.py --all --dollars`)<!-- /full-only -->:
 
 | Measure | Value |
 |---|---|
@@ -47,28 +47,40 @@ restart cap stays.
 3. **Keep the main context for what the work needs.** Read in full the code you
    change, search instead of sweeping, send long output to disk first (the
    `agent-kit:lean-context` skill). Understanding is not waste; the restart
-   cap limits how long it is carried (ADR 0011). The rule is on by default;
+   cap limits how long it is carried (ADR 0011).
+   <!-- full-only -->
+   The rule is on by default;
    `CLAUDE_KIT_LEAN_CONTEXT=0` plus a `Skill(agent-kit:lean-context)` deny
    switches it off (ADR 0014). The kit map, injected at session start, gives the
    plugin root and the absolute paths of these playbooks from any repo;
    `CLAUDE_KIT_KIT_MAP=0` switches it off (ADR 0032).
+   <!-- /full-only -->
+<!-- full-only -->
 4. **Keep dead ends through a compaction.** A PreCompact hook tells the
    compaction summary to keep the approaches already tried and why they failed,
    open problems and confirmed decisions; `CLAUDE_KIT_PRECOMPACT=0` switches it off.
 5. **Make growth visible.** The status line shows context size at zero cost; a
    nudge at 300k tokens (then every 100k) says when to hand off.
+<!-- /full-only -->
 
 ## The handoff file
 
 `<work-tree>/.claude/handoffs/<branch>.md`, gitignored, under 80 lines. Written
-by `/handoff`; its State section is refreshed automatically at session end; it is
+by `/handoff`;
+<!-- full-only -->
+its State section is refreshed automatically at session end; it is
 injected automatically on the next `startup` or `clear` on the same branch while
 its Written date is younger than seven days (the session-end refresh does not
-move that date, so an old task is not revived). Sections: Task, State (generated), Done this session,
+move that date, so an old task is not revived).
+<!-- /full-only -->
+<!-- lite-only (agent-kit-lite only; agent-kit ignores this block)
+the next session reads it when you ask it to.
+-->
+Sections: Task, State (generated), Done this session,
 Next, Files that matter, Commands that work, Suggested skills, Open questions,
 Moved to durable homes. `/handoff <focus>` tailors it to what the next session
 will do. It never holds secrets or personal data, since every later session on
-the branch loads it.
+the branch <!-- full-only -->loads it<!-- /full-only --><!-- lite-only (agent-kit-lite only; agent-kit ignores this block) may read it -->.
 
 What does **not** belong in it: findings (go to `knowledge/`), decisions (go to
 an ADR), changes of plan (go to the plan). The `/handoff` command asks about
@@ -77,11 +89,12 @@ takes its handoffs with it.
 
 ## The routine
 
-1. Start: read the injected handoff, verify its State against `git status`.
-2. Work with the `lean-context` skill; keep an eye on the status line.
-3. When the nudge appears, finish the current step.
+1. Start: <!-- full-only -->read the injected handoff<!-- /full-only --><!-- lite-only (agent-kit-lite only; agent-kit ignores this block) read the branch's handoff file -->, verify its State against `git status`.
+2. Work with the `lean-context` skill<!-- full-only -->; keep an eye on the status line<!-- /full-only -->.
+3. <!-- full-only -->When the nudge appears<!-- /full-only --><!-- lite-only (agent-kit-lite only; agent-kit ignores this block) When the context grows large -->, finish the current step.
 4. `/handoff`, then `/clear`. Repeat.
 
+<!-- full-only -->
 ## Re-measuring
 
 `python <kit>/plugin/scripts/token-report.py --all` prints the numbers above for
@@ -89,6 +102,7 @@ every project on this machine, plus the restart simulation. `--dollars` adds
 the cost and the simulation in dollars (`--prices INPUT WRITE READ OUTPUT` for
 another model's rates). Run it after a few weeks of use, and again when a new
 model changes the prices, and compare with the tables at the top.
+<!-- /full-only -->
 
 ## Definition of done
 
