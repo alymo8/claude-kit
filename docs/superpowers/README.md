@@ -6,6 +6,7 @@
 
 | Date | Spec | Status |
 |---|---|---|
+| 2026-11-27 | [A Markdown-only `agent-kit-lite` plugin for Anthropic's plugin directory](specs/2026-11-27-directory-lite-design.md) | approved |
 | 2026-11-24 | [Directory-ready plugin, a sibling default for `/new-project`, and a `git mv` plan check](specs/2026-11-24-directory-ready-design.md) | approved |
 | 2026-11-24 | [Quote hook commands safely and harden the Vibe installer](specs/2026-11-24-hook-quoting-design.md) | approved |
 | 2026-11-23 | [Publish the kit as a Claude Code plugin (agent-kit)](specs/2026-11-23-publish-plugin-design.md) | approved |
