@@ -23,7 +23,13 @@ names and continue. Do not check local `main` or stop for its state, and
 skip the workspace's pre-flight branch check: invoking `/ship-fast` waives
 it. Never delete a repository, and never suggest deleting one.
 
+<!-- full-only -->
 Where `${CLAUDE_PLUGIN_ROOT}` is not expanded, use the plugin root stated in the kit map, else `~/.claude/skills/agent-kit`, in its place.
+<!-- /full-only -->
+<!-- lite-only (agent-kit-lite only; agent-kit ignores this block)
+Where `${CLAUDE_PLUGIN_ROOT}` is not expanded, use the plugin root in its place:
+the folder one level above the `commands/` folder that holds this command.
+-->
 
 ## Input
 
@@ -38,9 +44,18 @@ Where `${CLAUDE_PLUGIN_ROOT}` is not expanded, use the plugin root stated in the
   the first `##` section whose heading contains "criteria" or
   "verification" (any case). If there is none, that is a stop rule: never
   invent what "done" means.
+<!-- full-only -->
 - **New repository:** a header line `- **Repo:** new <name> <node|python>`
   in the spec. Without it, work in the git repository that contains the
   spec.
+<!-- /full-only -->
+<!-- lite-only (agent-kit-lite only; agent-kit ignores this block)
+- **New repository:** agent-kit-lite never creates one. Ignore a
+  `- **Repo:** new` line, work in the git repository that contains the spec,
+  and tell the user once that creating a new project needs the full
+  agent-kit plugin. A spec outside any git repository is a stop rule: say so
+  and end.
+-->
 - `<slug>`: the spec's file name without `.md`, without a leading
   `YYYY-MM-DD-` and without a trailing `-design`.
 
@@ -101,10 +116,17 @@ every answered question and every product choice "assumed (not asked)";
 These are the only reasons to stop. When one fires: write the handoff with
 the `agent-kit:handoff` skill, state the blocker and what you tried, and
 end your turn. A stop after step 5 launched the app leaves it running and
-gives its stop command. Every stop after step 0 also states the absolute path of the
+gives its stop command.
+<!-- full-only -->
+Every stop after step 0 also states the absolute path of the
 spec to pass on the rerun, in the stop message and in the handoff: for a
 new repository, the in-repository copy once step 1 has committed it, and
 before that the `~/.claude/ship-fast-specs/` path.
+<!-- /full-only -->
+<!-- lite-only (agent-kit-lite only; agent-kit ignores this block)
+Every stop after step 0 also states the absolute path of the spec to pass on
+the rerun, in the stop message and in the handoff.
+-->
 
 The first three stops below happen before any repository or branch exists:
 they end the run without a handoff, printing the blocker and the corrected
@@ -117,13 +139,19 @@ invocation (for example `/ship-fast <path to an existing spec.md>`).
   nobody can approve it.
 - A risky engineering choice in a non-interactive session.
 - The spec has no acceptance criteria.
+<!-- full-only -->
 - `git fetch origin`, `scaffold.py`, the stack's init command, or
   `gh repo create` fails.
+<!-- /full-only -->
+<!-- lite-only (agent-kit-lite only; agent-kit ignores this block)
+- `git fetch origin` fails.
+- The spec is not inside a git repository.
+-->
 - The baseline test suite of an existing repository is red.
 - An acceptance criterion still fails the smoke run after 2 fix attempts.
   No PR is opened.
 - PR CI is red after 2 fix attempts. Report the open PR link.
-- `frozen-check.py` exits 1 before a push in step 7. Report each changed
+- <!-- full-only -->`frozen-check.py` exits 1<!-- /full-only --><!-- lite-only (agent-kit-lite only; agent-kit ignores this block) The frozen check finds a changed path --> before a push in step 7. Report each changed
   path (and the open PR link, if any). The user approves the change, and
   only then the main session runs `git commit --allow-empty`, after the
   change commit, with one `Frozen-change-approved: <path>` trailer line per
@@ -152,7 +180,9 @@ step 7 ends. A resumed run reports the minutes it measured.
 **Step 0** (Spec), only when Input says so: read `${CLAUDE_PLUGIN_ROOT}/references/ship-fast-spec.md`
 and follow it.
 
-1. **Repo.** With a `**Repo:** new <name> <stack>` line, run
+1. **Repo.**
+   <!-- full-only -->
+   With a `**Repo:** new <name> <stack>` line, run
    `python "${CLAUDE_PLUGIN_ROOT}/scripts/scaffold.py" --name <name> --stack <stack>`
    with no `--parent` (the repository goes beside the other project repos);
    `<repo>` is the path the script prints. In `<repo>`, run
@@ -167,6 +197,10 @@ and follow it.
    says so. From here on, "the spec" is the copy at
    `docs/superpowers/specs/<spec file name>` in `<repo>`. Without the line,
    run `git fetch origin` in the spec's repository.
+   <!-- /full-only -->
+   <!-- lite-only (agent-kit-lite only; agent-kit ignores this block)
+   Run `git fetch origin` in the spec's repository.
+   -->
 2. **Worktree.** Use `superpowers:using-git-worktrees` in the repository;
    branch `poc/<slug>` from `origin/main`, not local `main` (the git
    fallback is `git worktree add <path> -b poc/<slug> origin/main`). If the
@@ -176,8 +210,8 @@ and follow it.
    main checkout, and if it is tracked and its only change is the Status
    bullet item 6 set, restore it with `git -C <main-checkout> checkout --
    <path>`. In an existing repository, run the full test
-   suite and lint from the repo's `CLAUDE.md` once; red is a stop rule. For
-   a repository created in step 1, skip this baseline run.
+   suite and lint from the repo's `CLAUDE.md` once; red is a stop rule.
+   <!-- full-only -->For a repository created in step 1, skip this baseline run.<!-- /full-only -->
 3. **Task list.** Write `docs/superpowers/plans/<YYYY-MM-DD>-<slug>.md`: a
    `# ` title, a `**Spec:**` line with the spec's path in backticks,
    `**Status:** fast (ungated)`, and 1 to 5 tasks. Each task is a
@@ -205,7 +239,9 @@ and follow it.
    `### Task`, and commit. Leave out a part with nothing to ask. If both
    are empty, say so in one line, write `## Decisions` with the single line
    `- none new`, and commit.
-4. **Implement.** Run
+4. **Implement.**
+   <!-- full-only -->
+   Run
    `python "${CLAUDE_PLUGIN_ROOT}/scripts/parallel-plan.py" waves <plan>`. If it
    exits non-zero, or every wave has one task, implement the tasks in order
    in this session with `superpowers:test-driven-development`. Otherwise
@@ -218,14 +254,34 @@ and follow it.
    risky engineering choice that the plan's `## Decisions` does not settle
    is not guessed: report the task as failed and name the question." When
    a task fails that way, ask its question inline (see Questions) before
-   implementing that task inline. Tests cover the core path and every
+   implementing that task inline.
+   <!-- /full-only -->
+   <!-- lite-only (agent-kit-lite only; agent-kit ignores this block)
+   Implement the tasks one at a time, in order, in this session with
+   `superpowers:test-driven-development` (agent-kit-lite has no parallel task
+   runner). A product choice or risky engineering choice that the plan's
+   `## Decisions` does not settle is not guessed: ask it inline (see
+   Questions) before implementing that task.
+   -->
+   Tests cover the core path and every
    acceptance criterion a test can check; skip edge cases the spec does not
    ask for. Before each commit run the full suite and lint; commit per task
    with its commit message. Before the first Docker command, follow "Docker
-   hygiene" in the engineering-practices playbook (kit map), with `<slug>`
+   hygiene" in the engineering-practices
+   <!-- full-only -->
+   playbook (kit map), with `<slug>`
    as the task name and the baseline in
    `~/.claude/ship-fast-specs/<slug>.docker-baseline.txt` (it outlives the
    session, for a later Cleanup).
+   <!-- /full-only -->
+   <!-- lite-only (agent-kit-lite only; agent-kit ignores this block)
+   playbook (`${CLAUDE_PLUGIN_ROOT}/conventions/engineering-practices.md`),
+   with `<slug>` as the task name and the baseline in
+   `<git common dir>/ship-fast/<slug>.docker-baseline.txt`, where
+   `<git common dir>` is the output of
+   `git rev-parse --path-format=absolute --git-common-dir` (it outlives the
+   worktree, for a later Cleanup).
+   -->
 5. **Smoke run.** The user tries the app while it is checked. Use the
    `run` skill to launch it from the worktree in the background (or its containers): one
    copy, the only one the run starts. Before any check, post a **Try it

@@ -23,13 +23,22 @@ Part of `commands/ship-fast.md`, which reads this file when it reaches it. That 
    `gh pr checks --watch --fail-fast`. On red: `gh run view <id> --log-failed`,
    fix with `superpowers:systematic-debugging`, commit, run the frozen check,
    push, count one attempt. If there is no workflow file, skip the watch and
-   say so in the report. `<plugin root>` is the plugin root stated in the kit map, else `~/.claude/skills/agent-kit`.
+   say so in the report.<!-- full-only --> `<plugin root>` is the plugin root stated in the kit map, else `~/.claude/skills/agent-kit`.<!-- /full-only -->
+   <!-- full-only -->
    **Frozen check:** before each push in this step, run
    `python "${CLAUDE_PLUGIN_ROOT}/scripts/frozen-check.py" <spec>` (fallback
    `<plugin root>/scripts/frozen-check.py`; the task list
    carries no Frozen bullet). Exit 0: push. Exit 1: a stop rule. Exit 2:
    debug it with `superpowers:systematic-debugging` and rerun before
    pushing.
+   <!-- /full-only -->
+   <!-- lite-only (agent-kit-lite only; agent-kit ignores this block)
+   **Frozen check:** before each push in this step, run the Frozen check in
+   `spec-lint-checks.md` (in this file's folder) on `<spec>`; the task list
+   carries no Frozen bullet. `frozen: ok` or `frozen: none declared`: push. A
+   `frozen: changed` line: a stop rule. A git command that fails: debug it
+   with `superpowers:systematic-debugging` and rerun before pushing.
+   -->
 8. **Hand over.** No cleanup runs here: the user tests and presents the
    POC from this workspace first. Keep the feature worktree, the local
    branch `poc/<slug>` and any Docker objects. The app launched in step 5
