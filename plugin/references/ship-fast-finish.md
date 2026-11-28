@@ -12,8 +12,8 @@ Part of `commands/ship-fast.md`, which reads this file when it reaches it. That 
    PowerShell), `gh pr create --title '<title>' --body-file <file>`, with
    the title written out literally inside single quotes and each `'` in it
    written as `'\''`. Write the body by
-   `${CLAUDE_PLUGIN_ROOT}/references/pr-body.md` (fallback if the variable
-   is not expanded: `<plugin root>/references/pr-body.md`):
+   `${CLAUDE_PLUGIN_ROOT}/references/pr-body.md`
+   <!-- full-only -->(fallback if the variable is not expanded: `<plugin root>/references/pr-body.md`)<!-- /full-only --><!-- lite-only (agent-kit-lite only; agent-kit ignores this block) (fallback if the variable is not expanded: the `pr-body.md` next to this file) -->:
    its shared parts and its `/ship-fast` list. Then
    compare `gh pr view --json title` with the title; on a mismatch run
    `gh pr edit --title '<title>'` once. Whether the repository has CI is
