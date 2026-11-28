@@ -2,6 +2,7 @@
 
 - **Status:** accepted
 - **Date:** 2026-11-24
+- **See:** [ADR 0058](0058-directory-lite-plugin.md) (the directory is submitted the generated lite plugin; this ADR still holds for plugin/)
 
 ## Context
 [ADR 0052](0052-published-plugin.md) published the kit as the `agent-kit`
