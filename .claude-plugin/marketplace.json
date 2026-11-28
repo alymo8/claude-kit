@@ -9,6 +9,11 @@
       "name": "agent-kit",
       "source": "./plugin",
       "description": "Workspace conventions as a Claude Code plugin: spec and plan gates, /ship from spec to merge, handoffs, and the kit map and workspace rules at session start."
+    },
+    {
+      "name": "agent-kit-lite",
+      "source": "./lite",
+      "description": "Markdown-only agent-kit for Anthropic's plugin directory: gated specs and plans, /ship, /ship-fast and /handoff, with no hooks or scripts."
     }
   ]
 }

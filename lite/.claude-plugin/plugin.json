@@ -1,0 +1,19 @@
+{
+  "name": "agent-kit-lite",
+  "version": "1.2.0",
+  "author": {
+    "name": "alymo8"
+  },
+  "homepage": "https://github.com/alymo8/claude-kit",
+  "repository": "https://github.com/alymo8/claude-kit",
+  "keywords": [
+    "spec-driven",
+    "workflow",
+    "specs",
+    "code-review",
+    "git-worktrees",
+    "conventions"
+  ],
+  "description": "Markdown-only agent-kit for Claude Code: gated specs and plans, /ship and /ship-fast from spec to pull request, handoffs and the workspace conventions, with no hooks or scripts.",
+  "license": "MIT"
+}

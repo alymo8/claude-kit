@@ -1,0 +1,106 @@
+# Engineering practices
+
+How code is written, tested, and reviewed. Three practices — test-first
+development, coding standards, and code review — set a consistent quality floor for
+every project. They are decided up front so quality is designed in, not retrofitted,
+and each is durable enough to record as an [ADR](decision-log.md) when a project
+adopts it.
+
+## PR lifecycle end-to-end
+
+Every change to `main` travels the same path:
+
+```
+branch → test-first → CI (lint / type-check / test) → AI review → human review → merge
+```
+
+`main` is protected: changes land through a pull request that clears the gates
+below.
+
+## 1. Test-first development
+
+Test-first is the **default and expected** practice: write the test, watch it fail,
+then implement. Regression safety is a core need, not a nicety — it is what makes it
+safe to ship optimizations and refactors with confidence.
+
+Named carve-outs where test-first is relaxed:
+
+- **Exploratory spikes** — thrown away, or redone test-first before merge.
+- **Pure configuration / declarative data.**
+- **Generated code.**
+
+Regardless of the order code was written in, **behavior must be covered by tests at
+merge.** (Use the `superpowers:test-driven-development` skill.)
+
+## 2. Coding standards
+
+Language-agnostic principles that hold whatever the stack:
+
+- Small, single-purpose units with clear interfaces.
+- Readable over clever.
+- Consistent formatting enforced by an **automated formatter** — no hand-formatting
+  debates.
+- No dead or commented-out code introduced by the change.
+- Meaningful, intention-revealing names.
+
+Concrete tool choices (formatter, linter, type-checker, and their configs) are
+pinned per project once its stack is known — and that choice is itself worth an ADR.
+
+### Surgical diffs and simplicity
+
+- **Trace every line.** Every changed line traces to the spec, plan task or
+  request. Do not reformat, rename or refactor code the change does not need.
+- **Mention unrelated dead code.** Unrelated dead code you notice: mention it
+  (report or PR body); do not delete it.
+- **Remove only your own leftovers.** Remove only what your own change made unused
+  (imports, variables, functions, files).
+- **Nothing speculative.** No configurability nobody asked for, no abstraction
+  with one caller, no error handling for cases that cannot happen.
+- **Deleting is a win.** A change that deletes code and keeps the same behaviour
+  is a win; prefer it to adding code.
+- **Ask during design.** When the request is ambiguous, ask during design
+  (brainstorming, spec). This never adds a check-in to `/ship`,
+  whose approval covers the run (ADR 0018, ADR 0036): during execution, take the
+  reading the spec most supports and note it.
+
+The standards reviewer of agent-kit-lite:review checks these rules (ADR 0044).
+
+## 3. Code review
+
+Every change to `main` clears three gates before merge:
+
+1. **CI gates (blocking):** lint, type-check, the full test suite, and a secret scan (gitleaks) pass.
+2. **AI review:** an automated review runs on the PR (e.g. Claude Code
+   `/code-review`), surfacing correctness and quality findings.
+3. **Human approval:** at least one human approves.
+
+Projects with quality-sensitive or performance-sensitive code add their own gate —
+e.g. an eval or benchmark gate — on top of these three.
+
+This raises merge friction deliberately, in exchange for a consistent quality floor
+and a second (AI) set of eyes on every change. It requires branch protection and CI
+wiring, set up when the code phase begins.
+
+
+## Docker hygiene
+
+Docker is part of the workspace. Before a task first uses Docker, make its objects
+identifiable. Record the IDs that already exist (`docker ps -aq`, `images -q`,
+`volume ls -q`, `network ls -q`) in a scratch file outside the repo. Label what the
+task creates (`--label claude-kit.task=<slug>`, compose `-p <slug>`) and build with
+its own builder (`docker buildx create --name <slug>`). At cleanup, before removing
+the worktree: stop and remove the task's containers (`docker compose -p <slug> down
+--volumes --rmi local` for a stack), remove the images, volumes and networks it
+created or pulled that are not in the baseline, and remove its builder
+(`docker buildx rm <slug>`, which drops that build cache). Never run a prune
+(`docker system|volume|image|container|network|builder prune`) without a
+`label=claude-kit.task=<slug>` filter, and never remove anything in the baseline.
+
+## Definition of done
+
+- Behavior is covered by tests at merge (test-first, or the divergence is a named
+  carve-out).
+- Formatting is tool-enforced; no dead code introduced by the change; names reveal
+  intent.
+- The diff is surgical: every changed line traces to the spec or task.
+- The PR passed CI, an AI review, and a human approval before landing on `main`.
