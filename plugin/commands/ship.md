@@ -14,7 +14,13 @@ every ask, menu, option list, or checkpoint inside the skills this command
 invokes: where a skill says "ask" or "wait for the answer", take the path this
 command names and continue. Report once, at the end.
 
+<!-- full-only -->
 Where `${CLAUDE_PLUGIN_ROOT}` is not expanded, use the plugin root stated in the kit map, else `~/.claude/skills/agent-kit`, in its place.
+<!-- /full-only -->
+<!-- lite-only (agent-kit-lite only; agent-kit ignores this block)
+Where `${CLAUDE_PLUGIN_ROOT}` is not expanded, use the plugin root in its place:
+the folder one level above the `commands/` folder that holds this command.
+-->
 
 ## Stop rules
 
@@ -43,7 +49,7 @@ These are the only reasons to stop. When one fires: write the handoff with the
   plan (or the spec, which is gated again) and rerun the plan gate through
   step 3's subagent dispatch. Commit, and continue from step 4.
 - The PR title does not match the spec's title after one fix in step 7.
-- `frozen-check.py` exits 1 (see Frozen check). Report each changed path. The
+- <!-- full-only -->`frozen-check.py` exits 1<!-- /full-only --><!-- lite-only (agent-kit-lite only; agent-kit ignores this block) The frozen check finds a changed path --> (see Frozen check). Report each changed path. The
   user answers by approving the change or by revising the spec. On approval,
   and only then, the main session runs `git commit --allow-empty` after the
   change commit, with one `Frozen-change-approved: <path>` trailer line per
@@ -60,16 +66,32 @@ after 5 seconds, up to 5 times; then it is handled like any failed command.
 
 Before every `git push` in steps 5 to 9 (step 7's push, step 8's fix loop and
 step 9's rebase included), run
+<!-- full-only -->
 `python "${CLAUDE_PLUGIN_ROOT}/scripts/frozen-check.py" <spec> <plan>` in the
 feature worktree. Exit 0: push. Exit 1: the frozen stop rule. Exit 2 (bad usage,
 unreadable file, git failure): debug it with
 `superpowers:systematic-debugging` and rerun before pushing; it is not a stop
 rule.
+<!-- /full-only -->
+<!-- lite-only (agent-kit-lite only; agent-kit ignores this block)
+the Frozen check in `${CLAUDE_PLUGIN_ROOT}/references/spec-lint-checks.md` with
+`<spec>` and `<plan>` in the feature worktree. `frozen: ok` or
+`frozen: none declared`: push. A `frozen: changed` line: the frozen stop rule.
+A git command that fails: debug it with `superpowers:systematic-debugging` and
+rerun before pushing; it is not a stop rule.
+-->
 
 ## Steps
 
-0. **Gate.** Run
+0. **Gate.**
+   <!-- full-only -->
+   Run
    `python "${CLAUDE_PLUGIN_ROOT}/scripts/spec-lint.py" --verify-record <spec>`.
+   <!-- /full-only -->
+   <!-- lite-only (agent-kit-lite only; agent-kit ignores this block)
+   Run the Gate record check in
+   `${CLAUDE_PLUGIN_ROOT}/references/spec-lint-checks.md` on `<spec>`.
+   -->
    If it prints `ok:`, set the spec's Status to `approved` if it is not
    already, and continue. Otherwise run the `agent-kit:spec-gate` skill on
    the spec, steps 1–6 (skip step 7's question: invoking `/ship` is the
@@ -84,8 +106,8 @@ rule.
    `origin/main`, not local `main` (the git fallback is
    `git worktree add <path> -b feat/<slug> origin/main`). `<slug>` is the
    spec's file name without `.md`, a leading `YYYY-MM-DD-` and a trailing
-   `-design` (`2026-11-15-user-config-audit-design.md` → `user-config-audit`);
-   `/ship-many`'s runner finds the branch by this rule. If the spec or its
+   `-design` (`2026-11-15-user-config-audit-design.md` → `user-config-audit`)<!-- full-only -->; `/ship-many`'s runner finds the branch by this rule<!-- /full-only -->.
+   If the spec or its
    gate record (`docs/superpowers/gates/<spec file name>`) is missing from
    `origin/main` or differs from it, copy each to the same path in the
    worktree and commit them there. Then delete each from the main checkout
@@ -97,7 +119,7 @@ rule.
 3. **Plan.** First look for an existing plan: a `*.md` under
    `docs/superpowers/plans/` on this branch whose `**Spec:**` line names this
    spec (the newest by file name if several match). If there is one, run
-   `spec-lint.py --verify-record <plan>`. On `ok:`, go to step 4. On
+   <!-- full-only -->`spec-lint.py --verify-record <plan>`<!-- /full-only --><!-- lite-only (agent-kit-lite only; agent-kit ignores this block) the Gate record check on `<plan>` -->. On `ok:`, go to step 4. On
    `decisions not approved`, do not rerun the gate: if the record has a
    `Stopped on irreversible` line, the plan-gate stop rule fires; otherwise
    continue from (3a) below. On any other reason, or with no plan, `/ship`
@@ -169,14 +191,16 @@ rule.
    `approved` (neither changes a hash).
    (3c) For each approved decision that hits a MUST trigger of the
    decision-log playbook (the trigger list in the repo's decisions README,
-   else the decision-log playbook path from the kit map), write its ADR file and its decisions README row now. Do not edit
+   else <!-- full-only -->the decision-log playbook path from the kit map<!-- /full-only --><!-- lite-only (agent-kit-lite only; agent-kit ignores this block) `${CLAUDE_PLUGIN_ROOT}/conventions/decision-log.md` -->), write its ADR file and its decisions README row now. Do not edit
    the plan: any plan edit changes its hash and makes the record stale. A
    repo with no ADR folder and no trigger list skips this.
    (3d) Write a `Ruling:` ledger line naming the record and the number of
    decisions approved.
    (3e) Commit the plan, its record and any ADRs from (3c), and continue to
    step 4.
-4. **Implement.** `spec-lint.py --verify-record <plan>` on the plan from
+4. **Implement.**
+   <!-- full-only -->
+   `spec-lint.py --verify-record <plan>` on the plan from
    step 3 must print `ok:`; otherwise return to step 3. Then run
    `python "${CLAUDE_PLUGIN_ROOT}/scripts/parallel-plan.py" waves <plan>`.
    If it exits non-zero, write a `Ruling:` ledger line with its messages and
@@ -184,7 +208,15 @@ rule.
    not a stop rule, because the plan still runs one task at a time. If every
    wave has one task, use SDD too. Otherwise use `agent-kit:parallel-tasks`
    with `<plan>` as its argument (under `/ship` its inline paths use SDD's
-   task loop). An SDD stop reason that is not a `/ship` stop rule is settled
+   task loop).
+   <!-- /full-only -->
+   <!-- lite-only (agent-kit-lite only; agent-kit ignores this block)
+   The Gate record check on the plan from step 3 must report `ok:`; otherwise
+   return to step 3. Implement with `superpowers:subagent-driven-development`
+   (SDD), one task at a time in plan order (agent-kit-lite has no parallel
+   task runner).
+   -->
+   An SDD stop reason that is not a `/ship` stop rule is settled
    with a `Ruling:` ledger line; a ruling on an irreversible, destructive or
    security-sensitive action declines the action and records why, unless
    the spec requires it. A task-review or final-review finding that needs a
@@ -206,7 +238,7 @@ rule.
    escalated. Before every commit run the full test suite and lint; commit
    per task. Before the first
    Docker command, follow "Docker hygiene" in the engineering-practices
-   playbook (kit map), with `<slug>` as the task name.
+   playbook <!-- full-only -->(kit map)<!-- /full-only --><!-- lite-only (agent-kit-lite only; agent-kit ignores this block) (`${CLAUDE_PLUGIN_ROOT}/conventions/engineering-practices.md`) -->, with `<slug>` as the task name.
 5. **CI.** Run the frozen check, then `git push -u origin feat/<slug>`. Find
    the run for the pushed commit:
    `gh run list --commit $(git rev-parse HEAD) --json databaseId,status,conclusion`
@@ -214,8 +246,8 @@ rule.
    On red: `gh run view <id> --log-failed`, use `superpowers:systematic-debugging`,
    fix, commit, run the frozen check, push, count one attempt.
 6. **Review.** If this session did not receive, during step 4 of this run,
-   the report of that step's final whole-branch review (SDD's or
-   `parallel-tasks`'), for example on a run resumed in another session, first
+   the report of that step's final whole-branch review
+   (SDD's<!-- full-only --> or `parallel-tasks`'<!-- /full-only -->), for example on a run resumed in another session, first
    use `superpowers:requesting-code-review` on `origin/main..HEAD`, then
    `superpowers:receiving-code-review`, and fix every finding you can verify.
    Then, on every run, run the `agent-kit:review` skill with base

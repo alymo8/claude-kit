@@ -3,8 +3,14 @@ description: Write the per-branch handoff file (task, git state, done, next, fil
 argument-hint: "What will the next session focus on?"
 ---
 
-Write the handoff for the current branch. It is gitignored, per work tree, and
-the next session on this branch loads it automatically on start.
+Write the handoff for the current branch. It is gitignored, per work tree,
+<!-- full-only -->
+and the next session on this branch loads it automatically on start.
+<!-- /full-only -->
+<!-- lite-only (agent-kit-lite only; agent-kit ignores this block)
+and no hook loads it in agent-kit-lite, so the next session reads it when
+the user asks.
+-->
 
 If arguments were passed (`$ARGUMENTS`), they describe what the next session will
 focus on: shape Task, Next, Suggested skills and Open questions around that focus,
@@ -15,6 +21,7 @@ and leave out what it does not need.
    `knowledge/decisions/`, a change of approach in the plan under
    `docs/superpowers/plans/`. Write those now; the handoff only links to them.
 2. Get the path and the generated State section:
+   <!-- full-only -->
 
    python "${CLAUDE_PLUGIN_ROOT}/scripts/handoff.py" path
    python "${CLAUDE_PLUGIN_ROOT}/scripts/handoff.py" state
@@ -22,6 +29,24 @@ and leave out what it does not need.
    (Fallback if the variable is not expanded:
    `<plugin root>/scripts/handoff.py`.)
    `<plugin root>` is the plugin root stated in the kit map, else `~/.claude/skills/agent-kit`.
+   <!-- /full-only -->
+   <!-- lite-only (agent-kit-lite only; agent-kit ignores this block)
+   - **Path:** `<git rev-parse --show-toplevel>/.claude/handoffs/<name>.md`,
+     where `<name>` is the branch (`git branch --show-current`, or
+     `detached-<git rev-parse --short=7 HEAD>` when detached) with every
+     character other than letters, digits, `.`, `_` and `-` replaced by
+     `_` (`feat/x` becomes `feat_x`).
+   - **State section:** write these lines from the commands named:
+     `## State`
+     `- branch: <branch>  (worktree: <git rev-parse --show-toplevel>)`
+     `- upstream: <git rev-parse --abbrev-ref @{u}>, ahead <A>, behind <B>`,
+       where `<B>` and `<A>` are the two numbers `git rev-list --left-right
+       --count @{u}...HEAD` prints; or `- upstream: none` without an upstream
+     `- dirty:` the paths from `git status --porcelain`, comma-separated, or
+       `clean`
+     `- last commits:` `git log --oneline -5` joined with `"; "`, or `none`
+     `- PR:` the URL from `gh pr view --json url -q .url`, or `none`
+   -->
 3. Write the file at that path with exactly these sections, in this order. If
    `.claude/handoffs/.gitignore` does not exist, create it containing a single `*`
    line so the folder stays untracked in repos that do not ignore it.
@@ -57,11 +82,24 @@ and leave out what it does not need.
    diff: link it by path, SHA or URL instead.
 
    Never write secrets or personal data: no API keys, tokens, passwords,
-   connection strings or personal details. The file is re-injected into every
-   future session on this branch. Write `<redacted>` and say where the value
+   connection strings or personal details.
+   <!-- full-only -->
+   The file is re-injected into every future session on this branch.
+   <!-- /full-only -->
+   <!-- lite-only (agent-kit-lite only; agent-kit ignores this block)
+   Every future session on this branch may read it.
+   -->
+   Write `<redacted>` and say where the value
    lives (env var name, secret store) instead.
 
    Keep it under 80 lines. If Next has more than 8 steps, they belong in the plan
    file; link it and keep the first 3 here.
-4. End your reply with the path and this sentence: "Run `/clear` to start fresh;
+4. End your reply with the path and this sentence:
+   <!-- full-only -->
+   "Run `/clear` to start fresh;
    the next session loads this handoff automatically."
+   <!-- /full-only -->
+   <!-- lite-only (agent-kit-lite only; agent-kit ignores this block)
+   "Run `/clear`, then start the next session with: read
+   `.claude/handoffs/<name>.md` and continue."
+   -->

@@ -13,9 +13,16 @@ Part of `commands/ship-fast.md`, which reads this file when it reaches it. That 
       is not the agent-kit repository itself (the one whose
       `plugin/.claude-plugin/plugin.json` has `"name": "agent-kit"`), that
       repository is the home: state it in one line and read its stack from
-      its files; do not ask. Otherwise Home is a grill question: a new
+      its files; do not ask.
+      <!-- full-only -->
+      Otherwise Home is a grill question: a new
       repository (name, and `node` or `python`) or the path of an existing
       one.
+      <!-- /full-only -->
+      <!-- lite-only (agent-kit-lite only; agent-kit ignores this block)
+      Otherwise Home is a grill question: the path of an existing git
+      repository (agent-kit-lite does not create repositories).
+      -->
    3. **Design.** Run `superpowers:brainstorming` on the idea, on its
       architectural path, with these overrides: skip its separate
       clarifying questions and its visual-companion offer; read the home
@@ -54,17 +61,25 @@ Part of `commands/ship-fast.md`, which reads this file when it reaches it. That 
       is applied and does not count against the budget.
    5. **Write the spec.** Pick `<slug>`, a short kebab-case name for the
       POC. Write a `# <title>` line (the POC's name; step 7 uses it as the
-      PR title), Status `draft`, Date, a
-      `- **Repo:** new <name> <stack>` line when Home is a new repository,
+      PR title), Status `draft`, Date,
+      <!-- full-only -->a `- **Repo:** new <name> <stack>` line when Home is a new repository,<!-- /full-only -->
       and the sections Purpose, Scope (`**In:**` and `**Out:**`), Design,
       Decisions (each question and the user's answer, then an
       **Assumed (not asked)** list) and Success criteria (the acceptance
       criteria). No `## Coverage` section. The file name is
-      `<YYYY-MM-DD>-<slug>-design.md`: in an existing repository, under
+      `<YYYY-MM-DD>-<slug>-design.md`:
+      <!-- full-only -->
+      in an existing repository, under
       `docs/superpowers/specs/` in its main checkout (step 2 commits it on
       the branch); for a new repository, under `~/.claude/ship-fast-specs/`
       (durable across sessions and outside every repository; step 1 copies
-      it in). State the path in one line and go to item 6.
+      it in).
+      <!-- /full-only -->
+      <!-- lite-only (agent-kit-lite only; agent-kit ignores this block)
+      under `docs/superpowers/specs/` in the home repository's main checkout
+      (step 2 commits it on the branch).
+      -->
+      State the path in one line and go to item 6.
    6. **Approval.** The user reads the spec and approves it; this is the
       spec's only review, and no gate runs. Open the spec's `.md` for the
       user (`Invoke-Item <path>` on Windows, `open` on macOS, `xdg-open`

@@ -6,10 +6,18 @@ Part of `commands/ship.md`, which reads this file when it reaches it. That comma
    loop.
 9. **Merge.** `gh pr view --json mergeStateStatus`. If `BEHIND` or `DIRTY`:
    `git fetch origin && git rebase origin/main`, resolve every conflict (a
-   conflict in `docs/superpowers/README.md` is resolved by running
+   conflict in `docs/superpowers/README.md`
+   <!-- full-only -->
+   is resolved by running
    `python "${CLAUDE_PLUGIN_ROOT}/scripts/spec-index.py" docs/superpowers`, with
    the fallback `<plugin root>/scripts/spec-index.py`, then
-   `git add docs/superpowers/README.md`, never by hand; a conflict in a
+   `git add docs/superpowers/README.md`, never by hand;
+   <!-- /full-only -->
+   <!-- lite-only (agent-kit-lite only; agent-kit ignores this block)
+   is resolved by keeping every row from both sides, then
+   `git add docs/superpowers/README.md`;
+   -->
+   a conflict in a
    file from the `Capture learnings` commit keeps one copy of each
    duplicate entry, and an ADR whose number `origin/main` already uses is
    renumbered to the next free one, with its file name and index row;
@@ -19,7 +27,7 @@ Part of `commands/ship.md`, which reads this file when it reaches it. That comma
    `gh pr merge --squash --delete-branch`. Run from a worktree this exits
    non-zero *after* merging, because it cannot check out `main` here; confirm
    with `gh pr view --json state,mergeCommit` — `MERGED` means continue, and
-   step 11 finishes the local cleanup. Anything else is a stop rule. `<plugin root>` is the plugin root stated in the kit map, else `~/.claude/skills/agent-kit`.
+   step 11 finishes the local cleanup. Anything else is a stop rule.<!-- full-only --> `<plugin root>` is the plugin root stated in the kit map, else `~/.claude/skills/agent-kit`.<!-- /full-only -->
 10. **Verify main.** Never test in the main checkout (the first entry of
     `git worktree list`). `git fetch origin`, then
     `git worktree add --detach <tmp> <squash-commit>` with `<tmp>` a new
@@ -40,17 +48,21 @@ Part of `commands/ship.md`, which reads this file when it reaches it. That comma
     the task created or pulled that are not in the step-4 baseline; and
     `docker buildx rm <slug>`. Never run a prune without a
     `label=claude-kit.task=<slug>` filter, and never remove anything in the
-    baseline. If the task used Docker, then run
+    baseline.
+    <!-- full-only -->
+    If the task used Docker, then run
     `python "${CLAUDE_PLUGIN_ROOT}/scripts/docker-disk.py"` (fallback
     `<plugin root>/scripts/docker-disk.py`) and keep its
     `docker disk:` line for the report; it changes nothing and never prompts,
-    and its verdict is not a stop rule. Run every git command as
+    and its verdict is not a stop rule.
+    <!-- /full-only -->
+    Run every git command as
     `git -C <main-checkout> ...`; none of them changes that checkout's files or
     branch: `worktree remove <worktree-path>`, `worktree prune`,
     `branch -D feat/<slug>`, `push origin --delete feat/<slug>` (the merge's
     `--delete-branch` aborts before the remote step when run from a worktree),
-    `fetch --prune`. Delete `.claude/handoffs/feat_<slug>.md` (`handoff.py` writes `/`
-    as `_`) if present, and
+    `fetch --prune`. Delete `.claude/handoffs/feat_<slug>.md`
+    <!-- full-only -->(`handoff.py` writes `/` as `_`)<!-- /full-only --><!-- lite-only (agent-kit-lite only; agent-kit ignores this block) (a `/` in the branch name becomes `_`) --> if present, and
     delete any scratch files you created outside the repo. Then bring local `main`
     up only when that is safe: if `git -C <main-checkout> branch --show-current`
     is `main` and `git -C <main-checkout> status --porcelain` is empty (a clean
@@ -68,6 +80,12 @@ Part of `commands/ship.md`, which reads this file when it reaches it. That comma
     in step 4 or step 6) and, per `agent-kit:review` axis (Standards,
     Spec), the findings fixed and the `judgement` findings left, the
     `Plan decisions (auto-approved)` (or `Plan decisions`) list from step 7, if
-    any, the Learnings summary from step 7, the `docker disk:` line from
-    step 11 if the task used Docker, and anything left out and why
+    any, the Learnings summary from step 7,
+    <!-- full-only -->the `docker disk:` line from step 11 if the task used Docker,<!-- /full-only -->
+    and anything left out and why
     (including SDD's rulings and any findings it parked or deferred).
+    <!-- lite-only (agent-kit-lite only; agent-kit ignores this block)
+    In agent-kit-lite, add the line
+    `Spec index: not updated (needs the full agent-kit plugin).`
+    -->
+

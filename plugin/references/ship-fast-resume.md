@@ -2,6 +2,7 @@
 
 Part of `commands/ship-fast.md`, which reads this file when it reaches it. That command's Stop rules and Git lock retry apply here.
 
+<!-- full-only -->
 A repository folder counts as this run's only if it holds
 `docs/superpowers/specs/<spec file name>` (step 1 commits it there). Any
 other existing folder at that path is a name collision: `scaffold.py`
@@ -18,6 +19,7 @@ refuses it, and that is a stop rule.
 - In both cases above, "the spec" is the copy at
   `docs/superpowers/specs/<spec file name>` in the repository, as after
   step 1.
+<!-- /full-only -->
 - If you are already in a worktree on `poc/<slug>`, skip step 2. If
   `git worktree list` shows a worktree on `poc/<slug>`, enter it
   (`EnterWorktree` with its path, or change directory) and skip step 2. If
