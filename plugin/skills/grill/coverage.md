@@ -1,8 +1,9 @@
 # Coverage checklist
 
 The grill walks every area below, and the spec's `## Coverage` section
-answers each one. `spec-lint.py` (rule `L9-coverage`) reads the area names
-from the bold labels under `## Areas`, so editing this list changes the grill
+answers each one.
+<!-- full-only -->`spec-lint.py` (rule `L9-coverage`) reads<!-- /full-only --><!-- lite-only (agent-kit-lite only; agent-kit ignores this block) The `L9-coverage` lint check reads -->
+the area names from the bold labels under `## Areas`, so editing this list changes the grill
 and the lint together.
 
 ## Areas

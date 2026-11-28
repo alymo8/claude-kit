@@ -24,14 +24,24 @@ your view of the work.
    skip the spec reviewer and report `Spec: no spec found`.
 3. **Find the standards.** The root `CLAUDE.md`, `knowledge/review-standards.md`,
    `CONTRIBUTING.md`, any `CODING_STANDARDS.md`, and the engineering-practices
-   playbook (the repo's `conventions/engineering-practices.md`, else the path
-   from the kit map). Only files that exist.
-4. **Frozen check.** Run
+   playbook (the repo's
+   `./conventions/engineering-practices.md`<!-- full-only -->, else the path from the kit map<!-- /full-only --><!-- lite-only (agent-kit-lite only; agent-kit ignores this block) , else `<plugin root>/conventions/engineering-practices.md` with `<plugin root>` two folders above this skill's directory -->).
+   Only files that exist.
+4. **Frozen check.**
+   <!-- full-only -->
+   Run
    `python <this skill's directory>/../../scripts/frozen-check.py <spec> [<plan>] --base <base>`
    (fallback: `<plugin root>/scripts/frozen-check.py`) and keep
    its whole output for the standards reviewer. With no spec and no plan, skip
    it and use `Frozen: skipped (no spec or plan)`. On exit 2, put the stderr in
    the output line given to the reviewer; it is not a finding. `<plugin root>` is the plugin root stated in the kit map, else `~/.claude/skills/agent-kit`.
+   <!-- /full-only -->
+   <!-- lite-only (agent-kit-lite only; agent-kit ignores this block)
+   Run the Frozen check in `../../references/spec-lint-checks.md` from this
+   skill's directory with `<spec>`, `[<plan>]` and base `<base>`, and keep its
+   whole output for the standards reviewer. With no spec and no plan, skip it
+   and use `Frozen: skipped (no spec or plan)`.
+   -->
 5. **Dispatch both reviewers in one message**, as new general-purpose
    subagents, no `model` override, no conversation context. Each prompt is its
    file's content (`standards-reviewer.md`, `spec-reviewer.md`, in this

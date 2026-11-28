@@ -40,7 +40,7 @@ never edit the spec.
    check 7, decide whether it matches a MUST trigger under
    `## When to write one`. Read that section from the decisions directory's
    `README.md`; if the README has no such section, from
-   `conventions/decision-log.md` in the repository, else from the
+   the repository's `./conventions/decision-log.md`, else from the
    decision-log path given in the dispatch prompt (skip this source when it
    says `none`). If none of the three has the section, skip this check. A
    decision that matches a NOT REQUIRED item is not a match. If it matches and the spec's Scope In
@@ -49,8 +49,10 @@ never edit the spec.
    fix is to add the ADR file to Scope In and a one-paragraph ADR summary
    to the Design. A SHOULD match is a `minor` finding that is reported
    only: never add an ADR to Scope In for it without the user.
+   <!-- full-only -->
    (In the kit repo, `<plugin root>/conventions/decision-log.md`, the plugin
    root stated in the kit map, is the workspace convention itself.)
+   <!-- /full-only -->
 9. **Frozen evaluator.** If the Success criteria name a test or eval file, or
    a test suite the change adds, and the spec has neither a `- **Frozen:**`
    header bullet nor a Decisions entry saying why nothing is frozen, raise a
