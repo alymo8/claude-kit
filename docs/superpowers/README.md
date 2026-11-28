@@ -48,6 +48,7 @@
 
 | Date | Plan | Status |
 |---|---|---|
+| 2026-11-28 | [agent-kit-lite Implementation Plan](plans/2026-11-28-directory-lite.md) | approved |
 | 2026-11-24 | [Directory-ready plugin Implementation Plan](plans/2026-11-24-directory-ready.md) | approved |
 | 2026-11-24 | [Hook quoting and Vibe installer hardening Implementation Plan](plans/2026-11-24-hook-quoting.md) | approved |
 | 2026-11-23 | [Publish the kit as a Claude Code plugin (agent-kit) Implementation Plan](plans/2026-11-23-publish-plugin.md) | approved |
